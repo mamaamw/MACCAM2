@@ -1,0 +1,279 @@
+// Schema Prisma optimise pour SQLite
+// Compatible avec toutes les bases de donnees
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Modeles sans enums (compatible SQLite)
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password        String
+  firstName       String
+  lastName        String
+  phone           String?
+  avatar          String?
+  role            String    @default("USER") // ADMIN, MANAGER, SALES, USER
+  isActive        Boolean   @default(true)
+  
+  // Champs additionnels pour le profil
+  company         String?
+  address         String?
+  city            String?
+  country         String?
+  postalCode      String?
+  bio             String?
+  
+  // 2FA
+  twoFactorEnabled Boolean  @default(false)
+  twoFactorSecret  String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  assignedLeads   Lead[]    @relation("AssignedTo")
+  assignedProjects ProjectMember[]
+  assignedTasks   Task[]    @relation("AssignedTo")
+  createdTasks    Task[]    @relation("CreatedBy")
+  notes           Note[]
+  activities      Activity[]
+  notificationSettings NotificationSettings?
+
+  @@map("users")
+}
+
+model Customer {
+  id              String    @id @default(uuid())
+  companyName     String
+  contactName     String
+  email           String    @unique
+  phone           String?
+  website         String?
+  address         String?
+  city            String?
+  country         String?
+  zipCode         String?
+  taxId           String?
+  notes           String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  leads           Lead[]
+  projects        Project[]
+  invoices        Invoice[]
+
+  @@map("customers")
+}
+
+model Lead {
+  id              String      @id @default(uuid())
+  title           String
+  description     String?
+  companyName     String
+  contactName     String
+  email           String
+  phone           String?
+  value           Float?      // Utiliser Float au lieu de Decimal pour SQLite
+  status          String      @default("NEW") // NEW, CONTACTED, QUALIFIED, PROPOSAL, NEGOTIATION, WON, LOST
+  source          String?
+  expectedCloseDate DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  // Relations
+  customerId      String?
+  customer        Customer?   @relation(fields: [customerId], references: [id])
+  assignedToId    String?
+  assignedTo      User?       @relation("AssignedTo", fields: [assignedToId], references: [id])
+  notes           Note[]
+  activities      Activity[]
+
+  @@map("leads")
+}
+
+model Project {
+  id              String        @id @default(uuid())
+  name            String
+  description     String?
+  startDate       DateTime?
+  endDate         DateTime?
+  budget          Float?        // Float au lieu de Decimal
+  status          String        @default("PLANNING") // PLANNING, IN_PROGRESS, ON_HOLD, COMPLETED, CANCELLED
+  progress        Int           @default(0)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  members         ProjectMember[]
+  tasks           Task[]
+  invoices        Invoice[]
+  notes           Note[]
+  activities      Activity[]
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  id              String    @id @default(uuid())
+  role            String?
+  joinedAt        DateTime  @default(now())
+
+  // Relations
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model Task {
+  id              String        @id @default(uuid())
+  title           String
+  description     String?
+  status          String        @default("TODO") // TODO, IN_PROGRESS, REVIEW, COMPLETED, CANCELLED
+  priority        String        @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  dueDate         DateTime?
+  estimatedHours  Float?        // Float au lieu de Decimal
+  actualHours     Float?        // Float au lieu de Decimal
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  projectId       String?
+  project         Project?      @relation(fields: [projectId], references: [id])
+  assignedToId    String?
+  assignedTo      User?         @relation("AssignedTo", fields: [assignedToId], references: [id])
+  createdById     String
+  createdBy       User          @relation("CreatedBy", fields: [createdById], references: [id])
+  notes           Note[]
+  activities      Activity[]
+
+  @@map("tasks")
+}
+
+model Invoice {
+  id              String        @id @default(uuid())
+  invoiceNumber   String        @unique
+  issueDate       DateTime      @default(now())
+  dueDate         DateTime
+  subtotal        Float         // Float au lieu de Decimal
+  tax             Float         @default(0)
+  discount        Float         @default(0)
+  total           Float
+  status          String        @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE, CANCELLED
+  notes           String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  // Relations
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  projectId       String?
+  project         Project?      @relation(fields: [projectId], references: [id])
+  items           InvoiceItem[]
+
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id              String    @id @default(uuid())
+  description     String
+  quantity        Float     // Float au lieu de Decimal
+  unitPrice       Float
+  total           Float
+
+  // Relations
+  invoiceId       String
+  invoice         Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@map("invoice_items")
+}
+
+model Note {
+  id              String    @id @default(uuid())
+  content         String
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  customerId      String?
+  leadId          String?
+  lead            Lead?     @relation(fields: [leadId], references: [id])
+  projectId       String?
+  project         Project?  @relation(fields: [projectId], references: [id])
+  taskId          String?
+  task            Task?     @relation(fields: [taskId], references: [id])
+
+  @@map("notes")
+}
+
+model Activity {
+  id              String    @id @default(uuid())
+  type            String    // "created", "updated", "deleted", "status_changed", etc.
+  description     String
+  metadata        String?   // JSON en String pour SQLite
+  createdAt       DateTime  @default(now())
+
+  // Relations
+  userId          String
+  user            User      @relation(fields: [userId], references: [id])
+  leadId          String?
+  lead            Lead?     @relation(fields: [leadId], references: [id])
+  projectId       String?
+  project         Project?  @relation(fields: [projectId], references: [id])
+  taskId          String?
+  task            Task?     @relation(fields: [taskId], references: [id])
+
+  @@map("activities")
+}
+
+// Table pour les parametres du systeme
+model Setting {
+  id              String    @id @default(uuid())
+  key             String    @unique
+  value           String
+  type            String    @default("string") // string, number, boolean, json
+  category        String?   // general, email, finance, etc.
+  description     String?
+  updatedAt       DateTime  @updatedAt
+
+  @@map("settings")
+}
+
+// Preferences de notification par utilisateur
+model NotificationSettings {
+  id              String    @id @default(uuid())
+  
+  // Preferences
+  emailNotifications Boolean @default(true)
+  taskNotifications  Boolean @default(true)
+  leadNotifications  Boolean @default(true)
+  projectNotifications Boolean @default(true)
+  newsletter         Boolean @default(false)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  userId          String    @unique
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_settings")
+}
+

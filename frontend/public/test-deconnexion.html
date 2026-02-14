@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Déconnexion - Duralux</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        button {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #c82333;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border: 1px solid #bee5eb;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .btn-secondary {
+            background: #6c757d;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 Test de Protection des Routes</h1>
+        
+        <div id="status" class="status"></div>
+        
+        <div class="info">
+            <strong>Instructions :</strong>
+            <ol>
+                <li>Vérifiez votre statut de connexion ci-dessus</li>
+                <li>Cliquez sur "Effacer la session" pour vous déconnecter complètement</li>
+                <li>Essayez d'accéder à <a href="http://localhost:3000">http://localhost:3000</a></li>
+                <li>Vous devriez être redirigé vers /login</li>
+            </ol>
+        </div>
+
+        <div>
+            <button onclick="clearSession()">🗑️ Effacer la session</button>
+            <button onclick="location.reload()" class="btn-secondary">🔄 Actualiser</button>
+            <button onclick="window.location.href='http://localhost:3000'" class="btn-secondary">🏠 Retour à l'app</button>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <h3>Détails du localStorage :</h3>
+            <pre id="localStorageContent"></pre>
+        </div>
+    </div>
+
+    <script>
+        function checkStatus() {
+            const token = localStorage.getItem('token');
+            const authStorage = localStorage.getItem('auth-storage');
+            const statusDiv = document.getElementById('status');
+            
+            if (token || authStorage) {
+                statusDiv.className = 'status connected';
+                statusDiv.innerHTML = '✅ CONNECTÉ - Vous avez un token actif';
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.innerHTML = '❌ DÉCONNECTÉ - Aucun token trouvé';
+            }
+            
+            // Afficher le contenu du localStorage
+            const content = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                content[key] = localStorage.getItem(key);
+            }
+            document.getElementById('localStorageContent').textContent = JSON.stringify(content, null, 2);
+        }
+
+        function clearSession() {
+            // Effacer tout le localStorage
+            localStorage.clear();
+            
+            // Effacer aussi le sessionStorage
+            sessionStorage.clear();
+            
+            alert('✅ Session effacée ! Actualisez la page pour voir le changement.');
+            checkStatus();
+        }
+
+        // Vérifier au chargement
+        checkStatus();
+    </script>
+</body>
+</html>

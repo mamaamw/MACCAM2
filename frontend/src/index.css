@@ -1,0 +1,52 @@
+/* Styles personnalises pour l'application React */
+#root {
+  min-height: 100vh;
+}
+
+/* Compatibilite avec les styles MACCAM */
+.react-app-wrapper {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Timeline Styles */
+.timeline-wrapper {
+  position: relative;
+  padding-left: 40px;
+}
+
+.timeline-item {
+  position: relative;
+  padding-bottom: 30px;
+}
+
+.timeline-item:before {
+  content: '';
+  position: absolute;
+  left: -25px;
+  top: 30px;
+  width: 2px;
+  height: calc(100% - 10px);
+  background: #e5e7eb;
+}
+
+.timeline-item:last-child:before {
+  display: none;
+}
+
+.timeline-icon {
+  position: absolute;
+  left: -40px;
+  top: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timeline-content {
+  padding-left: 0;
+}

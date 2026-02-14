@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test du Bouton Logout</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .status {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .connected {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .disconnected {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .steps {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .steps ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .steps li {
+            margin: 8px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            max-height: 300px;
+        }
+        .check-item {
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+            background: #f8f9fa;
+        }
+        .success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+        .warning {
+            border-left-color: #ffc107;
+            background: #fff3cd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test du Bouton Logout</h1>
+        
+        <div id="currentStatus" class="status"></div>
+
+        <div class="steps">
+            <h3>📋 Instructions de Test :</h3>
+            <ol>
+                <li><strong>Vérifiez ci-dessous</strong> que vous êtes actuellement connecté</li>
+                <li><strong>Ouvrez l'application</strong> dans un autre onglet : <a href="http://localhost:3000" target="_blank">http://localhost:3000</a></li>
+                <li><strong>Cliquez sur votre avatar</strong> en haut à droite (dans l'app)</li>
+                <li><strong>Cliquez sur "Logout"</strong> dans le menu déroulant</li>
+                <li><strong>Revenez sur cette page</strong> et cliquez sur "🔄 Vérifier le statut"</li>
+                <li><strong>Vérifiez</strong> que vous êtes maintenant déconnecté</li>
+            </ol>
+        </div>
+
+        <div>
+            <button onclick="checkStatus()">🔄 Vérifier le statut</button>
+            <button onclick="location.href='http://localhost:3000'">🏠 Ouvrir l'application</button>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <h3>🔍 Détails du localStorage :</h3>
+            <div id="checks"></div>
+            <pre id="localStorageContent"></pre>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <h3>✅ Résultat Attendu Après Logout :</h3>
+            <div class="check-item">
+                <strong>✓ localStorage.token</strong> → <code>null</code>
+            </div>
+            <div class="check-item">
+                <strong>✓ localStorage['auth-storage']</strong> → <code>null</code> ou contient <code>{"state":{"user":null,"token":null}}</code>
+            </div>
+            <div class="check-item">
+                <strong>✓ Redirection automatique</strong> → vers <code>/login</code>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function checkStatus() {
+            const token = localStorage.getItem('token');
+            const authStorage = localStorage.getItem('auth-storage');
+            const statusDiv = document.getElementById('currentStatus');
+            const checksDiv = document.getElementById('checks');
+            
+            // Statut global
+            if (token || (authStorage && JSON.parse(authStorage).state?.token)) {
+                statusDiv.className = 'status connected';
+                statusDiv.innerHTML = '✅ CONNECTÉ - Vous avez un token actif dans le localStorage';
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.innerHTML = '❌ DÉCONNECTÉ - Aucun token trouvé (le logout a fonctionné !)';
+            }
+            
+            // Vérifications détaillées
+            let checks = '<h4>Vérifications détaillées :</h4>';
+            
+            // Vérif token
+            if (token) {
+                checks += '<div class="check-item warning">⚠️ <strong>localStorage.token</strong> existe encore (devrait être null)</div>';
+            } else {
+                checks += '<div class="check-item success">✅ <strong>localStorage.token</strong> = null</div>';
+            }
+            
+            // Vérif auth-storage
+            if (authStorage) {
+                try {
+                    const parsed = JSON.parse(authStorage);
+                    if (parsed.state?.token) {
+                        checks += '<div class="check-item warning">⚠️ <strong>auth-storage</strong> contient encore un token</div>';
+                    } else {
+                        checks += '<div class="check-item success">✅ <strong>auth-storage</strong> nettoyé (token = null)</div>';
+                    }
+                } catch (e) {
+                    checks += '<div class="check-item">ℹ️ <strong>auth-storage</strong> présent mais invalide</div>';
+                }
+            } else {
+                checks += '<div class="check-item success">✅ <strong>auth-storage</strong> complètement supprimé</div>';
+            }
+            
+            checksDiv.innerHTML = checks;
+            
+            // Afficher tout le localStorage
+            const content = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                let value = localStorage.getItem(key);
+                
+                // Formater si c'est du JSON
+                try {
+                    value = JSON.parse(value);
+                    content[key] = value;
+                } catch (e) {
+                    content[key] = value;
+                }
+            }
+            document.getElementById('localStorageContent').textContent = 
+                Object.keys(content).length > 0 
+                    ? JSON.stringify(content, null, 2)
+                    : '(localStorage vide)';
+        }
+
+        // Vérifier au chargement
+        checkStatus();
+
+        // Auto-refresh toutes les 2 secondes
+        setInterval(checkStatus, 2000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,364 @@
+export default function Dashboard() {
+  return (
+    <>
+      {/* [ Main Content ] start */}
+      <div className="main-content">
+        <div className="row">
+          {/* [Invoices Awaiting Payment] start */}
+          <div className="col-xxl-3 col-md-6">
+            <div className="card stretch stretch-full">
+              <div className="card-body">
+                <div className="d-flex align-items-start justify-content-between mb-4">
+                  <div className="d-flex gap-4 align-items-center">
+                    <div className="avatar-text avatar-lg bg-gray-200">
+                      <i className="feather-dollar-sign"></i>
+                    </div>
+                    <div>
+                      <div className="fs-4 fw-bold text-dark">
+                        <span className="counter">45</span>/<span className="counter">76</span>
+                      </div>
+                      <h3 className="fs-13 fw-semibold text-truncate-1-line">Factures en attente</h3>
+                    </div>
+                  </div>
+                  <a href="javascript:void(0);" className="">
+                    <i className="feather-more-vertical"></i>
+                  </a>
+                </div>
+                <div className="pt-4">
+                  <div className="d-flex align-items-center justify-content-between">
+                    <a href="javascript:void(0);" className="fs-12 fw-medium text-muted text-truncate-1-line">
+                      Factures en attente
+                    </a>
+                    <div className="w-100 text-end">
+                      <span className="fs-12 text-dark">€5,569</span>
+                      <span className="fs-11 text-muted">(56%)</span>
+                    </div>
+                  </div>
+                  <div className="progress mt-2 ht-3">
+                    <div className="progress-bar bg-primary" role="progressbar" style={{width: '56%'}}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* [Invoices Awaiting Payment] end */}
+
+          {/* [Converted Leads] start */}
+          <div className="col-xxl-3 col-md-6">
+            <div className="card stretch stretch-full">
+              <div className="card-body">
+                <div className="d-flex align-items-start justify-content-between mb-4">
+                  <div className="d-flex gap-4 align-items-center">
+                    <div className="avatar-text avatar-lg bg-gray-200">
+                      <i className="feather-cast"></i>
+                    </div>
+                    <div>
+                      <div className="fs-4 fw-bold text-dark">
+                        <span className="counter">48</span>/<span className="counter">86</span>
+                      </div>
+                      <h3 className="fs-13 fw-semibold text-truncate-1-line">Leads convertis</h3>
+                    </div>
+                  </div>
+                  <a href="javascript:void(0);" className="">
+                    <i className="feather-more-vertical"></i>
+                  </a>
+                </div>
+                <div className="pt-4">
+                  <div className="d-flex align-items-center justify-content-between">
+                    <a href="javascript:void(0);" className="fs-12 fw-medium text-muted text-truncate-1-line">
+                      Leads convertis
+                    </a>
+                    <div className="w-100 text-end">
+                      <span className="fs-12 text-dark">52 Complétés</span>
+                      <span className="fs-11 text-muted">(63%)</span>
+                    </div>
+                  </div>
+                  <div className="progress mt-2 ht-3">
+                    <div className="progress-bar bg-warning" role="progressbar" style={{width: '63%'}}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* [Converted Leads] end */}
+
+          {/* [Projects In Progress] start */}
+          <div className="col-xxl-3 col-md-6">
+            <div className="card stretch stretch-full">
+              <div className="card-body">
+                <div className="d-flex align-items-start justify-content-between mb-4">
+                  <div className="d-flex gap-4 align-items-center">
+                    <div className="avatar-text avatar-lg bg-gray-200">
+                      <i className="feather-briefcase"></i>
+                    </div>
+                    <div>
+                      <div className="fs-4 fw-bold text-dark">
+                        <span className="counter">16</span>/<span className="counter">20</span>
+                      </div>
+                      <h3 className="fs-13 fw-semibold text-truncate-1-line">Projets en cours</h3>
+                    </div>
+                  </div>
+                  <a href="javascript:void(0);" className="">
+                    <i className="feather-more-vertical"></i>
+                  </a>
+                </div>
+                <div className="pt-4">
+                  <div className="d-flex align-items-center justify-content-between">
+                    <a href="javascript:void(0);" className="fs-12 fw-medium text-muted text-truncate-1-line">
+                      Projets en cours
+                    </a>
+                    <div className="w-100 text-end">
+                      <span className="fs-12 text-dark">16 Complétés</span>
+                      <span className="fs-11 text-muted">(78%)</span>
+                    </div>
+                  </div>
+                  <div className="progress mt-2 ht-3">
+                    <div className="progress-bar bg-success" role="progressbar" style={{width: '78%'}}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* [Projects In Progress] end */}
+
+          {/* [Conversion Rate] start */}
+          <div className="col-xxl-3 col-md-6">
+            <div className="card stretch stretch-full">
+              <div className="card-body">
+                <div className="d-flex align-items-start justify-content-between mb-4">
+                  <div className="d-flex gap-4 align-items-center">
+                    <div className="avatar-text avatar-lg bg-gray-200">
+                      <i className="feather-activity"></i>
+                    </div>
+                    <div>
+                      <div className="fs-4 fw-bold text-dark">
+                        <span className="counter">46.59</span>%
+                      </div>
+                      <h3 className="fs-13 fw-semibold text-truncate-1-line">Taux de conversion</h3>
+                    </div>
+                  </div>
+                  <a href="javascript:void(0);" className="">
+                    <i className="feather-more-vertical"></i>
+                  </a>
+                </div>
+                <div className="pt-4">
+                  <div className="d-flex align-items-center justify-content-between">
+                    <a href="javascript:void(0);" className="fs-12 fw-medium text-muted text-truncate-1-line">
+                      Taux de conversion
+                    </a>
+                    <div className="w-100 text-end">
+                      <span className="fs-12 text-dark">€2,254</span>
+                      <span className="fs-11 text-muted">(46%)</span>
+                    </div>
+                  </div>
+                  <div className="progress mt-2 ht-3">
+                    <div className="progress-bar bg-danger" role="progressbar" style={{width: '46%'}}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* [Conversion Rate] end */}
+
+          {/* [Mini Cards] start */}
+          <div className="col-lg-4">
+            <div className="card mb-4 stretch stretch-full">
+              <div className="card-header d-flex align-items-center justify-content-between">
+                <div className="d-flex gap-3 align-items-center">
+                  <div className="avatar-text">
+                    <i className="feather feather-star"></i>
+                  </div>
+                  <div>
+                    <div className="fw-semibold text-dark">Tâches complétées</div>
+                    <div className="fs-12 text-muted">22/35 complétées</div>
+                  </div>
+                </div>
+                <div className="fs-4 fw-bold text-dark">22/35</div>
+              </div>
+              <div className="card-body">
+                <div className="fs-12 text-muted">
+                  <span className="fw-semibold text-primary">28% de plus</span>
+                  <br />
+                  <span>depuis la semaine dernière</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-lg-4">
+            <div className="card mb-4 stretch stretch-full">
+              <div className="card-header d-flex align-items-center justify-content-between">
+                <div className="d-flex gap-3 align-items-center">
+                  <div className="avatar-text">
+                    <i className="feather feather-file-text"></i>
+                  </div>
+                  <div>
+                    <div className="fw-semibold text-dark">Nouvelles tâches</div>
+                    <div className="fs-12 text-muted">5/20 tâches</div>
+                  </div>
+                </div>
+                <div className="fs-4 fw-bold text-dark">5/20</div>
+              </div>
+              <div className="card-body">
+                <div className="fs-12 text-muted">
+                  <span className="fw-semibold text-success">34% de plus</span>
+                  <br />
+                  <span>depuis la semaine dernière</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="col-lg-4">
+            <div className="card mb-4 stretch stretch-full">
+              <div className="card-header d-flex align-items-center justify-content-between">
+                <div className="d-flex gap-3 align-items-center">
+                  <div className="avatar-text">
+                    <i className="feather feather-airplay"></i>
+                  </div>
+                  <div>
+                    <div className="fw-semibold text-dark">Projets terminés</div>
+                    <div className="fs-12 text-muted">20/30 projets</div>
+                  </div>
+                </div>
+                <div className="fs-4 fw-bold text-dark">20/30</div>
+              </div>
+              <div className="card-body">
+                <div className="fs-12 text-muted">
+                  <span className="fw-semibold text-danger">42% de plus</span>
+                  <br />
+                  <span>depuis la semaine dernière</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* [Mini Cards] end */}
+
+          {/* [Recent Activity] start */}
+          <div className="col-xxl-6">
+            <div className="card stretch stretch-full">
+              <div className="card-header">
+                <h5 className="card-title">Activité récente</h5>
+              </div>
+              <div className="card-body">
+                <div className="d-flex align-items-center mb-3 pb-3 border-bottom">
+                  <div className="avatar-text avatar-md rounded me-3">
+                    <i className="feather-user"></i>
+                  </div>
+                  <div className="flex-grow-1">
+                    <h6 className="mb-1">Nouveau client ajouté</h6>
+                    <p className="fs-12 text-muted mb-0">Société Tech Solutions</p>
+                  </div>
+                  <span className="fs-11 text-muted">Il y a 2h</span>
+                </div>
+
+                <div className="d-flex align-items-center mb-3 pb-3 border-bottom">
+                  <div className="avatar-text avatar-md rounded me-3">
+                    <i className="feather-check"></i>
+                  </div>
+                  <div className="flex-grow-1">
+                    <h6 className="mb-1">Lead converti</h6>
+                    <p className="fs-12 text-muted mb-0">Innovation Corp → Client</p>
+                  </div>
+                  <span className="fs-11 text-muted">Il y a 5h</span>
+                </div>
+
+                <div className="d-flex align-items-center mb-3 pb-3 border-bottom">
+                  <div className="avatar-text avatar-md rounded me-3">
+                    <i className="feather-folder"></i>
+                  </div>
+                  <div className="flex-grow-1">
+                    <h6 className="mb-1">Nouveau projet</h6>
+                    <p className="fs-12 text-muted mb-0">Refonte site web</p>
+                  </div>
+                  <span className="fs-11 text-muted">Il y a 1j</span>
+                </div>
+
+                <div className="d-flex align-items-center">
+                  <div className="avatar-text avatar-md rounded me-3">
+                    <i className="feather-file-text"></i>
+                  </div>
+                  <div className="flex-grow-1">
+                    <h6 className="mb-1">Facture envoyée</h6>
+                    <p className="fs-12 text-muted mb-0">Invoice #1234 - €5,200</p>
+                  </div>
+                  <span className="fs-11 text-muted">Il y a 2j</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* [Recent Activity] end */}
+
+          {/* [Top Clients] start */}
+          <div className="col-xxl-6">
+            <div className="card stretch stretch-full">
+              <div className="card-header">
+                <h5 className="card-title">Top Clients</h5>
+              </div>
+              <div className="card-body">
+                <div className="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                  <div className="d-flex align-items-center">
+                    <div className="avatar-text avatar-md bg-primary text-white rounded me-3">TS</div>
+                    <div>
+                      <h6 className="mb-0">Tech Solutions SARL</h6>
+                      <p className="fs-12 text-muted mb-0">5 projets actifs</p>
+                    </div>
+                  </div>
+                  <div className="text-end">
+                    <div className="fw-bold text-dark">€45,200</div>
+                    <div className="fs-12 text-success">+12%</div>
+                  </div>
+                </div>
+
+                <div className="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                  <div className="d-flex align-items-center">
+                    <div className="avatar-text avatar-md bg-success text-white rounded me-3">IC</div>
+                    <div>
+                      <h6 className="mb-0">Innovation Corp</h6>
+                      <p className="fs-12 text-muted mb-0">3 projets actifs</p>
+                    </div>
+                  </div>
+                  <div className="text-end">
+                    <div className="fw-bold text-dark">€32,500</div>
+                    <div className="fs-12 text-success">+8%</div>
+                  </div>
+                </div>
+
+                <div className="d-flex align-items-center justify-content-between mb-3 pb-3 border-bottom">
+                  <div className="d-flex align-items-center">
+                    <div className="avatar-text avatar-md bg-warning text-white rounded me-3">DS</div>
+                    <div>
+                      <h6 className="mb-0">Digital Services SA</h6>
+                      <p className="fs-12 text-muted mb-0">4 projets actifs</p>
+                    </div>
+                  </div>
+                  <div className="text-end">
+                    <div className="fw-bold text-dark">€28,900</div>
+                    <div className="fs-12 text-success">+15%</div>
+                  </div>
+                </div>
+
+                <div className="d-flex align-items-center justify-content-between">
+                  <div className="d-flex align-items-center">
+                    <div className="avatar-text avatar-md bg-danger text-white rounded me-3">MC</div>
+                    <div>
+                      <h6 className="mb-0">Modern Consulting</h6>
+                      <p className="fs-12 text-muted mb-0">2 projets actifs</p>
+                    </div>
+                  </div>
+                  <div className="text-end">
+                    <div className="fw-bold text-dark">€21,300</div>
+                    <div className="fs-12 text-success">+5%</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          {/* [Top Clients] end */}
+        </div>
+      </div>
+      {/* [ Main Content ] end */}
+    </>
+  )
+}
+

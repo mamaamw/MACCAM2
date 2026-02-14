@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔒 Vérification Complète de la Protection</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 30px;
+        }
+        .status-card {
+            padding: 25px;
+            border-radius: 15px;
+            margin: 20px 0;
+            font-size: 1.2em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .status-connected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: 3px solid #5568d3;
+        }
+        .status-disconnected {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: 3px solid #e04858;
+        }
+        .icon {
+            font-size: 2em;
+        }
+        .test-section {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 15px;
+            margin: 25px 0;
+        }
+        .test-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.5em;
+        }
+        .test-step {
+            background: white;
+            padding: 15px 20px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border-left: 5px solid #667eea;
+            transition: all 0.3s;
+        }
+        .test-step:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .test-step strong {
+            color: #667eea;
+            display: block;
+            margin-bottom: 5px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 35px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1em;
+            font-weight: 600;
+            margin: 10px 10px 10px 0;
+            transition: all 0.3s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .btn-danger:hover {
+            box-shadow: 0 10px 25px rgba(245, 87, 108, 0.4);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        .btn-success:hover {
+            box-shadow: 0 10px 25px rgba(56, 239, 125, 0.4);
+        }
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+        .check-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .check-item {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid #e0e0e0;
+        }
+        .check-success {
+            border-color: #38ef7d;
+            background: linear-gradient(135deg, #d4f8e8 0%, #f0fff4 100%);
+        }
+        .check-warning {
+            border-color: #ffd700;
+            background: linear-gradient(135deg, #fff4d4 0%, #fffef0 100%);
+        }
+        .check-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+        .auto-refresh {
+            display: inline-block;
+            padding: 5px 15px;
+            background: #e3f2fd;
+            color: #1976d2;
+            border-radius: 20px;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 Vérification Complète de la Protection</h1>
+        <p class="subtitle">Système de protection des routes - Debug Mode Activé</p>
+        
+        <div class="auto-refresh">🔄 Actualisation automatique toutes les 2 secondes</div>
+        
+        <div id="currentStatus" class="status-card"></div>
+
+        <div class="test-section">
+            <h3>🧪 TEST RAPIDE (30 secondes)</h3>
+            <div class="test-step">
+                <strong>Étape 1:</strong>
+                Cliquez sur "🗑️ EFFACER LA SESSION" ci-dessous
+            </div>
+            <div class="test-step">
+                <strong>Étape 2:</strong>
+                Attendez 2 secondes (actualisation automatique)
+            </div>
+            <div class="test-step">
+                <strong>Étape 3:</strong>
+                Vérifiez que le statut passe à "DÉCONNECTÉ" ❌
+            </div>
+            <div class="test-step">
+                <strong>Étape 4:</strong>
+                Cliquez sur "🧪 TESTER L'ACCÈS AU DASHBOARD" - Vous devriez être redirigé vers /login
+            </div>
+        </div>
+
+        <div style="margin: 30px 0;">
+            <button onclick="clearSession()" class="btn-danger">🗑️ EFFACER LA SESSION</button>
+            <button onclick="testDashboard()" class="btn-success">🧪 TESTER L'ACCÈS AU DASHBOARD</button>
+            <button onclick="testCustomers()" class="btn-success">🧪 TESTER L'ACCÈS AUX CLIENTS</button>
+            <button onclick="checkStatus()">🔄 ACTUALISER</button>
+        </div>
+
+        <div class="test-section">
+            <h3>🔍 État Détaillé du localStorage</h3>
+            <div class="check-grid" id="checks"></div>
+            <pre id="localStorageContent"></pre>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Instructions Console</h3>
+            <div class="test-step">
+                <strong>Ouvrez la Console (F12)</strong>
+                Vous verrez des logs comme:
+                <ul style="margin-top: 10px;">
+                    <li>🔄 Navigation: { path: "/customers", authenticated: false }</li>
+                    <li>🔒 ProtectedRoute Check: { hasToken: false }</li>
+                    <li>❌ Accès refusé - Redirection vers /login</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>✅ Résultats Attendus</h3>
+            <div class="check-grid">
+                <div class="check-item">
+                    <div class="check-icon">🔒</div>
+                    <strong>Sans token</strong>
+                    <p>Toutes les routes → /login</p>
+                </div>
+                <div class="check-item">
+                    <div class="check-icon">✅</div>
+                    <strong>Avec token</strong>
+                    <p>Accès complet au dashboard</p>
+                </div>
+                <div class="check-item">
+                    <div class="check-icon">🚫</div>
+                    <strong>Après logout</strong>
+                    <p>Redirection immédiate</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function checkStatus() {
+            const token = localStorage.getItem('token');
+            const authStorage = localStorage.getItem('auth-storage');
+            const statusDiv = document.getElementById('currentStatus');
+            const checksDiv = document.getElementById('checks');
+            
+            let hasValidToken = false;
+            
+            // Vérifier le token direct
+            if (token) hasValidToken = true;
+            
+            // Vérifier dans auth-storage
+            if (authStorage) {
+                try {
+                    const parsed = JSON.parse(authStorage);
+                    if (parsed.state?.token) hasValidToken = true;
+                } catch (e) {}
+            }
+            
+            // Statut global
+            if (hasValidToken) {
+                statusDiv.className = 'status-card status-connected';
+                statusDiv.innerHTML = '<span class="icon">✅</span><div><div>CONNECTÉ</div><div style="font-size: 0.8em; opacity: 0.9;">Token actif dans le localStorage - Accès complet</div></div>';
+            } else {
+                statusDiv.className = 'status-card status-disconnected';
+                statusDiv.innerHTML = '<span class="icon">❌</span><div><div>DÉCONNECTÉ</div><div style="font-size: 0.8em; opacity: 0.9;">Aucun token - Accès limité à /login et /register</div></div>';
+            }
+            
+            // Vérifications détaillées
+            let checks = '';
+            
+            if (token) {
+                checks += `<div class="check-item check-warning">
+                    <div class="check-icon">⚠️</div>
+                    <strong>localStorage.token</strong>
+                    <p>Présent</p>
+                </div>`;
+            } else {
+                checks += `<div class="check-item check-success">
+                    <div class="check-icon">✅</div>
+                    <strong>localStorage.token</strong>
+                    <p>null</p>
+                </div>`;
+            }
+            
+            if (authStorage) {
+                try {
+                    const parsed = JSON.parse(authStorage);
+                    if (parsed.state?.token) {
+                        checks += `<div class="check-item check-warning">
+                            <div class="check-icon">⚠️</div>
+                            <strong>auth-storage</strong>
+                            <p>Token présent</p>
+                        </div>`;
+                    } else {
+                        checks += `<div class="check-item check-success">
+                            <div class="check-icon">✅</div>
+                            <strong>auth-storage</strong>
+                            <p>Token = null</p>
+                        </div>`;
+                    }
+                } catch (e) {
+                    checks += `<div class="check-item">
+                        <div class="check-icon">❓</div>
+                        <strong>auth-storage</strong>
+                        <p>Invalide</p>
+                    </div>`;
+                }
+            } else {
+                checks += `<div class="check-item check-success">
+                    <div class="check-icon">✅</div>
+                    <strong>auth-storage</strong>
+                    <p>Supprimé</p>
+                </div>`;
+            }
+            
+            checksDiv.innerHTML = checks;
+            
+            // Afficher tout le localStorage
+            const content = {};
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                let value = localStorage.getItem(key);
+                try {
+                    value = JSON.parse(value);
+                } catch (e) {}
+                content[key] = value;
+            }
+            document.getElementById('localStorageContent').textContent = 
+                Object.keys(content).length > 0 
+                    ? JSON.stringify(content, null, 2)
+                    : '{ /* localStorage vide */ }';
+        }
+
+        function clearSession() {
+            if (confirm('⚠️ Effacer complètement la session ?\\n\\nCela va vous déconnecter.')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                alert('✅ Session effacée !\\n\\n↻ La page va s\'actualiser dans 1 seconde...');
+                setTimeout(checkStatus, 1000);
+            }
+        }
+
+        function testDashboard() {
+            alert('🧪 Test: Tentative d\'accès au Dashboard\\n\\nSi vous êtes déconnecté, vous serez redirigé vers /login\\n\\nOuvrez la console (F12) pour voir les logs de protection');
+            window.location.href = 'http://localhost:3000/';
+        }
+
+        function testCustomers() {
+            alert('🧪 Test: Tentative d\'accès à la page Clients\\n\\nSi vous êtes déconnecté, vous serez redirigé vers /login\\n\\nOuvrez la console (F12) pour voir les logs de protection');
+            window.location.href = 'http://localhost:3000/customers';
+        }
+
+        // Vérifier au chargement
+        checkStatus();
+
+        // Auto-refresh toutes les 2 secondes
+        setInterval(checkStatus, 2000);
+        
+        console.log('%c🔒 PAGE DE DEBUG DE LA PROTECTION DES ROUTES', 'font-size: 20px; color: #667eea; font-weight: bold;');
+        console.log('%cCette page s\'actualise automatiquement', 'color: #666;');
+    </script>
+</body>
+</html>
