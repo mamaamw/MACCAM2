@@ -17,6 +17,7 @@ export default function Chat() {
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [groupTitle, setGroupTitle] = useState('');
   const [groupDescription, setGroupDescription] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const messagesEndRef = useRef(null);
 
   // Charger les conversations au démarrage
@@ -55,8 +56,8 @@ export default function Chat() {
 
   const loadMessages = async (conversationId) => {
     try {
-      const data = await chatService.getMessages(conversationId);
-      setMessages(data);
+      const data = await chatService.getConversation(conversationId);
+      setMessages(data.messages || []);
     } catch (error) {
       toast.error('Erreur lors du chargement des messages');
       console.error(error);
@@ -70,17 +71,9 @@ export default function Chat() {
 
     try {
       setSending(true);
-      const message = await chatService.sendTextMessage(
-        selectedConversation.id,
-        newMessage.trim()
-      );
-      
-      // Ajouter le message à la liste
+      const message = await chatService.sendTextMessage(selectedConversation.id, newMessage.trim());
       setMessages([...messages, message]);
       setNewMessage('');
-      
-      // Mettre à jour la conversation dans la liste
-      loadConversations();
     } catch (error) {
       toast.error('Erreur lors de l\'envoi du message');
       console.error(error);
@@ -91,27 +84,16 @@ export default function Chat() {
 
   const handleSelectConversation = (conversation) => {
     setSelectedConversation(conversation);
-    setMessages([]);
   };
 
   const loadUsers = async () => {
     try {
       const data = await chatService.getUsers();
-      setUsers(data);
+      setUsers(data.filter(u => u.id !== user?.id));
     } catch (error) {
       toast.error('Erreur lors du chargement des utilisateurs');
       console.error(error);
     }
-  };
-
-  const handleOpenNewChat = async () => {
-    await loadUsers();
-    setShowNewChatModal(true);
-  };
-
-  const handleOpenNewGroup = async () => {
-    await loadUsers();
-    setShowNewGroupModal(true);
   };
 
   const handleCreateDirectChat = async (userId) => {
@@ -130,18 +112,17 @@ export default function Chat() {
   const handleCreateGroup = async (e) => {
     e.preventDefault();
     
-    if (!groupTitle.trim() || selectedUsers.length === 0) {
-      toast.error('Veuillez entrer un titre et sélectionner au moins un membre');
+    if (!groupTitle.trim() || selectedUsers.length < 2) {
+      toast.error('Veuillez entrer un titre et sélectionner au moins 2 participants');
       return;
     }
 
     try {
       const conversation = await chatService.createGroup(
-        groupTitle.trim(),
-        selectedUsers,
-        groupDescription.trim()
+        groupTitle,
+        selectedUsers.map(u => u.id),
+        groupDescription
       );
-      
       setConversations([conversation, ...conversations]);
       setSelectedConversation(conversation);
       setShowNewGroupModal(false);
@@ -155,321 +136,426 @@ export default function Chat() {
     }
   };
 
-  const toggleUserSelection = (userId) => {
-    if (selectedUsers.includes(userId)) {
-      setSelectedUsers(selectedUsers.filter(id => id !== userId));
-    } else {
-      setSelectedUsers([...selectedUsers, userId]);
-    }
-  };
-
-  const formatTime = (date) => {
-    const d = new Date(date);
+  const formatMessageTime = (date) => {
     const now = new Date();
-    const diff = now - d;
-    
-    // Moins de 24h : afficher l'heure
-    if (diff < 24 * 60 * 60 * 1000) {
-      return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    }
-    
-    // Moins de 7 jours : afficher le jour
-    if (diff < 7 * 24 * 60 * 60 * 1000) {
-      return d.toLocaleDateString('fr-FR', { weekday: 'short' });
-    }
-    
-    // Plus vieux : afficher la date
-    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    const messageDate = new Date(date);
+    const diffInMs = now - messageDate;
+    const diffInMinutes = Math.floor(diffInMs / 60000);
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInMinutes < 1) return 'NOW';
+    if (diffInMinutes < 60) return `${diffInMinutes} MIN AGO`;
+    if (diffInHours < 24) return `${diffInHours} HOUR AGO`;
+    if (diffInDays < 7) return `${diffInDays} DAY AGO`;
+    return messageDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }).toUpperCase();
   };
 
   const getConversationTitle = (conversation) => {
     if (conversation.type === 'GROUP') {
       return conversation.title;
     }
-    // Pour les conversations directes, afficher le nom de l'autre utilisateur
-    return conversation.otherUser 
-      ? `${conversation.otherUser.firstName} ${conversation.otherUser.lastName}`
-      : 'Conversation';
+    // Pour les conversations directes, afficher le nom de l'autre participant
+    const otherMember = conversation.members?.find(m => m.user.id !== user?.id);
+    return otherMember ? `${otherMember.user.firstName} ${otherMember.user.lastName}` : 'Conversation';
   };
 
   const getConversationAvatar = (conversation) => {
-    if (conversation.type === 'GROUP') {
-      return conversation.avatar || null;
+    if (conversation.type === 'GROUP' && conversation.avatar) {
+      return conversation.avatar;
     }
-    return conversation.otherUser?.avatar || null;
+    // Pour les conversations directes, utiliser l'avatar de l'autre participant
+    const otherMember = conversation.members?.find(m => m.user.id !== user?.id);
+    return otherMember?.user.avatar || '/assets/images/avatar/1.png';
   };
 
-  if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center" style={{height: '500px'}}>
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Chargement...</span>
-        </div>
-      </div>
-    );
-  }
+  const filteredConversations = conversations.filter(conv => {
+    const title = getConversationTitle(conv).toLowerCase();
+    return title.includes(searchQuery.toLowerCase());
+  });
 
   return (
-    <div className="container-fluid">
-      <div className="row">
-        <div className="col-12">
-          <div className="page-header">
-            <div className="row align-items-center">
-              <div className="col">
-                <h2 className="page-header-title">Chat</h2>
+    <>
+      <main className="nxl-container apps-container apps-chat">
+        <div className="nxl-content without-header nxl-full-content">
+          <div className="main-content d-flex">
+            {/* Sidebar - Liste des conversations */}
+            <div className="content-sidebar content-sidebar-xl" data-scrollbar-target="#psScrollbarInit">
+              <div className="content-sidebar-header bg-white sticky-top hstack justify-content-between">
+                <h4 className="fw-bolder mb-0">Chat</h4>
+                <a href="#" onClick={(e) => e.preventDefault()} className="app-sidebar-close-trigger d-flex">
+                  <i className="feather-x"></i>
+                </a>
               </div>
-              <div className="col-auto">
-                <button
-                  className="btn btn-primary me-2"
-                  onClick={handleOpenNewChat}
-                >
-                  <i className="feather-message-circle me-1"></i>
-                  Nouvelle conversation
-                </button>
-                <button
-                  className="btn btn-outline-primary"
-                  onClick={handleOpenNewGroup}
-                >
-                  <i className="feather-users me-1"></i>
-                  Nouveau groupe
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="row">
-        <div className="col-12">
-          <div className="card" style={{height: '70vh'}}>
-            <div className="row g-0 h-100">
-              {/* Sidebar des conversations */}
-              <div className="col-md-4 col-lg-3 border-end">
-                <div className="d-flex flex-column h-100">
-                  <div className="p-3 border-bottom">
+              
+              <div className="content-sidebar-body">
+                <div className="py-0 px-4 d-flex align-items-center justify-content-between border-bottom">
+                  <form className="sidebar-search" onSubmit={(e) => e.preventDefault()}>
                     <input
                       type="search"
-                      className="form-control"
-                      placeholder="Rechercher une conversation..."
+                      className="py-3 px-0 border-0"
+                      id="chattingSearch"
+                      placeholder="Search..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                     />
-                  </div>
-                  
-                  <div className="overflow-auto flex-grow-1">
-                    {conversations.length === 0 ? (
-                      <div className="text-center text-muted p-4">
-                        <i className="feather-message-circle" style={{fontSize: '3rem'}}></i>
-                        <p className="mt-3">Aucune conversation</p>
-                        <button
-                          className="btn btn-sm btn-primary"
-                          onClick={handleOpenNewChat}
-                        >
-                          Démarrer une conversation
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="list-group list-group-flush">
-                        {conversations.map((conversation) => (
-                          <button
-                            key={conversation.id}
-                            className={`list-group-item list-group-item-action ${
-                              selectedConversation?.id === conversation.id ? 'active' : ''
-                            }`}
-                            onClick={() => handleSelectConversation(conversation)}
-                          >
-                            <div className="d-flex align-items-center">
-                              <div className="avatar avatar-md me-3">
-                                {getConversationAvatar(conversation) ? (
-                                  <img
-                                    src={getConversationAvatar(conversation)}
-                                    alt="Avatar"
-                                    className="rounded-circle"
-                                  />
-                                ) : (
-                                  <div className="avatar-title bg-primary text-white rounded-circle">
-                                    {conversation.type === 'GROUP' ? (
-                                      <i className="feather-users"></i>
-                                    ) : (
-                                      getConversationTitle(conversation)[0]
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex-grow-1 overflow-hidden">
-                                <div className="d-flex justify-content-between align-items-start">
-                                  <h6 className="mb-0 text-truncate">
-                                    {getConversationTitle(conversation)}
-                                  </h6>
-                                  {conversation.lastMessage && (
-                                    <small className="text-muted ms-2">
-                                      {formatTime(conversation.lastMessage.createdAt)}
-                                    </small>
-                                  )}
-                                </div>
-                                {conversation.lastMessage && (
-                                  <p className="mb-0 text-muted small text-truncate">
-                                    {conversation.lastMessage.type === 'SYSTEM' ? (
-                                      <em>{conversation.lastMessage.content}</em>
-                                    ) : (
-                                      conversation.lastMessage.content
-                                    )}
-                                  </p>
-                                )}
-                              </div>
-                              {conversation.unreadCount > 0 && (
-                                <span className="badge bg-primary rounded-pill ms-2">
-                                  {conversation.unreadCount}
-                                </span>
-                              )}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                  </form>
+                  <div className="dropdown sidebar-filter">
+                    <a href="#" onClick={(e) => e.preventDefault()} data-bs-toggle="dropdown" className="d-flex align-items-center justify-content-center dropdown-toggle" data-bs-offset="0, 15">
+                      Newest
+                    </a>
+                    <ul className="dropdown-menu dropdown-menu-end overflow-auto">
+                      <li><a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item active">Newest</a></li>
+                      <li><a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">Oldest</a></li>
+                      <li><a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">Unread</a></li>
+                    </ul>
                   </div>
                 </div>
-              </div>
-
-              {/* Zone de messages */}
-              <div className="col-md-8 col-lg-9">
-                {selectedConversation ? (
-                  <div className="d-flex flex-column h-100">
-                    {/* Header de la conversation */}
-                    <div className="p-3 border-bottom">
-                      <div className="d-flex align-items-center justify-content-between">
-                        <div className="d-flex align-items-center">
-                          <div className="avatar avatar-md me-3">
-                            {getConversationAvatar(selectedConversation) ? (
-                              <img
-                                src={getConversationAvatar(selectedConversation)}
-                                alt="Avatar"
-                                className="rounded-circle"
-                              />
-                            ) : (
-                              <div className="avatar-title bg-primary text-white rounded-circle">
-                                {selectedConversation.type === 'GROUP' ? (
-                                  <i className="feather-users"></i>
-                                ) : (
-                                  getConversationTitle(selectedConversation)[0]
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <div>
-                            <h5 className="mb-0">{getConversationTitle(selectedConversation)}</h5>
-                            {selectedConversation.type === 'GROUP' && (
-                              <small className="text-muted">
-                                {selectedConversation.members.length} membres
-                              </small>
-                            )}
-                          </div>
+                
+                <div className="content-sidebar-items">
+                  {loading ? (
+                    <div className="p-4 text-center">
+                      <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Chargement...</span>
+                      </div>
+                    </div>
+                  ) : filteredConversations.length === 0 ? (
+                    <div className="p-4 text-center text-muted">
+                      <i className="feather-message-circle fs-3 d-block mb-2"></i>
+                      <p className="mb-0">Aucune conversation</p>
+                    </div>
+                  ) : (
+                    filteredConversations.map((conversation) => (
+                      <div
+                        key={conversation.id}
+                        className={`p-4 d-flex position-relative border-bottom c-pointer single-item ${
+                          selectedConversation?.id === conversation.id ? 'active' : ''
+                        }`}
+                        onClick={() => handleSelectConversation(conversation)}
+                      >
+                        <div className="avatar-image">
+                          <img
+                            src={getConversationAvatar(conversation)}
+                            className="img-fluid"
+                            alt={getConversationTitle(conversation)}
+                          />
                         </div>
-                        <div>
-                          <button className="btn btn-sm btn-outline-secondary">
-                            <i className="feather-more-vertical"></i>
-                          </button>
+                        <div className="ms-3 item-desc">
+                          <div className="w-100 d-flex align-items-center justify-content-between">
+                            <a href="#" onClick={(e) => e.preventDefault()} className="hstack gap-2 me-2">
+                              <span>{getConversationTitle(conversation)}</span>
+                              <div className={`wd-5 ht-5 rounded-circle opacity-75 me-1 ${
+                                conversation.type === 'GROUP' ? 'bg-info' : 'bg-success'
+                              }`}></div>
+                              {conversation.lastMessage && (
+                                <span className="fs-10 fw-medium text-muted text-uppercase d-none d-sm-block">
+                                  {formatMessageTime(conversation.lastMessage.createdAt)}
+                                </span>
+                              )}
+                            </a>
+                            <div className="dropdown">
+                              <a href="#" onClick={(e) => { e.stopPropagation(); e.preventDefault(); }} className="avatar-text avatar-sm" data-bs-toggle="dropdown">
+                                <i className="feather-more-vertical"></i>
+                              </a>
+                              <ul className="dropdown-menu dropdown-menu-end overflow-auto">
+                                <li>
+                                  <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                                    <i className="feather-check-circle me-3"></i>
+                                    <span>Marquer comme lu</span>
+                                  </a>
+                                </li>
+                                <li>
+                                  <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                                    <i className="feather-star me-3"></i>
+                                    <span>Favoris</span>
+                                  </a>
+                                </li>
+                                <li>
+                                  <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                                    <i className="feather-bell-off me-3"></i>
+                                    <span>Notifications</span>
+                                  </a>
+                                </li>
+                                <li className="dropdown-divider"></li>
+                                <li>
+                                  <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                                    <i className="feather-trash-2 me-3"></i>
+                                    <span>Supprimer</span>
+                                  </a>
+                                </li>
+                              </ul>
+                            </div>
+                          </div>
+                          <p className="fs-12 fw-semibold text-dark mt-2 mb-0 text-truncate-2-line">
+                            {conversation.lastMessage?.content || 'Aucun message pour le moment'}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+              <a href="#" onClick={(e) => e.preventDefault()} className="content-sidebar-footer px-4 py-3 fs-11 text-uppercase d-block text-center">Load More</a>
+            </div>
+
+            {/* Zone principale - Messages */}
+            <div className="content-area" data-scrollbar-target="#psScrollbarInit">
+              {selectedConversation ? (
+                <>
+                  {/* Header */}
+                  <div className="content-area-header sticky-top">
+                    <div className="page-header-left hstack gap-4">
+                      <a href="#" onClick={(e) => e.preventDefault()} className="app-sidebar-open-trigger">
+                        <i className="feather-align-left fs-20"></i>
+                      </a>
+                      <div className="d-flex align-items-center justify-content-center gap-3">
+                        <div className="avatar-image">
+                          <img
+                            src={getConversationAvatar(selectedConversation)}
+                            className="img-fluid"
+                            alt={getConversationTitle(selectedConversation)}
+                          />
+                        </div>
+                        <div className="d-none d-sm-block">
+                          <div className="fw-bold d-flex align-items-center">
+                            {getConversationTitle(selectedConversation)}
+                          </div>
+                          {selectedConversation.type === 'GROUP' ? (
+                            <div className="fs-11 text-muted">
+                              {selectedConversation.members?.length} membres
+                            </div>
+                          ) : (
+                            <div className="d-flex align-items-center mt-1">
+                              <span className="wd-7 ht-7 rounded-circle opacity-75 me-2 bg-success"></span>
+                              <span className="fs-9 text-uppercase fw-bold text-success">ACTIVE NOW</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
+                    <div className="page-header-right ms-auto">
+                      <div className="d-flex align-items-center justify-content-center gap-2">
+                        <a href="#" onClick={(e) => e.preventDefault()} className="d-flex">
+                          <div className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Appel vocal">
+                            <i className="feather-phone-call"></i>
+                          </div>
+                        </a>
+                        <a href="#" onClick={(e) => e.preventDefault()} className="d-flex">
+                          <div className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Appel vidéo">
+                            <i className="feather-video"></i>
+                          </div>
+                        </a>
+                        <a href="#" onClick={(e) => e.preventDefault()} className="d-flex d-none d-sm-block">
+                          <div className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Favoris">
+                            <i className="feather-star"></i>
+                          </div>
+                        </a>
+                        <a href="#" onClick={(e) => e.preventDefault()} className="d-flex">
+                          <div className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Informations">
+                            <i className="feather-info"></i>
+                          </div>
+                        </a>
+                        <div className="dropdown">
+                          <a href="#" onClick={(e) => e.preventDefault()} className="avatar-text avatar-md" data-bs-toggle="dropdown" data-bs-offset="0,22">
+                            <i className="feather-more-vertical"></i>
+                          </a>
+                          <div className="dropdown-menu dropdown-menu-end">
+                            <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                              <i className="feather-user-plus me-3"></i>
+                              <span>Ajouter au groupe</span>
+                            </a>
+                            <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                              <i className="feather-bell-off me-3"></i>
+                              <span>Notifications</span>
+                            </a>
+                            <div className="dropdown-divider"></div>
+                            <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                              <i className="feather-slash me-3"></i>
+                              <span>Bloquer</span>
+                            </a>
+                            <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                              <i className="feather-trash-2 me-3"></i>
+                              <span>Supprimer la conversation</span>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-                    {/* Messages */}
-                    <div className="flex-grow-1 overflow-auto p-3" style={{backgroundColor: '#f8f9fa'}}>
-                      {messages.map((message) => {
-                        const isOwn = message.senderId === user?.id;
-                        const isSystem = message.type === 'SYSTEM';
-
-                        if (isSystem) {
+                  {/* Messages */}
+                  <div className="content-area-body">
+                    {messages.length === 0 ? (
+                      <div className="text-center py-5">
+                        <i className="feather-message-circle fs-1 text-muted d-block mb-3"></i>
+                        <p className="text-muted">Aucun message dans cette conversation</p>
+                        <p className="text-muted fs-12">Commencez à discuter !</p>
+                      </div>
+                    ) : (
+                      messages.map((message, index) => {
+                        const isOwnMessage = message.sender?.id === user?.id;
+                        const previousMessage = index > 0 ? messages[index - 1] : null;
+                        const nextMessage = index < messages.length - 1 ? messages[index + 1] : null;
+                        
+                        // Vérifier si c'est le même expéditeur que le message précédent
+                        const isSameSenderAsPrevious = previousMessage && previousMessage.sender?.id === message.sender?.id;
+                        const isSameSenderAsNext = nextMessage && nextMessage.sender?.id === message.sender?.id;
+                        
+                        // Vérifier si les messages sont dans un intervalle court (moins de 2 minutes)
+                        const isCloseTimeToPrevious = previousMessage && 
+                          (new Date(message.createdAt) - new Date(previousMessage.createdAt)) < 120000; // 2 minutes
+                        
+                        const shouldShowHeader = !isSameSenderAsPrevious || !isCloseTimeToPrevious;
+                        const isLastInGroup = !isSameSenderAsNext || 
+                          (nextMessage && (new Date(nextMessage.createdAt) - new Date(message.createdAt)) >= 120000);
+                        
+                        if (message.type === 'SYSTEM') {
                           return (
-                            <div key={message.id} className="text-center my-3">
-                              <small className="text-muted">
-                                <em>{message.content}</em>
-                              </small>
+                            <div key={message.id} className="text-center my-4">
+                              <span className="badge bg-light text-muted p-2">
+                                <i className="feather-info me-2"></i>
+                                {message.content}
+                              </span>
                             </div>
                           );
                         }
 
                         return (
-                          <div
-                            key={message.id}
-                            className={`d-flex mb-3 ${isOwn ? 'justify-content-end' : ''}`}
-                          >
-                            {!isOwn && (
-                              <div className="avatar avatar-sm me-2">
-                                {message.sender?.avatar ? (
+                          <div key={message.id} className={`single-chat-item ${isLastInGroup ? 'mb-5' : 'mb-0'}`}>
+                            {shouldShowHeader && (
+                              <div className={`d-flex ${isOwnMessage ? 'flex-row-reverse' : ''} align-items-center gap-3 mb-3`}>
+                                <a href="#" onClick={(e) => e.preventDefault()} className="avatar-image">
                                   <img
-                                    src={message.sender.avatar}
-                                    alt="Avatar"
-                                    className="rounded-circle"
+                                    src={message.sender?.avatar || '/assets/images/avatar/1.png'}
+                                    className="img-fluid rounded-circle"
+                                    alt={`${message.sender?.firstName} ${message.sender?.lastName}`}
                                   />
-                                ) : (
-                                  <div className="avatar-title bg-secondary text-white rounded-circle">
-                                    {message.sender?.firstName?.[0] || '?'}
-                                  </div>
-                                )}
+                                </a>
+                                <div className={`d-flex ${isOwnMessage ? 'flex-row-reverse' : ''} align-items-center gap-2`}>
+                                  <a href="#" onClick={(e) => e.preventDefault()}>{message.sender?.firstName} {message.sender?.lastName}</a>
+                                  <span className="wd-5 ht-5 bg-gray-400 rounded-circle"></span>
+                                  <span className="fs-11 text-muted">{formatMessageTime(message.createdAt)}</span>
+                                </div>
                               </div>
                             )}
-                            <div style={{maxWidth: '70%'}}>
-                              {!isOwn && (
-                                <div className="mb-1">
-                                  <small className="text-muted">
-                                    {message.sender?.firstName} {message.sender?.lastName}
-                                  </small>
-                                </div>
-                              )}
-                              <div
-                                className={`p-2 rounded ${
-                                  isOwn
-                                    ? 'bg-primary text-white'
-                                    : 'bg-white border'
-                                }`}
-                              >
-                                <p className="mb-0">{message.content}</p>
-                              </div>
-                              <div className="mt-1">
-                                <small className="text-muted">
-                                  {formatTime(message.createdAt)}
-                                </small>
-                              </div>
+                            <div className={`wd-500 ${shouldShowHeader ? 'p-3' : 'px-3 pb-3 pt-0'} rounded-5 bg-gray-200 ${isOwnMessage ? 'ms-auto' : ''}`}>
+                              <p className={`py-2 px-3 rounded-5 bg-white ${!isLastInGroup ? 'mb-2' : 'mb-0'}`}>{message.content}</p>
                             </div>
                           </div>
                         );
-                      })}
-                      <div ref={messagesEndRef} />
-                    </div>
+                      })
+                    )}
+                    <div ref={messagesEndRef} />
+                  </div>
 
-                    {/* Input de message */}
-                    <div className="p-3 border-top">
-                      <form onSubmit={handleSendMessage}>
-                        <div className="input-group">
-                          <input
-                            type="text"
-                            className="form-control"
-                            placeholder="Écrivez un message..."
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            disabled={sending}
-                          />
-                          <button
-                            type="submit"
-                            className="btn btn-primary"
-                            disabled={sending || !newMessage.trim()}
-                          >
-                            {sending ? (
-                              <span className="spinner-border spinner-border-sm"></span>
-                            ) : (
-                              <i className="feather-send"></i>
-                            )}
-                          </button>
+                  {/* Zone de saisie */}
+                  <div className="content-area-footer">
+                    <form onSubmit={handleSendMessage} className="d-flex align-items-center gap-2">
+                      <a href="#" onClick={(e) => e.preventDefault()} className="d-flex">
+                        <div className="wd-60 d-flex align-items-center justify-content-center" style={{ height: '59px' }}>
+                          <i className="feather-hash"></i>
                         </div>
-                      </form>
-                    </div>
+                      </a>
+                      <div className="dropdown">
+                        <a href="#" onClick={(e) => e.preventDefault()} className="d-flex" data-bs-toggle="dropdown" data-bs-offset="0, 15">
+                          <div className="wd-60 d-flex align-items-center justify-content-center" style={{ height: '59px' }}>
+                            <i className="feather-paperclip"></i>
+                          </div>
+                        </a>
+                        <ul className="dropdown-menu dropdown-menu-start">
+                          <li>
+                            <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                              <i className="feather-image me-3"></i>Image
+                            </a>
+                          </li>
+                          <li>
+                            <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                              <i className="feather-file me-3"></i>Document
+                            </a>
+                          </li>
+                        </ul>
+                      </div>
+                      <a href="#" onClick={(e) => e.preventDefault()} className="d-flex">
+                        <div className="wd-60 d-flex align-items-center justify-content-center" style={{ height: '59px' }}>
+                          <i className="feather-mic"></i>
+                        </div>
+                      </a>
+                      <input
+                        type="text"
+                        className="form-control border-0"
+                        placeholder="Type your message here..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        disabled={sending}
+                      />
+                      <a href="#" onClick={(e) => e.preventDefault()} className="d-flex">
+                        <div className="wd-60 d-flex align-items-center justify-content-center" style={{ height: '59px' }}>
+                          <i className="feather-smile"></i>
+                        </div>
+                      </a>
+                      <div className="border-start border-gray-5 send-message">
+                        <button 
+                          type="submit" 
+                          className="wd-60 d-flex align-items-center justify-content-center border-0 bg-transparent"
+                          style={{ height: '59px' }}
+                          disabled={sending || !newMessage.trim()}
+                          data-bs-toggle="tooltip"
+                          data-bs-trigger="hover"
+                          title="Send Message"
+                        >
+                          {sending ? (
+                            <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                          ) : (
+                            <i className="feather-send"></i>
+                          )}
+                        </button>
+                      </div>
+                    </form>
                   </div>
+                </>
+              ) : (
+                <div className="d-flex align-items-center justify-content-center h-100">
+                  <div className="text-center">
+                    <i className="feather-message-circle" style={{ fontSize: '5rem', opacity: 0.3 }}></i>
+                    <h4 className="mt-3 text-muted">Sélectionnez une conversation</h4>
+                    <p className="text-muted">Choisissez une conversation pour commencer à discuter</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Modal Nouvelle conversation */}
+      <div className="modal fade" id="newChatModal" tabIndex="-1">
+        <div className="modal-dialog">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">Nouvelle conversation</h5>
+              <button type="button" className="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div className="modal-body">
+              <div className="list-group">
+                {users.length === 0 ? (
+                  <div className="text-center py-3 text-muted">Chargement...</div>
                 ) : (
-                  <div className="d-flex justify-content-center align-items-center h-100 text-muted">
-                    <div className="text-center">
-                      <i className="feather-message-circle" style={{fontSize: '4rem'}}></i>
-                      <p className="mt-3">Sélectionnez une conversation pour commencer</p>
-                    </div>
-                  </div>
+                  users.map((u) => (
+                    <button
+                      key={u.id}
+                      className="list-group-item list-group-item-action d-flex align-items-center gap-3"
+                      onClick={() => handleCreateDirectChat(u.id)}
+                      data-bs-dismiss="modal"
+                    >
+                      <div className="avatar-image">
+                        <img src={u.avatar || '/assets/images/avatar/1.png'} className="img-fluid" alt={u.firstName} />
+                      </div>
+                      <div>
+                        <div className="fw-bold">{u.firstName} {u.lastName}</div>
+                        <div className="fs-12 text-muted">{u.email}</div>
+                      </div>
+                    </button>
+                  ))
                 )}
               </div>
             </div>
@@ -477,158 +563,83 @@ export default function Chat() {
         </div>
       </div>
 
-      {/* Modal : Nouvelle conversation */}
-      {showNewChatModal && (
-        <div className="modal show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Nouvelle conversation</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => setShowNewChatModal(false)}
-                ></button>
-              </div>
-              <div className="modal-body">
-                <p className="text-muted mb-3">Sélectionnez un utilisateur pour démarrer une conversation</p>
-                <div className="list-group">
-                  {users.map((usr) => (
-                    <button
-                      key={usr.id}
-                      className="list-group-item list-group-item-action"
-                      onClick={() => handleCreateDirectChat(usr.id)}
-                    >
-                      <div className="d-flex align-items-center">
-                        <div className="avatar avatar-sm me-3">
-                          {usr.avatar ? (
-                            <img src={usr.avatar} alt="Avatar" className="rounded-circle" />
-                          ) : (
-                            <div className="avatar-title bg-primary text-white rounded-circle">
-                              {usr.firstName[0]}
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <h6 className="mb-0">{usr.firstName} {usr.lastName}</h6>
-                          <small className="text-muted">{usr.email}</small>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
+      {/* Modal Nouveau groupe */}
+      <div className="modal fade" id="newGroupModal" tabIndex="-1">
+        <div className="modal-dialog modal-lg">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">Créer un groupe</h5>
+              <button type="button" className="btn-close" data-bs-dismiss="modal"></button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal : Nouveau groupe */}
-      {showNewGroupModal && (
-        <div className="modal show d-block" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">Créer un groupe</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  onClick={() => {
-                    setShowNewGroupModal(false);
-                    setGroupTitle('');
-                    setGroupDescription('');
-                    setSelectedUsers([]);
-                  }}
-                ></button>
-              </div>
-              <form onSubmit={handleCreateGroup}>
-                <div className="modal-body">
-                  <div className="mb-3">
-                    <label className="form-label">Nom du groupe *</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={groupTitle}
-                      onChange={(e) => setGroupTitle(e.target.value)}
-                      placeholder="Ex: Équipe Marketing"
-                      required
-                    />
-                  </div>
-                  
-                  <div className="mb-3">
-                    <label className="form-label">Description (optionnelle)</label>
-                    <textarea
-                      className="form-control"
-                      rows="2"
-                      value={groupDescription}
-                      onChange={(e) => setGroupDescription(e.target.value)}
-                      placeholder="Description du groupe..."
-                    ></textarea>
-                  </div>
-
-                  <div className="mb-3">
-                    <label className="form-label">Membres *</label>
-                    <p className="text-muted small">Sélectionnez au moins un membre</p>
-                    <div className="list-group" style={{maxHeight: '300px', overflowY: 'auto'}}>
-                      {users.map((usr) => (
-                        <label
-                          key={usr.id}
-                          className={`list-group-item ${selectedUsers.includes(usr.id) ? 'active' : ''}`}
-                          style={{cursor: 'pointer'}}
-                        >
-                          <div className="d-flex align-items-center">
-                            <input
-                              type="checkbox"
-                              className="form-check-input me-3"
-                              checked={selectedUsers.includes(usr.id)}
-                              onChange={() => toggleUserSelection(usr.id)}
-                            />
-                            <div className="avatar avatar-sm me-3">
-                              {usr.avatar ? (
-                                <img src={usr.avatar} alt="Avatar" className="rounded-circle" />
-                              ) : (
-                                <div className="avatar-title bg-secondary text-white rounded-circle">
-                                  {usr.firstName[0]}
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex-grow-1">
-                              <div>{usr.firstName} {usr.lastName}</div>
-                              <small className="text-muted">{usr.email}</small>
-                            </div>
+            <form onSubmit={handleCreateGroup}>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <label className="form-label">Nom du groupe *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={groupTitle}
+                    onChange={(e) => setGroupTitle(e.target.value)}
+                    placeholder="Ex: Équipe Marketing"
+                    required
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Description</label>
+                  <textarea
+                    className="form-control"
+                    rows="3"
+                    value={groupDescription}
+                    onChange={(e) => setGroupDescription(e.target.value)}
+                    placeholder="Description optionnelle du groupe"
+                  ></textarea>
+                </div>
+                <div className="mb-3">
+                  <label className="form-label">Participants * (min. 2)</label>
+                  <div className="border rounded p-3" style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                    {users.map((u) => (
+                      <div key={u.id} className="form-check mb-2">
+                        <input
+                          className="form-check-input"
+                          type="checkbox"
+                          id={`user-${u.id}`}
+                          checked={selectedUsers.some(su => su.id === u.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedUsers([...selectedUsers, u]);
+                            } else {
+                              setSelectedUsers(selectedUsers.filter(su => su.id !== u.id));
+                            }
+                          }}
+                        />
+                        <label className="form-check-label d-flex align-items-center gap-2" htmlFor={`user-${u.id}`}>
+                          <div className="avatar-text avatar-sm bg-soft-primary text-primary">
+                            {u.firstName[0]}{u.lastName[0]}
+                          </div>
+                          <div>
+                            <div className="fw-semibold">{u.firstName} {u.lastName}</div>
+                            <div className="fs-12 text-muted">{u.email}</div>
                           </div>
                         </label>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="fs-12 text-muted mt-2">
+                    {selectedUsers.length} participant(s) sélectionné(s)
                   </div>
                 </div>
-                <div className="modal-footer">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => {
-                      setShowNewGroupModal(false);
-                      setGroupTitle('');
-                      setGroupDescription('');
-                      setSelectedUsers([]);
-                    }}
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn btn-primary"
-                    disabled={!groupTitle.trim() || selectedUsers.length === 0}
-                  >
-                    <i className="feather-check me-1"></i>
-                    Créer le groupe
-                  </button>
-                </div>
-              </form>
-            </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="submit" className="btn btn-primary" disabled={!groupTitle.trim() || selectedUsers.length < 2}>
+                  <i className="feather-users me-2"></i>
+                  Créer le groupe
+                </button>
+              </div>
+            </form>
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
