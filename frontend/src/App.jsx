@@ -23,17 +23,28 @@ import Projects from './pages/projects/Projects'
 import Tasks from './pages/tasks/Tasks'
 import Invoices from './pages/invoices/Invoices'
 import Settings from './pages/Settings'
+import Users from './pages/Users'
+import Contacts from './pages/Contacts'
+import ContactDetail from './pages/ContactDetail'
+import Chat from './pages/apps/Chat'
 
 function App() {
   const { token } = useAuthStore()
   const location = useLocation()
 
   useEffect(() => {
+    console.log('✅ App.jsx chargé!')
     console.log('🔄 Navigation:', {
       path: location.pathname,
       authenticated: !!token
     })
   }, [location, token])
+
+  // Test de rendu minimal
+  if (typeof window !== 'undefined') {
+    console.log('🌐 Window exists')
+    console.log('📍 Current path:', window.location.pathname)
+  }
 
   return (
     <Routes>
@@ -145,6 +156,41 @@ function App() {
         <ProtectedRoute>
           <DashboardLayout>
             <Profile />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Users - Admin */}
+      <Route path="/users" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Users />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Contacts */}
+      <Route path="/contacts" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Contacts />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/contacts/:id" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ContactDetail />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Chat */}
+      <Route path="/apps/chat" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Chat />
           </DashboardLayout>
         </ProtectedRoute>
       } />

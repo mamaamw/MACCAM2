@@ -24,7 +24,7 @@ export default function Sidebar() {
             
             {/* Dashboards */}
             <li className="nxl-item nxl-hasmenu">
-              <a href="javascript:void(0);" className="nxl-link">
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-airplay"></i></span>
                 <span className="nxl-mtext">Dashboards</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
@@ -37,7 +37,7 @@ export default function Sidebar() {
             
             {/* Reports */}
             <li className="nxl-item nxl-hasmenu">
-              <a href="javascript:void(0);" className="nxl-link">
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-cast"></i></span>
                 <span className="nxl-mtext">Reports</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
@@ -52,7 +52,7 @@ export default function Sidebar() {
             
             {/* Applications */}
             <li className="nxl-item nxl-hasmenu">
-              <a href="javascript:void(0);" className="nxl-link">
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-send"></i></span>
                 <span className="nxl-mtext">Applications</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
@@ -69,7 +69,7 @@ export default function Sidebar() {
             
             {/* Proposal */}
             <li className="nxl-item nxl-hasmenu">
-              <a href="javascript:void(0);" className="nxl-link">
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-at-sign"></i></span>
                 <span className="nxl-mtext">Proposal</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
@@ -84,7 +84,7 @@ export default function Sidebar() {
             
             {/* Payment */}
             <li className="nxl-item nxl-hasmenu">
-              <a href="javascript:void(0);" className="nxl-link">
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-dollar-sign"></i></span>
                 <span className="nxl-mtext">Payment</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
@@ -98,7 +98,7 @@ export default function Sidebar() {
             
             {/* Customers */}
             <li className="nxl-item nxl-hasmenu">
-              <a href="javascript:void(0);" className="nxl-link">
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-users"></i></span>
                 <span className="nxl-mtext">Customers</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
@@ -112,7 +112,7 @@ export default function Sidebar() {
             
             {/* Leads */}
             <li className="nxl-item nxl-hasmenu">
-              <a href="javascript:void(0);" className="nxl-link">
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-alert-circle"></i></span>
                 <span className="nxl-mtext">Leads</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
@@ -126,7 +126,7 @@ export default function Sidebar() {
             
             {/* Projects */}
             <li className="nxl-item nxl-hasmenu">
-              <a href="javascript:void(0);" className="nxl-link">
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-briefcase"></i></span>
                 <span className="nxl-mtext">Projects</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
@@ -140,7 +140,7 @@ export default function Sidebar() {
             
             {/* Widgets */}
             <li className="nxl-item nxl-hasmenu">
-              <a href="javascript:void(0);" className="nxl-link">
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-layout"></i></span>
                 <span className="nxl-mtext">Widgets</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
@@ -156,7 +156,7 @@ export default function Sidebar() {
             
             {/* Settings */}
             <li className="nxl-item nxl-hasmenu">
-              <a href="javascript:void(0);" className="nxl-link">
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-settings"></i></span>
                 <span className="nxl-mtext">Settings</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
@@ -178,9 +178,25 @@ export default function Sidebar() {
               </ul>
             </li>
             
+            {/* Utilisateurs - Admin */}
+            <li className="nxl-item">
+              <Link to="/users" className={`nxl-link ${isActive('/users')}`}>
+                <span className="nxl-micon"><i className="feather-user-check"></i></span>
+                <span className="nxl-mtext">Utilisateurs</span>
+              </Link>
+            </li>
+            
+            {/* Contacts */}
+            <li className="nxl-item">
+              <Link to="/contacts" className={`nxl-link ${isActive('/contacts')}`}>
+                <span className="nxl-micon"><i className="feather-user-plus"></i></span>
+                <span className="nxl-mtext">Contacts</span>
+              </Link>
+            </li>
+            
             {/* Help Center */}
             <li className="nxl-item nxl-hasmenu">
-              <a href="javascript:void(0);" className="nxl-link">
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-life-buoy"></i></span>
                 <span className="nxl-mtext">Help Center</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>

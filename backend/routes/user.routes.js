@@ -15,6 +15,7 @@ router.get('/', authorize('ADMIN', 'MANAGER'), async (req, res) => {
       select: {
         id: true,
         email: true,
+        username: true,
         firstName: true,
         lastName: true,
         phone: true,

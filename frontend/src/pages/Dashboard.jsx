@@ -1,4 +1,17 @@
+import { useState, useEffect } from 'react';
+
 export default function Dashboard() {
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    console.log('✅ Dashboard mounted');
+    setLoaded(true);
+  }, []);
+
+  if (!loaded) {
+    return <div>Chargement du Dashboard...</div>;
+  }
+
   return (
     <div className="main-content">
       <div className="row">

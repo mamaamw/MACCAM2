@@ -20,17 +20,26 @@ model User {
   firstName       String
   lastName        String
   phone           String?
+  phoneLabel      String?   // Mobile, Travail, Domicile, etc.
+  secondaryPhone  String?
+  secondaryPhoneLabel String?
   avatar          String?
   role            String    @default("USER") // ADMIN, MANAGER, SALES, USER
   isActive        Boolean   @default(true)
+  isContact       Boolean   @default(false) // true = contact simple, false = utilisateur
   
   // Champs additionnels pour le profil
   company         String?
+  jobTitle        String?   // Fonction/poste
+  website         String?   // Site web
+  secondaryEmail  String?   // Email secondaire
   address         String?
   city            String?
   country         String?
   postalCode      String?
-  bio             String?
+  birthDate       DateTime? // Date de naissance
+  labels          String?   // Étiquettes/tags (JSON array)
+  bio             String?   // Notes
   
   // 2FA
   twoFactorEnabled Boolean  @default(false)
@@ -47,8 +56,106 @@ model User {
   notes           Note[]
   activities      Activity[]
   notificationSettings NotificationSettings?
+  
+  // Relations pour contacts (champs multiples)
+  contactEmails   ContactEmail[]
+  contactPhones   ContactPhone[]
+  contactAddresses ContactAddress[]
+  contactWebsites ContactWebsite[]
+  contactDates    ContactDate[]
+  contactRelations ContactRelation[]
+  contactCustomFields ContactCustomField[]
+  
+  // Relations pour le chat
+  conversationMemberships ConversationMember[]
 
   @@map("users")
+}
+
+// Tables pour champs multiples des contacts
+
+model ContactEmail {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  email     String
+  label     String   @default("Travail") // Travail, Personnel, Autre
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  @@map("contact_emails")
+}
+
+model ContactPhone {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone     String
+  label     String   @default("Mobile") // Mobile, Travail, Domicile, Principal, Autre
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  
+  @@map("contact_phones")
+}
+
+model ContactAddress {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label      String   @default("Domicile") // Domicile, Travail, Autre
+  street     String?
+  city       String?
+  state      String?
+  postalCode String?
+  country    String?
+  isPrimary  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  
+  @@map("contact_addresses")
+}
+
+model ContactWebsite {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  url       String
+  label     String   @default("Site Web") // Site Web, Blog, Profil, Accueil, Travail, Autre
+  createdAt DateTime @default(now())
+  
+  @@map("contact_websites")
+}
+
+model ContactDate {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date      DateTime
+  label     String   @default("Anniversaire") // Anniversaire, Événement, Autre
+  createdAt DateTime @default(now())
+  
+  @@map("contact_dates")
+}
+
+model ContactRelation {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  label     String   @default("Contact") // Conjoint, Enfant, Parent, Manager, Assistant, Partenaire, Autre
+  createdAt DateTime @default(now())
+  
+  @@map("contact_relations")
+}
+
+model ContactCustomField {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fieldName String
+  value     String
+  createdAt DateTime @default(now())
+  
+  @@map("contact_custom_fields")
 }
 
 model Customer {
@@ -276,5 +383,63 @@ model NotificationSettings {
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_settings")
+}
+
+// ============================================
+// CHAT - Système de messagerie
+// ============================================
+
+// Conversations (1-à-1 ou groupes)
+model Conversation {
+  id              String    @id @default(uuid())
+  type            String    @default("DIRECT") // DIRECT ou GROUP
+  title           String?   // Nom du groupe (uniquement pour les groupes)
+  description     String?   // Description du groupe
+  avatar          String?   // Avatar du groupe
+  createdById     String    // Créateur de la conversation
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastMessageAt   DateTime? // Date du dernier message (pour tri)
+  
+  // Relations
+  members         ConversationMember[]
+  messages        Message[]
+
+  @@map("conversations")
+}
+
+// Membres d'une conversation (relation many-to-many)
+model ConversationMember {
+  id              String    @id @default(uuid())
+  conversationId  String
+  userId          String
+  joinedAt        DateTime  @default(now())
+  isAdmin         Boolean   @default(false) // Pour les groupes
+  leftAt          DateTime? // Date de départ (si quitté)
+  
+  // Relations
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([conversationId, userId])
+  @@map("conversation_members")
+}
+
+// Messages
+model Message {
+  id              String    @id @default(uuid())
+  conversationId  String
+  senderId        String
+  content         String
+  type            String    @default("TEXT") // TEXT, IMAGE, FILE, SYSTEM
+  attachmentUrl   String?   // URL du fichier joint
+  isRead          Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@map("messages")
 }
 

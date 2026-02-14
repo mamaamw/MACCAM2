@@ -39,7 +39,7 @@ export const register = async (req, res, next) => {
     // Hasher le mot de passe
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Créer l'utilisateur
+    // Créer l'utilisateur (automatiquement un contact aussi)
     const user = await prisma.user.create({
       data: {
         email,
@@ -47,7 +47,9 @@ export const register = async (req, res, next) => {
         password: hashedPassword,
         firstName,
         lastName,
-        phone: phone || null
+        phone: phone || null,
+        isContact: true,  // Tous les utilisateurs sont aussi des contacts
+        isActive: true    // Actifs par défaut lors de l'inscription
       },
       select: {
         id: true,

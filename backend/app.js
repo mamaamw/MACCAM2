@@ -8,11 +8,14 @@ import rateLimit from 'express-rate-limit';
 // Routes
 import authRoutes from './routes/auth.routes.js';
 import userRoutes from './routes/user.routes.js';
+import contactRoutes from './routes/contact.routes.js';
+import contactFieldsRoutes from './routes/contact-fields.routes.js';
 import customerRoutes from './routes/customer.routes.js';
 import leadRoutes from './routes/lead.routes.js';
 import projectRoutes from './routes/project.routes.js';
 import taskRoutes from './routes/task.routes.js';
 import invoiceRoutes from './routes/invoice.routes.js';
+import chatRoutes from './routes/chat.routes.js';
 
 // Middleware d'erreur
 import { errorHandler } from './middleware/error.middleware.js';
@@ -53,11 +56,14 @@ if (process.env.NODE_ENV === 'development') {
 // Routes API
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/contacts', contactRoutes);
+app.use('/api/v1/contact-fields', contactFieldsRoutes);
 app.use('/api/v1/customers', customerRoutes);
 app.use('/api/v1/leads', leadRoutes);
 app.use('/api/v1/projects', projectRoutes);
 app.use('/api/v1/tasks', taskRoutes);
 app.use('/api/v1/invoices', invoiceRoutes);
+app.use('/api/v1/chat', chatRoutes);
 
 // Route de test
 app.get('/api/v1/health', (req, res) => {
