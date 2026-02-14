@@ -8,8 +8,10 @@ export default function Register() {
   const navigate = useNavigate()
   const { setAuth } = useAuthStore()
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
+    username: '',
     password: '',
     firstName: '',
     lastName: '',
@@ -76,6 +78,25 @@ export default function Register() {
             </div>
 
             <div className="col-12">
+              <label className="form-label">Nom d'utilisateur</label>
+              <div className="input-group">
+                <span className="input-group-text"><i className="feather-user"></i></span>
+                <input
+                  type="text"
+                  className="form-control"
+                  required
+                  value={formData.username}
+                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  placeholder="johndoe"
+                  pattern="[a-zA-Z0-9_]+"
+                  title="Uniquement des lettres, chiffres et underscores"
+                  minLength="3"
+                />
+              </div>
+              <small className="text-muted">Au moins 3 caractères (lettres, chiffres et underscore uniquement)</small>
+            </div>
+
+            <div className="col-12">
               <label className="form-label">Téléphone</label>
               <div className="input-group">
                 <span className="input-group-text"><i className="feather-phone"></i></span>
@@ -94,13 +115,20 @@ export default function Register() {
               <div className="input-group">
                 <span className="input-group-text"><i className="feather-lock"></i></span>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   className="form-control"
                   required
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Minimum 6 caractères"
                 />
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  <i className={showPassword ? "feather-eye-off" : "feather-eye"}></i>
+                </button>
               </div>
             </div>
 

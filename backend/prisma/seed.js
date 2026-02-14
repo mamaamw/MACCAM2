@@ -14,6 +14,7 @@ async function main() {
     update: {},
     create: {
       email: 'admin@maccam.com',
+      username: 'admin',
       password: hashedPassword,
       firstName: 'Admin',
       lastName: 'MACCAM',
@@ -31,6 +32,7 @@ async function main() {
     update: {},
     create: {
       email: 'manager@maccam.com',
+      username: 'manager',
       password: hashedPassword,
       firstName: 'Jean',
       lastName: 'Dupont',

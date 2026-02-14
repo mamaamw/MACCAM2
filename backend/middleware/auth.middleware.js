@@ -30,6 +30,7 @@ export const protect = async (req, res, next) => {
         select: {
           id: true,
           email: true,
+          username: true,
           firstName: true,
           lastName: true,
           role: true,

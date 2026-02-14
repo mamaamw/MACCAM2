@@ -14,6 +14,7 @@ export default function Profile() {
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
     email: user?.email || '',
+    username: user?.username || '',
     phone: user?.phone || '',
     company: user?.company || '',
     address: user?.address || '',
@@ -55,6 +56,7 @@ export default function Profile() {
           firstName: userData.firstName || '',
           lastName: userData.lastName || '',
           email: userData.email || '',
+          username: userData.username || '',
           phone: userData.phone || '',
           company: userData.company || '',
           address: userData.address || '',
@@ -279,6 +281,7 @@ export default function Profile() {
                       <a href="javascript:void(0);" className="fw-bold mb-1 text-truncate-1-line">
                         {user?.firstName} {user?.lastName}
                       </a>
+                      <div className="fs-11 fw-semibold text-primary text-truncate-1-line">@{user?.username}</div>
                       <div className="fs-12 fw-normal text-muted text-truncate-1-line">{user?.email}</div>
                     </div>
                   </div>
@@ -460,6 +463,22 @@ export default function Profile() {
                               placeholder="votre@email.com"
                               required
                             />
+                          </div>
+                          <div className="col-md-6 mb-4">
+                            <label className="form-label">Nom d'utilisateur <span className="text-danger">*</span></label>
+                            <input 
+                              type="text" 
+                              className="form-control" 
+                              name="username"
+                              value={formData.username}
+                              onChange={handleChange}
+                              placeholder="johndoe"
+                              pattern="[a-zA-Z0-9_]+"
+                              title="Uniquement des lettres, chiffres et underscores"
+                              minLength="3"
+                              required
+                            />
+                            <small className="text-muted">Au moins 3 caractères (lettres, chiffres et underscore uniquement)</small>
                           </div>
                           <div className="col-md-6 mb-4">
                             <label className="form-label">Téléphone</label>

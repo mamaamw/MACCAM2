@@ -37,6 +37,7 @@ router.get('/profile', async (req, res) => {
       select: {
         id: true,
         email: true,
+        username: true,
         firstName: true,
         lastName: true,
         phone: true,
@@ -68,7 +69,7 @@ router.get('/profile', async (req, res) => {
 // PUT /api/users/profile - Mettre à jour le profil
 router.put('/profile', async (req, res) => {
   try {
-    const { firstName, lastName, email, phone, company, address, city, country, postalCode, bio } = req.body;
+    const { firstName, lastName, email, username, phone, company, address, city, country, postalCode, bio } = req.body;
     
     // Vérifier si l'email est déjà utilisé par un autre utilisateur
     if (email && email !== req.user.email) {
@@ -81,12 +82,24 @@ router.put('/profile', async (req, res) => {
       }
     }
     
+    // Vérifier si le username est déjà utilisé par un autre utilisateur
+    if (username && username !== req.user.username) {
+      const existingUsername = await prisma.user.findUnique({ where: { username } });
+      if (existingUsername) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Ce nom d\'utilisateur est déjà pris' 
+        });
+      }
+    }
+    
     const user = await prisma.user.update({
       where: { id: req.user.id },
       data: {
         firstName,
         lastName,
         email,
+        username,
         phone,
         company,
         address,
@@ -98,6 +111,7 @@ router.put('/profile', async (req, res) => {
       select: {
         id: true,
         email: true,
+        username: true,
         firstName: true,
         lastName: true,
         phone: true,

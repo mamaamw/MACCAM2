@@ -16,14 +16,23 @@ const generateToken = (id) => {
 // @access  Public
 export const register = async (req, res, next) => {
   try {
-    const { email, password, firstName, lastName, phone } = req.body;
+    const { email, username, password, firstName, lastName, phone } = req.body;
 
-    // Vérifier si l'utilisateur existe déjà
-    const userExists = await prisma.user.findUnique({ where: { email } });
-    if (userExists) {
+    // Vérifier si l'email existe déjà
+    const emailExists = await prisma.user.findUnique({ where: { email } });
+    if (emailExists) {
       return res.status(400).json({
         success: false,
         message: 'Un utilisateur avec cet email existe déjà'
+      });
+    }
+
+    // Vérifier si le username existe déjà
+    const usernameExists = await prisma.user.findUnique({ where: { username } });
+    if (usernameExists) {
+      return res.status(400).json({
+        success: false,
+        message: 'Ce nom d\'utilisateur est déjà pris'
       });
     }
 
@@ -34,6 +43,7 @@ export const register = async (req, res, next) => {
     const user = await prisma.user.create({
       data: {
         email,
+        username,
         password: hashedPassword,
         firstName,
         lastName,
@@ -42,6 +52,7 @@ export const register = async (req, res, next) => {
       select: {
         id: true,
         email: true,
+        username: true,
         firstName: true,
         lastName: true,
         role: true,
@@ -75,13 +86,19 @@ export const login = async (req, res, next) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Veuillez fournir un email et un mot de passe'
+        message: 'Veuillez fournir un identifiant et un mot de passe'
       });
     }
 
-    // Récupérer l'utilisateur
-    const user = await prisma.user.findUnique({
-      where: { email }
+    // Récupérer l'utilisateur par email ou username
+    // SQLite: la recherche est case-insensitive par défaut pour LIKE
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: email },
+          { username: email }
+        ]
+      }
     });
 
     if (!user) {
@@ -136,6 +153,7 @@ export const getMe = async (req, res, next) => {
       select: {
         id: true,
         email: true,
+        username: true,
         firstName: true,
         lastName: true,
         phone: true,
