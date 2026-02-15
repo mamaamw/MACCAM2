@@ -955,12 +955,15 @@ export default function Chat() {
 
   return (
     <>
-      <main className="nxl-container apps-container apps-chat" style={{ height: '100dvh' }}>
-        <div className="nxl-content without-header nxl-full-content" style={{ height: '100%' }}>
-          <div className="main-content d-flex" style={{ height: '100%', overflow: 'hidden' }}>
+      <main
+        className="nxl-container apps-container apps-chat"
+        style={{ top: 0, minHeight: 'calc(100vh - 80px)' }}
+      >
+        <div className="nxl-content without-header nxl-full-content">
+          <div className="main-content d-flex" style={{ overflow: 'hidden' }}>
             {/* Sidebar - Liste des conversations */}
-            <div className="content-sidebar content-sidebar-xl" data-scrollbar-target="#psScrollbarInit" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <div className="content-sidebar-header bg-white sticky-top hstack justify-content-between">
+            <div className="content-sidebar content-sidebar-xl" data-scrollbar-target="#psScrollbarInit" style={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
+              <div className="content-sidebar-header bg-white hstack justify-content-between" style={{ flexShrink: 0 }}>
                 <h4 className="fw-bolder mb-0">Chat</h4>
                 <div className="hstack gap-2">
                   {/* Bouton Nouveau Chat avec Dropdown */}
@@ -1202,11 +1205,11 @@ export default function Chat() {
             </div>
 
             {/* Zone principale - Messages */}
-            <div className="content-area" data-scrollbar-target="#psScrollbarInit" style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div className="content-area" data-scrollbar-target="#psScrollbarInit" style={{ flex: 1, height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {selectedConversation ? (
                 <>
                   {/* Header */}
-                  <div className="content-area-header sticky-top" style={{ flexShrink: 0 }}>
+                  <div className="content-area-header" style={{ flexShrink: 0, zIndex: 2, backgroundColor: '#fff' }}>
                     <div className="page-header-left hstack gap-4">
                       <a href="#" onClick={(e) => e.preventDefault()} className="app-sidebar-open-trigger">
                         <i className="feather-align-left fs-20"></i>
@@ -1486,7 +1489,7 @@ export default function Chat() {
                   </div>
 
                   {/* Zone de saisie */}
-                  <div className="content-area-footer" style={{ flexShrink: 0 }}>
+                  <div className="content-area-footer" style={{ flexShrink: 0, zIndex: 2, backgroundColor: '#fff' }}>
                     {isSendingBlocked && (
                       <div className="px-3 pt-2 pb-1 fs-12 text-danger">
                         Vous avez bloqué cet utilisateur. Débloquez-le pour envoyer des messages.
