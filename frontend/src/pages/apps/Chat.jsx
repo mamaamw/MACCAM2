@@ -4,7 +4,15 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function Chat() {
-  const { user } = useAuthStore();
+  const { user, token } = useAuthStore();
+  
+  // Log de débogage
+  console.log('🎯 Chat Component Mounted', {
+    user: user ? `${user.firstName} ${user.lastName}` : 'null',
+    hasToken: !!token,
+    tokenPreview: token ? `${token.substring(0, 20)}...` : 'null'
+  });
+
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -18,10 +26,13 @@ export default function Chat() {
   const [groupTitle, setGroupTitle] = useState('');
   const [groupDescription, setGroupDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [loadingUsers, setLoadingUsers] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Charger les conversations au démarrage
   useEffect(() => {
+    console.log('📥 Loading conversations...');
     loadConversations();
   }, []);
 
@@ -43,10 +54,19 @@ export default function Chat() {
 
   const loadConversations = async () => {
     try {
+      console.log('📡 Fetching conversations from API...');
       setLoading(true);
       const data = await chatService.getConversations();
+      console.log('✅ Conversations loaded:', data);
       setConversations(data);
     } catch (error) {
+      console.error('❌ Error loading conversations:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response,
+        status: error.response?.status,
+        data: error.response?.data
+      });
       toast.error('Erreur lors du chargement des conversations');
       console.error(error);
     } finally {
@@ -57,7 +77,18 @@ export default function Chat() {
   const loadMessages = async (conversationId) => {
     try {
       const data = await chatService.getConversation(conversationId);
-      setMessages(data.messages || []);
+      const loadedMessages = data.messages || [];
+      console.log('📨 Messages chargés:', {
+        count: loadedMessages.length,
+        currentUserId: user?.id,
+        sampleMessage: loadedMessages[0] ? {
+          id: loadedMessages[0].id,
+          senderId: loadedMessages[0].senderId,
+          senderObjectId: loadedMessages[0].sender?.id,
+          content: loadedMessages[0].content?.substring(0, 20)
+        } : null
+      });
+      setMessages(loadedMessages);
     } catch (error) {
       toast.error('Erreur lors du chargement des messages');
       console.error(error);
@@ -88,11 +119,14 @@ export default function Chat() {
 
   const loadUsers = async () => {
     try {
+      setLoadingUsers(true);
       const data = await chatService.getUsers();
       setUsers(data.filter(u => u.id !== user?.id));
     } catch (error) {
       toast.error('Erreur lors du chargement des utilisateurs');
       console.error(error);
+    } finally {
+      setLoadingUsers(false);
     }
   };
 
@@ -156,8 +190,8 @@ export default function Chat() {
       return conversation.title;
     }
     // Pour les conversations directes, afficher le nom de l'autre participant
-    const otherMember = conversation.members?.find(m => m.user.id !== user?.id);
-    return otherMember ? `${otherMember.user.firstName} ${otherMember.user.lastName}` : 'Conversation';
+    const otherMember = conversation.members?.find(m => m?.user?.id && m.user.id !== user?.id);
+    return otherMember?.user ? `${otherMember.user.firstName} ${otherMember.user.lastName}` : 'Conversation';
   };
 
   const getConversationAvatar = (conversation) => {
@@ -165,8 +199,8 @@ export default function Chat() {
       return conversation.avatar;
     }
     // Pour les conversations directes, utiliser l'avatar de l'autre participant
-    const otherMember = conversation.members?.find(m => m.user.id !== user?.id);
-    return otherMember?.user.avatar || '/assets/images/avatar/1.png';
+    const otherMember = conversation.members?.find(m => m?.user?.id && m.user.id !== user?.id);
+    return otherMember?.user?.avatar || '/assets/images/avatar/1.png';
   };
 
   const filteredConversations = conversations.filter(conv => {
@@ -183,9 +217,56 @@ export default function Chat() {
             <div className="content-sidebar content-sidebar-xl" data-scrollbar-target="#psScrollbarInit">
               <div className="content-sidebar-header bg-white sticky-top hstack justify-content-between">
                 <h4 className="fw-bolder mb-0">Chat</h4>
-                <a href="#" onClick={(e) => e.preventDefault()} className="app-sidebar-close-trigger d-flex">
-                  <i className="feather-x"></i>
-                </a>
+                <div className="hstack gap-2">
+                  {/* Bouton Nouveau Chat avec Dropdown */}
+                  <div className="dropdown">
+                    <button 
+                      className="btn btn-sm btn-primary rounded-circle d-flex align-items-center justify-content-center" 
+                      style={{ width: '32px', height: '32px' }}
+                      type="button" 
+                      data-bs-toggle="dropdown" 
+                      aria-expanded="false"
+                      title="Nouvelle conversation"
+                    >
+                      <i className="feather-plus"></i>
+                    </button>
+                    <ul className="dropdown-menu dropdown-menu-end">
+                      <li>
+                        <a 
+                          className="dropdown-item" 
+                          href="#" 
+                          data-bs-toggle="modal" 
+                          data-bs-target="#newChatModal"
+                          onClick={(e) => { 
+                            e.preventDefault(); 
+                            loadUsers(); 
+                          }}
+                        >
+                          <i className="feather-message-circle me-2"></i>
+                          Nouvelle discussion
+                        </a>
+                      </li>
+                      <li>
+                        <a 
+                          className="dropdown-item" 
+                          href="#" 
+                          data-bs-toggle="modal" 
+                          data-bs-target="#newGroupModal"
+                          onClick={(e) => { 
+                            e.preventDefault(); 
+                            loadUsers(); 
+                          }}
+                        >
+                          <i className="feather-users me-2"></i>
+                          Nouveau groupe
+                        </a>
+                      </li>
+                    </ul>
+                  </div>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="app-sidebar-close-trigger d-flex">
+                    <i className="feather-x"></i>
+                  </a>
+                </div>
               </div>
               
               <div className="content-sidebar-body">
@@ -393,13 +474,23 @@ export default function Chat() {
                       </div>
                     ) : (
                       messages.map((message, index) => {
-                        const isOwnMessage = message.sender?.id === user?.id;
+                        // Comparaison robuste des IDs (gère number et string)
+                        const isOwnMessage = message.senderId ? 
+                          String(message.senderId) === String(user?.id) : 
+                          (message.sender?.id && String(message.sender.id) === String(user?.id));
+                        
                         const previousMessage = index > 0 ? messages[index - 1] : null;
                         const nextMessage = index < messages.length - 1 ? messages[index + 1] : null;
                         
-                        // Vérifier si c'est le même expéditeur que le message précédent
-                        const isSameSenderAsPrevious = previousMessage && previousMessage.sender?.id === message.sender?.id;
-                        const isSameSenderAsNext = nextMessage && nextMessage.sender?.id === message.sender?.id;
+                        // Vérifier si c'est le même expéditeur que le message précédent (comparaison robuste)
+                        const getPreviousSenderId = () => previousMessage?.senderId || previousMessage?.sender?.id;
+                        const getMessageSenderId = () => message.senderId || message.sender?.id;
+                        const getNextSenderId = () => nextMessage?.senderId || nextMessage?.sender?.id;
+                        
+                        const isSameSenderAsPrevious = previousMessage && 
+                          String(getPreviousSenderId()) === String(getMessageSenderId());
+                        const isSameSenderAsNext = nextMessage && 
+                          String(getNextSenderId()) === String(getMessageSenderId());
                         
                         // Vérifier si les messages sont dans un intervalle court (moins de 2 minutes)
                         const isCloseTimeToPrevious = previousMessage && 

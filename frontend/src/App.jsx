@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useAuthStore } from './stores/authStore'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
+import cleanBackdrop from './utils/cleanBackdrop'
 
 // Layouts
 import DashboardLayout from './layouts/DashboardLayout'
@@ -20,13 +21,53 @@ import Leads from './pages/leads/Leads'
 import LeadView from './pages/leads/LeadView'
 import LeadCreate from './pages/leads/LeadCreate'
 import Projects from './pages/projects/Projects'
+import ProjectView from './pages/projects/ProjectView'
+import ProjectCreate from './pages/projects/ProjectCreate'
 import Tasks from './pages/tasks/Tasks'
 import Invoices from './pages/invoices/Invoices'
+import InvoiceView from './pages/invoice/InvoiceView'
+import InvoiceCreate from './pages/invoice/InvoiceCreate'
 import Settings from './pages/Settings'
 import Users from './pages/Users'
 import Contacts from './pages/Contacts'
 import ContactDetail from './pages/ContactDetail'
+
+// Apps
 import Chat from './pages/apps/Chat'
+import Email from './pages/apps/Email'
+import Notes from './pages/apps/Notes'
+import Storage from './pages/apps/Storage'
+import Calendar from './pages/apps/Calendar'
+
+// Analytics & Reports
+import Analytics from './pages/Analytics'
+import SalesReport from './pages/reports/SalesReport'
+import LeadsReport from './pages/reports/LeadsReport'
+import ProjectReport from './pages/reports/ProjectReport'
+import TimesheetsReport from './pages/reports/TimesheetsReport'
+
+// Proposals & Payments
+import Proposal from './pages/proposal/Proposal'
+import ProposalView from './pages/proposal/ProposalView'
+import ProposalCreate from './pages/proposal/ProposalCreate'
+import ProposalEdit from './pages/proposal/ProposalEdit'
+import Payment from './pages/payment/Payment'
+
+// Widgets
+import WidgetsLists from './pages/widgets/Lists'
+import WidgetsTables from './pages/widgets/Tables'
+import WidgetsCharts from './pages/widgets/Charts'
+import WidgetsStatistics from './pages/widgets/Statistics'
+import WidgetsMiscellaneous from './pages/widgets/Miscellaneous'
+
+// Settings
+import SettingsSEO from './pages/settings/SEO'
+import SettingsTags from './pages/settings/Tags'
+import SettingsEmail from './pages/settings/Email'
+
+// Help & Docs
+import HelpKnowledgebase from './pages/help/Knowledgebase'
+import Documentations from './pages/docs/Documentations'
 
 function App() {
   const { token } = useAuthStore()
@@ -38,6 +79,9 @@ function App() {
       path: location.pathname,
       authenticated: !!token
     })
+    
+    // Nettoyer les backdrops de modals Bootstrap à chaque changement de route
+    cleanBackdrop();
   }, [location, token])
 
   // Test de rendu minimal
@@ -133,6 +177,22 @@ function App() {
         </ProtectedRoute>
       } />
       
+      <Route path="/projects/create" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ProjectCreate />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/projects/:id" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ProjectView />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
       {/* Tasks */}
       <Route path="/tasks" element={
         <ProtectedRoute>
@@ -147,6 +207,230 @@ function App() {
         <ProtectedRoute>
           <DashboardLayout>
             <Invoices />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/invoice/view/:id" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <InvoiceView />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/invoice/create" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <InvoiceCreate />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Proposals */}
+      <Route path="/proposal" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Proposal />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/proposal/view/:id" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ProposalView />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/proposal/create" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ProposalCreate />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/proposal/edit/:id" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ProposalEdit />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Payments */}
+      <Route path="/payment" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Payment />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Analytics */}
+      <Route path="/analytics" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Analytics />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Reports */}
+      <Route path="/reports/sales" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <SalesReport />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/reports/leads" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <LeadsReport />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/reports/project" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ProjectReport />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/reports/timesheets" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <TimesheetsReport />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Apps */}
+      <Route path="/apps/chat" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Chat />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/apps/email" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Email />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/apps/notes" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Notes />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/apps/storage" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Storage />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/apps/calendar" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Calendar />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Widgets */}
+      <Route path="/widgets/lists" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <WidgetsLists />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/widgets/tables" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <WidgetsTables />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/widgets/charts" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <WidgetsCharts />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/widgets/statistics" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <WidgetsStatistics />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/widgets/miscellaneous" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <WidgetsMiscellaneous />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Settings Sub-pages */}
+      <Route path="/settings/seo" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <SettingsSEO />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/settings/tags" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <SettingsTags />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/settings/email" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <SettingsEmail />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Help */}
+      <Route path="/help/knowledgebase" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <HelpKnowledgebase />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/docs/documentations" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Documentations />
           </DashboardLayout>
         </ProtectedRoute>
       } />
@@ -182,15 +466,6 @@ function App() {
         <ProtectedRoute>
           <DashboardLayout>
             <ContactDetail />
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      {/* Chat */}
-      <Route path="/apps/chat" element={
-        <ProtectedRoute>
-          <DashboardLayout>
-            <Chat />
           </DashboardLayout>
         </ProtectedRoute>
       } />

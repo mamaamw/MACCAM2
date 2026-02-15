@@ -68,6 +68,7 @@ model User {
   
   // Relations pour le chat
   conversationMemberships ConversationMember[]
+  sentMessages    Message[] @relation("SentMessages")
 
   @@map("users")
 }
@@ -439,6 +440,7 @@ model Message {
   
   // Relations
   conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender          User      @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
   
   @@map("messages")
 }

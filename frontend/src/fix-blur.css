@@ -1,0 +1,45 @@
+/* Fix AGRESSIF pour supprimer définitivement tout backdrop flou */
+.modal-backdrop,
+.modal-backdrop.show,
+.modal-backdrop.fade {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+
+body.modal-open,
+body {
+  overflow: auto !important;
+  padding-right: 0 !important;
+}
+
+/* Empêcher Bootstrap de masquer le scroll */
+html,
+body {
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+}
+
+/* S'assurer qu'aucun overlay ne couvre la page */
+body::before,
+body::after {
+  display: none !important;
+}
+
+/* Retirer tout filtre de flou */
+*,
+*::before,
+*::after {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+/* Forcer les modals à ne pas bloquer l'interaction */
+.modal {
+  pointer-events: auto !important;
+}
+
+.modal-dialog {
+  pointer-events: auto !important;
+}

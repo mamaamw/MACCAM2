@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useAuthStore } from '../stores/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
 
@@ -12,7 +13,8 @@ const api = axios.create({
 // Intercepteur pour ajouter le token à chaque requête
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    // Récupérer le token depuis le store Zustand
+    const token = useAuthStore.getState().token;
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -28,9 +30,13 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      console.log('❌ 401 Unauthorized - Déconnexion');
+      // Utiliser le logout du store pour nettoyer correctement
+      useAuthStore.getState().logout();
+      // Redirection sera gérée par ProtectedRoute
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

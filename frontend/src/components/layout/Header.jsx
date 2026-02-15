@@ -16,7 +16,7 @@ export default function Header() {
         {/* Header Left */}
         <div className="header-left d-flex align-items-center gap-4">
           {/* Mobile Toggler */}
-          <a href="javascript:void(0);" className="nxl-head-mobile-toggler" id="mobile-collapse">
+          <a href="#" onClick={(e) => e.preventDefault()} className="nxl-head-mobile-toggler" id="mobile-collapse">
             <div className="hamburger hamburger--arrowturn">
               <div className="hamburger-box">
                 <div className="hamburger-inner"></div>
@@ -55,7 +55,7 @@ export default function Header() {
             </div>
             {/* Language Dropdown */}
             <div className="dropdown nxl-h-item nxl-header-language d-none d-sm-flex">
-              <a href="javascript:void(0);" className="nxl-head-link me-0 nxl-language-link" data-bs-toggle="dropdown" data-bs-auto-close="outside">
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-head-link me-0 nxl-language-link" data-bs-toggle="dropdown" data-bs-auto-close="outside">
                 <img src="/assets/vendors/img/flags/4x3/us.svg" alt="" className="img-fluid wd-20" />
               </a>
               <div className="dropdown-menu dropdown-menu-end nxl-h-dropdown nxl-language-dropdown">
@@ -70,19 +70,19 @@ export default function Header() {
                   <div className="dropdown-divider"></div>
                   <div className="row px-4 pt-3">
                     <div className="col-sm-4 col-6 language_select active">
-                      <a href="javascript:void(0);" className="d-flex align-items-center gap-2">
+                      <a href="#" onClick={(e) => e.preventDefault()} className="d-flex align-items-center gap-2">
                         <div className="avatar-image avatar-sm"><img src="/assets/vendors/img/flags/1x1/us.svg" alt="" className="img-fluid" /></div>
                         <span>English</span>
                       </a>
                     </div>
                     <div className="col-sm-4 col-6 language_select">
-                      <a href="javascript:void(0);" className="d-flex align-items-center gap-2">
+                      <a href="#" onClick={(e) => e.preventDefault()} className="d-flex align-items-center gap-2">
                         <div className="avatar-image avatar-sm"><img src="/assets/vendors/img/flags/1x1/fr.svg" alt="" className="img-fluid" /></div>
                         <span>French</span>
                       </a>
                     </div>
                     <div className="col-sm-4 col-6 language_select">
-                      <a href="javascript:void(0);" className="d-flex align-items-center gap-2">
+                      <a href="#" onClick={(e) => e.preventDefault()} className="d-flex align-items-center gap-2">
                         <div className="avatar-image avatar-sm"><img src="/assets/vendors/img/flags/1x1/es.svg" alt="" className="img-fluid" /></div>
                         <span>Spanish</span>
                       </a>
@@ -94,7 +94,7 @@ export default function Header() {
             {/* Full Screen */}
             <div className="nxl-h-item d-none d-sm-flex">
               <div className="full-screen-switcher">
-                <a href="javascript:void(0);" className="nxl-head-link me-0" onClick={(e) => {
+                <a href="#" className="nxl-head-link me-0" onClick={(e) => {
                   e.preventDefault();
                   if (!document.fullscreenElement) {
                     document.documentElement.requestFullscreen();
@@ -109,23 +109,23 @@ export default function Header() {
             </div>
             {/* Dark/Light Theme */}
             <div className="nxl-h-item dark-light-theme">
-              <a href="javascript:void(0);" className="nxl-head-link me-0 dark-button">
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-head-link me-0 dark-button">
                 <i className="feather-moon"></i>
               </a>
-              <a href="javascript:void(0);" className="nxl-head-link me-0 light-button" style={{ display: 'none' }}>
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-head-link me-0 light-button" style={{ display: 'none' }}>
                 <i className="feather-sun"></i>
               </a>
             </div>
             {/* Timesheets */}
             <div className="dropdown nxl-h-item">
-              <a href="javascript:void(0);" className="nxl-head-link me-0" data-bs-toggle="dropdown" role="button" data-bs-auto-close="outside">
+              <a href="#" onClick={(e) => e.preventDefault()} className="nxl-head-link me-0" data-bs-toggle="dropdown" role="button" data-bs-auto-close="outside">
                 <i className="feather-clock"></i>
                 <span className="badge bg-success nxl-h-badge">2</span>
               </a>
               <div className="dropdown-menu dropdown-menu-end nxl-h-dropdown nxl-timesheets-menu">
                 <div className="d-flex justify-content-between align-items-center timesheets-head">
                   <h6 className="fw-bold text-dark mb-0">Timesheets</h6>
-                  <a href="javascript:void(0);" className="fs-11 text-success text-end ms-auto" data-bs-toggle="tooltip" title="Upcoming Timers">
+                  <a href="#" onClick={(e) => e.preventDefault()} className="fs-11 text-success text-end ms-auto" data-bs-toggle="tooltip" title="Upcoming Timers">
                     <i className="feather-clock"></i>
                     <span>3 Upcoming</span>
                   </a>
@@ -133,10 +133,10 @@ export default function Header() {
                 <div className="d-flex justify-content-between align-items-center flex-column timesheets-body">
                   <i className="feather-clock fs-1 mb-4"></i>
                   <p className="text-muted">No started timers found yet!</p>
-                  <a href="javascript:void(0);" className="btn btn-sm btn-primary">Start Timer</a>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="btn btn-sm btn-primary">Start Timer</a>
                 </div>
                 <div className="text-center timesheets-footer">
-                  <a href="javascript:void(0);" className="fs-13 fw-semibold text-dark">All Timesheets</a>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="fs-13 fw-semibold text-dark">All Timesheets</a>
                 </div>
               </div>
             </div>
@@ -149,7 +149,7 @@ export default function Header() {
               <div className="dropdown-menu dropdown-menu-end nxl-h-dropdown nxl-notifications-menu">
                 <div className="d-flex justify-content-between align-items-center notifications-head">
                   <h6 className="fw-bold text-dark mb-0">Notifications</h6>
-                  <a href="javascript:void(0);" className="fs-11 text-success text-end ms-auto" data-bs-toggle="tooltip" title="Make as Read">
+                  <a href="#" onClick={(e) => e.preventDefault()} className="fs-11 text-success text-end ms-auto" data-bs-toggle="tooltip" title="Make as Read">
                     <i className="feather-check"></i>
                     <span>Make as Read</span>
                   </a>
@@ -157,15 +157,15 @@ export default function Header() {
                 <div className="notifications-item">
                   <img src="/assets/images/avatar/2.png" alt="" className="rounded me-3 border" />
                   <div className="notifications-desc">
-                    <a href="javascript:void(0);" className="font-body text-truncate-2-line">
+                    <a href="#" onClick={(e) => e.preventDefault()} className="font-body text-truncate-2-line">
                       {" "}
                       <span className="fw-semibold text-dark">Malanie Hanvey</span> We should talk about that at lunch!
                     </a>
                     <div className="d-flex justify-content-between align-items-center">
                       <div className="notifications-date text-muted border-bottom border-bottom-dashed">2 minutes ago</div>
                       <div className="d-flex align-items-center float-end gap-2">
-                        <a href="javascript:void(0);" className="d-block wd-8 ht-8 rounded-circle bg-gray-300" data-bs-toggle="tooltip" title="Make as Read"></a>
-                        <a href="javascript:void(0);" className="text-danger" data-bs-toggle="tooltip" title="Remove">
+                        <a href="#" onClick={(e) => e.preventDefault()} className="d-block wd-8 ht-8 rounded-circle bg-gray-300" data-bs-toggle="tooltip" title="Make as Read"></a>
+                        <a href="#" onClick={(e) => e.preventDefault()} className="text-danger" data-bs-toggle="tooltip" title="Remove">
                           <i className="feather-x fs-12"></i>
                         </a>
                       </div>
@@ -175,15 +175,15 @@ export default function Header() {
                 <div className="notifications-item">
                   <img src="/assets/images/avatar/3.png" alt="" className="rounded me-3 border" />
                   <div className="notifications-desc">
-                    <a href="javascript:void(0);" className="font-body text-truncate-2-line">
+                    <a href="#" onClick={(e) => e.preventDefault()} className="font-body text-truncate-2-line">
                       {" "}
                       <span className="fw-semibold text-dark">Valentine Maton</span> You can download the latest invoices now.
                     </a>
                     <div className="d-flex justify-content-between align-items-center">
                       <div className="notifications-date text-muted border-bottom border-bottom-dashed">36 minutes ago</div>
                       <div className="d-flex align-items-center float-end gap-2">
-                        <a href="javascript:void(0);" className="d-block wd-8 ht-8 rounded-circle bg-gray-300" data-bs-toggle="tooltip" title="Make as Read"></a>
-                        <a href="javascript:void(0);" className="text-danger" data-bs-toggle="tooltip" title="Remove">
+                        <a href="#" onClick={(e) => e.preventDefault()} className="d-block wd-8 ht-8 rounded-circle bg-gray-300" data-bs-toggle="tooltip" title="Make as Read"></a>
+                        <a href="#" onClick={(e) => e.preventDefault()} className="text-danger" data-bs-toggle="tooltip" title="Remove">
                           <i className="feather-x fs-12"></i>
                         </a>
                       </div>
@@ -193,15 +193,15 @@ export default function Header() {
                 <div className="notifications-item">
                   <img src="/assets/images/avatar/4.png" alt="" className="rounded me-3 border" />
                   <div className="notifications-desc">
-                    <a href="javascript:void(0);" className="font-body text-truncate-2-line">
+                    <a href="#" onClick={(e) => e.preventDefault()} className="font-body text-truncate-2-line">
                       {" "}
                       <span className="fw-semibold text-dark">Archie Cantones</span> Don't forget to pickup Jeremy after school!
                     </a>
                     <div className="d-flex justify-content-between align-items-center">
                       <div className="notifications-date text-muted border-bottom border-bottom-dashed">53 minutes ago</div>
                       <div className="d-flex align-items-center float-end gap-2">
-                        <a href="javascript:void(0);" className="d-block wd-8 ht-8 rounded-circle bg-gray-300" data-bs-toggle="tooltip" title="Make as Read"></a>
-                        <a href="javascript:void(0);" className="text-danger" data-bs-toggle="tooltip" title="Remove">
+                        <a href="#" onClick={(e) => e.preventDefault()} className="d-block wd-8 ht-8 rounded-circle bg-gray-300" data-bs-toggle="tooltip" title="Make as Read"></a>
+                        <a href="#" onClick={(e) => e.preventDefault()} className="text-danger" data-bs-toggle="tooltip" title="Remove">
                           <i className="feather-x fs-12"></i>
                         </a>
                       </div>
@@ -209,13 +209,13 @@ export default function Header() {
                   </div>
                 </div>
                 <div className="text-center notifications-footer">
-                  <a href="javascript:void(0);" className="fs-13 fw-semibold text-dark">All Notifications</a>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="fs-13 fw-semibold text-dark">All Notifications</a>
                 </div>
               </div>
             </div>
             {/* User Dropdown */}
             <div className="dropdown nxl-h-item">
-              <a href="javascript:void(0);" data-bs-toggle="dropdown" role="button" data-bs-auto-close="outside">
+              <a href="#" onClick={(e) => e.preventDefault()} data-bs-toggle="dropdown" role="button" data-bs-auto-close="outside">
                 <img src="/assets/images/avatar/1.png" alt="user-image" className="img-fluid user-avtar me-0" />
               </a>
               <div className="dropdown-menu dropdown-menu-end nxl-h-dropdown nxl-user-dropdown">
@@ -229,7 +229,7 @@ export default function Header() {
                   </div>
                 </div>
                 <div className="dropdown">
-                  <a href="javascript:void(0);" className="dropdown-item" data-bs-toggle="dropdown">
+                  <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item" data-bs-toggle="dropdown">
                     <span className="hstack">
                       <i className="wd-10 ht-10 border border-2 border-gray-1 bg-success rounded-circle me-2"></i>
                       <span>Active</span>
@@ -239,7 +239,7 @@ export default function Header() {
                 </div>
                 <div className="dropdown-divider"></div>
                 <div className="dropdown">
-                  <a href="javascript:void(0);" className="dropdown-item" data-bs-toggle="dropdown">
+                  <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item" data-bs-toggle="dropdown">
                     <span className="hstack">
                       <i className="feather-dollar-sign me-2"></i>
                       <span>Subscriptions</span>
@@ -252,15 +252,15 @@ export default function Header() {
                   <i className="feather-user"></i>
                   <span>Profile Details</span>
                 </Link>
-                <a href="javascript:void(0);" className="dropdown-item">
+                <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
                   <i className="feather-activity"></i>
                   <span>Activity Feed</span>
                 </a>
-                <a href="javascript:void(0);" className="dropdown-item">
+                <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
                   <i className="feather-dollar-sign"></i>
                   <span>Billing Details</span>
                 </a>
-                <a href="javascript:void(0);" className="dropdown-item">
+                <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
                   <i className="feather-bell"></i>
                   <span>Notifications</span>
                 </a>
@@ -269,7 +269,7 @@ export default function Header() {
                   <span>Account Settings</span>
                 </Link>
                 <div className="dropdown-divider"></div>
-                <a href="javascript:void(0);" className="dropdown-item" onClick={handleLogout}>
+                <a href="#" className="dropdown-item" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
                   <i className="feather-log-out"></i>
                   <span>Logout</span>
                 </a>
