@@ -501,7 +501,6 @@ export default function Notes() {
 
       toast.success('Enregistrement démarré')
     } catch (error) {
-      console.error('Error accessing microphone:', error)
       toast.error('Impossible d\'accéder au microphone')
     }
   }

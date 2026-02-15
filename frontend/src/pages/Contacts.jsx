@@ -50,7 +50,6 @@ export default function Contacts() {
       setContacts(response.data);
     } catch (error) {
       toast.error('Erreur lors du chargement des contacts');
-      console.error(error);
     } finally {
       setLoading(false);
     }

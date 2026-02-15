@@ -7,13 +7,9 @@ import App from './App.jsx'
 import './index.css'
 import './fix-blur.css' // Fix pour supprimer le flou
 
-console.log('🚀 main.jsx - Démarrage de l\'application React')
-
 // Nettoyer tous les backdrops de modals au démarrage
 const cleanAllBackdrops = () => {
-  console.log('🧹 Nettoyage des backdrops...');
   const backdrops = document.querySelectorAll('.modal-backdrop');
-  console.log(`   Trouvé ${backdrops.length} backdrop(s)`);
   backdrops.forEach(backdrop => backdrop.remove());
   const modals = document.querySelectorAll('.modal.show');
   modals.forEach(modal => {
@@ -24,7 +20,6 @@ const cleanAllBackdrops = () => {
   document.body.classList.remove('pace-running');
   document.body.style.overflow = '';
   document.body.style.paddingRight = '';
-  console.log('✅ Backdrops nettoyés');
 };
 
 // Nettoyer immédiatement et répéter plusieurs fois pour être sûr
@@ -38,7 +33,6 @@ const observer = new MutationObserver((mutations) => {
   mutations.forEach((mutation) => {
     mutation.addedNodes.forEach((node) => {
       if (node.classList && node.classList.contains('modal-backdrop')) {
-        console.log('⚠️ Backdrop détecté et supprimé automatiquement');
         node.remove();
       }
     });
@@ -59,8 +53,6 @@ observer.observe(document.body, {
   attributeFilter: ['class', 'style']
 });
 
-console.log('👁️ Observateur de backdrop activé');
-
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -71,10 +63,7 @@ const queryClient = new QueryClient({
   },
 })
 
-console.log('📦 QueryClient créé')
-
 const rootElement = document.getElementById('root')
-console.log('🎯 Root element:', rootElement)
 
 if (rootElement) {
   ReactDOM.createRoot(rootElement).render(
@@ -87,7 +76,4 @@ if (rootElement) {
       </BrowserRouter>
     </React.StrictMode>,
   )
-  console.log('✅ Application React montée avec succès')
-} else {
-  console.error('❌ Élément #root non trouvé!')
 }

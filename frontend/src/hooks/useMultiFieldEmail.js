@@ -10,8 +10,7 @@ export default function MultiFieldEmail({ userId, onUpdate }) {
     try {
       const response = await contactFieldsService.getEmails(userId);
       setEmails(response.data || []);
-    } catch (error) {
-      console.error('Erreur chargement emails:', error);
+    } catch {
     }
   };
 

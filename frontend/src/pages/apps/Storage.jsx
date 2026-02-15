@@ -56,7 +56,6 @@ export default function Storage() {
         toast.error(data.message || 'Erreur de chargement');
       }
     } catch (error) {
-      console.error('Erreur:', error);
       toast.error('Erreur de connexion au NAS');
     } finally {
       setLoading(false);
@@ -76,8 +75,7 @@ export default function Storage() {
       if (data.success) {
         setGalleryMedia(data.media);
       }
-    } catch (error) {
-      console.error('Erreur:', error);
+    } catch {
     } finally {
       setLoading(false);
     }

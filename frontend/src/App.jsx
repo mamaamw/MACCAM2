@@ -77,21 +77,9 @@ function App() {
   const location = useLocation()
 
   useEffect(() => {
-    console.log('✅ App.jsx chargé!')
-    console.log('🔄 Navigation:', {
-      path: location.pathname,
-      authenticated: !!token
-    })
-    
     // Nettoyer les backdrops de modals Bootstrap à chaque changement de route
     cleanBackdrop();
   }, [location, token])
-
-  // Test de rendu minimal
-  if (typeof window !== 'undefined') {
-    console.log('🌐 Window exists')
-    console.log('📍 Current path:', window.location.pathname)
-  }
 
   return (
     <Routes>

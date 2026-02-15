@@ -68,8 +68,7 @@ export default function Profile() {
         setTwoFactorEnabled(userData.twoFactorEnabled || false)
         updateAuthUser(userData)
       }
-    } catch (err) {
-      console.error('Erreur chargement profil:', err)
+    } catch {
     }
   }
 
@@ -79,8 +78,7 @@ export default function Profile() {
       if (response.success) {
         setActivities(response.data)
       }
-    } catch (err) {
-      console.error('Erreur chargement activités:', err)
+    } catch {
     }
   }
 
@@ -96,8 +94,7 @@ export default function Profile() {
           newsletter: response.data.newsletter
         })
       }
-    } catch (err) {
-      console.error('Erreur chargement notifications:', err)
+    } catch {
     }
   }
 

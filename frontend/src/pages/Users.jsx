@@ -33,7 +33,6 @@ export default function Users() {
       setUsers(response.data);
     } catch (error) {
       toast.error('Erreur lors du chargement des utilisateurs');
-      console.error(error);
     } finally {
       setLoading(false);
     }

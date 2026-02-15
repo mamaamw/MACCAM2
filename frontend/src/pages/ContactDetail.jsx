@@ -51,7 +51,6 @@ export default function ContactDetail() {
       });
     } catch (error) {
       toast.error('Erreur lors du chargement');
-      console.error(error);
     } finally {
       setLoading(false);
     }

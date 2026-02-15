@@ -30,7 +30,6 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      console.log('❌ 401 Unauthorized - Déconnexion');
       // Utiliser le logout du store pour nettoyer correctement
       useAuthStore.getState().logout();
       // Redirection sera gérée par ProtectedRoute

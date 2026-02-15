@@ -4,7 +4,6 @@ export default function Dashboard() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    console.log('✅ Dashboard mounted');
     setLoaded(true);
   }, []);
 

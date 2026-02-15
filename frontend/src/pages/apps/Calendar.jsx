@@ -78,11 +78,9 @@ export default function Calendar() {
       if (data.success) {
         setEvents(data.events);
       } else {
-        console.error('Erreur réponse:', data);
         toast.error(data.message || 'Erreur de chargement des événements');
       }
     } catch (error) {
-      console.error('Erreur de chargement:', error);
       toast.error('Impossible de se connecter au serveur');
     } finally {
       setLoading(false);
@@ -116,8 +114,6 @@ export default function Calendar() {
         reminder: formData.reminder ? parseInt(formData.reminder) : undefined
       };
       
-      console.log('Création événement:', eventData);
-      
       const response = await fetch('http://localhost:5000/api/v1/calendar/events', {
         method: 'POST',
         headers: {
@@ -128,7 +124,6 @@ export default function Calendar() {
       });
 
       const data = await response.json();
-      console.log('Réponse serveur:', data);
       
       if (data.success) {
         toast.success('Événement créé !');
@@ -137,11 +132,9 @@ export default function Calendar() {
         resetForm();
         loadEvents();
       } else {
-        console.error('Erreur création:', data);
         toast.error(data.message || 'Erreur lors de la création');
       }
     } catch (error) {
-      console.error('Exception création:', error);
       toast.error('Erreur de connexion au serveur');
     }
   };
@@ -169,8 +162,6 @@ export default function Calendar() {
         reminder: formData.reminder ? parseInt(formData.reminder) : undefined
       };
       
-      console.log('Mise à jour événement:', eventData);
-      
       const response = await fetch(`http://localhost:5000/api/v1/calendar/events/${selectedEvent.id}`, {
         method: 'PUT',
         headers: {
@@ -181,7 +172,6 @@ export default function Calendar() {
       });
 
       const data = await response.json();
-      console.log('Réponse serveur:', data);
       
       if (data.success) {
         toast.success('Événement mis à jour !');
@@ -190,11 +180,9 @@ export default function Calendar() {
         resetForm();
         loadEvents();
       } else {
-        console.error('Erreur mise à jour:', data);
         toast.error(data.message || 'Erreur lors de la mise à jour');
       }
     } catch (error) {
-      console.error('Exception mise à jour:', error);
       toast.error('Erreur de connexion au serveur');
     }
   };
@@ -205,15 +193,12 @@ export default function Calendar() {
     try {
       const token = localStorage.getItem('token');
       
-      console.log('Suppression événement:', eventId);
-      
       const response = await fetch(`http://localhost:5000/api/v1/calendar/events/${eventId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
       const data = await response.json();
-      console.log('Réponse serveur:', data);
       
       if (data.success) {
         toast.success('Événement supprimé !');
@@ -221,11 +206,9 @@ export default function Calendar() {
         setSelectedEvent(null);
         loadEvents();
       } else {
-        console.error('Erreur suppression:', data);
         toast.error(data.message || 'Erreur lors de la suppression');
       }
     } catch (error) {
-      console.error('Exception suppression:', error);
       toast.error('Erreur de connexion au serveur');
     }
   };

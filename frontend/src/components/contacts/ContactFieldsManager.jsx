@@ -36,8 +36,7 @@ export default function ContactFieldsManager({ userId, onSave }) {
       setAddresses(data.addresses);
       setWebsites(data.websites);
       setDates(data.dates);
-    } catch (error) {
-      console.error('Erreur chargement champs:', error);
+    } catch {
     } finally {
       setLoading(false);
     }
@@ -296,7 +295,6 @@ export default function ContactFieldsManager({ userId, onSave }) {
       await loadAllFields(); // Recharger avec les IDs
     } catch (error) {
       toast.error('Erreur lors de l\'enregistrement');
-      console.error(error);
     } finally {
       setLoading(false);
     }

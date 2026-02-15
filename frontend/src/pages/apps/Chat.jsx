@@ -4,15 +4,9 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
 
 export default function Chat() {
-  const { user, token } = useAuthStore();
+  const { user } = useAuthStore();
   const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024;
-  
-  // Log de débogage
-  console.log('🎯 Chat Component Mounted', {
-    user: user ? `${user.firstName} ${user.lastName}` : 'null',
-    hasToken: !!token,
-    tokenPreview: token ? `${token.substring(0, 20)}...` : 'null'
-  });
+  const GALLERY_ACTION_LOCK_MS = 150;
 
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -27,6 +21,7 @@ export default function Chat() {
   const [showImageGalleryModal, setShowImageGalleryModal] = useState(false);
   const [galleryImageIndex, setGalleryImageIndex] = useState(0);
   const [galleryItems, setGalleryItems] = useState([]);
+  const [galleryImageLoadError, setGalleryImageLoadError] = useState(false);
   const [users, setUsers] = useState([]);
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [blockedUsersCount, setBlockedUsersCount] = useState(0);
@@ -54,10 +49,10 @@ export default function Chat() {
   const mediaRecorderRef = useRef(null);
   const audioStreamRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const galleryActionLockedUntilRef = useRef(0);
 
   // Charger les conversations au démarrage
   useEffect(() => {
-    console.log('📥 Loading conversations...');
     loadConversations();
     loadBlockedUsers(true);
   }, []);
@@ -93,17 +88,52 @@ export default function Chat() {
     ? galleryItems
     : messages.filter(message => message.type === 'IMAGE' && !!message.attachmentUrl);
 
+  const isGalleryActionLocked = () => Date.now() < galleryActionLockedUntilRef.current;
+
+  const lockGalleryAction = () => {
+    galleryActionLockedUntilRef.current = Date.now() + GALLERY_ACTION_LOCK_MS;
+  };
+
+  const handleCloseImageGallery = () => {
+    if (isGalleryActionLocked()) return;
+    lockGalleryAction();
+    setShowImageGalleryModal(false);
+    setGalleryItems([]);
+    setGalleryImageIndex(0);
+    setGalleryImageLoadError(false);
+  };
+
+  useEffect(() => {
+    if (!showImageGalleryModal) return;
+
+    if (galleryImages.length === 0) {
+      setShowImageGalleryModal(false);
+      setGalleryItems([]);
+      setGalleryImageIndex(0);
+      setGalleryImageLoadError(false);
+      return;
+    }
+
+    if (galleryImageIndex >= galleryImages.length) {
+      setGalleryImageIndex(galleryImages.length - 1);
+    }
+  }, [showImageGalleryModal, galleryImages.length, galleryImageIndex]);
+
   useEffect(() => {
     if (!showImageGalleryModal) return;
 
     const handleKeyDown = (event) => {
       if (event.key === 'Escape') {
-        setShowImageGalleryModal(false);
+        handleCloseImageGallery();
       }
       if (event.key === 'ArrowLeft') {
+        if (isGalleryActionLocked()) return;
+        lockGalleryAction();
         setGalleryImageIndex(prev => (prev > 0 ? prev - 1 : prev));
       }
       if (event.key === 'ArrowRight') {
+        if (isGalleryActionLocked()) return;
+        lockGalleryAction();
         setGalleryImageIndex(prev => {
           const maxIndex = Math.max(0, galleryImages.length - 1);
           return prev < maxIndex ? prev + 1 : prev;
@@ -121,21 +151,11 @@ export default function Chat() {
 
   const loadConversations = async () => {
     try {
-      console.log('📡 Fetching conversations from API...');
       setLoading(true);
       const data = await chatService.getConversations();
-      console.log('✅ Conversations loaded:', data);
       setConversations(data);
     } catch (error) {
-      console.error('❌ Error loading conversations:', error);
-      console.error('Error details:', {
-        message: error.message,
-        response: error.response,
-        status: error.response?.status,
-        data: error.response?.data
-      });
       toast.error('Erreur lors du chargement des conversations');
-      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -145,16 +165,6 @@ export default function Chat() {
     try {
       const data = await chatService.getConversation(conversationId);
       const loadedMessages = data.messages || [];
-      console.log('📨 Messages chargés:', {
-        count: loadedMessages.length,
-        currentUserId: user?.id,
-        sampleMessage: loadedMessages[0] ? {
-          id: loadedMessages[0].id,
-          senderId: loadedMessages[0].senderId,
-          senderObjectId: loadedMessages[0].sender?.id,
-          content: loadedMessages[0].content?.substring(0, 20)
-        } : null
-      });
 
       const hasUnreadIncoming = loadedMessages.some(
         msg => !msg.isRead && String(msg.senderId || msg.sender?.id) !== String(user?.id)
@@ -184,7 +194,6 @@ export default function Chat() {
       }
     } catch (error) {
       toast.error('Erreur lors du chargement des messages');
-      console.error(error);
     }
   };
 
@@ -200,7 +209,6 @@ export default function Chat() {
       setNewMessage('');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Erreur lors de l\'envoi du message');
-      console.error(error);
     } finally {
       setSending(false);
     }
@@ -230,7 +238,6 @@ export default function Chat() {
       toast.success('Message modifié');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Erreur lors de la modification');
-      console.error(error);
     }
   };
 
@@ -251,7 +258,6 @@ export default function Chat() {
       toast.success('Message supprimé pour tout le monde');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Erreur lors de la suppression');
-      console.error(error);
     }
   };
 
@@ -264,7 +270,6 @@ export default function Chat() {
       setMessageHistory(history);
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Erreur lors du chargement de l\'historique');
-      console.error(error);
       setShowHistoryModal(false);
     } finally {
       setLoadingHistory(false);
@@ -339,7 +344,6 @@ export default function Chat() {
       toast.success(readStatus ? 'Discussion marquée comme lue' : 'Discussion marquée comme non-lue');
     } catch (error) {
       toast.error('Erreur lors de la mise à jour du statut');
-      console.error(error);
     }
   };
 
@@ -354,7 +358,6 @@ export default function Chat() {
       setUsers(data.filter(u => u.id !== user?.id));
     } catch (error) {
       toast.error('Erreur lors du chargement des utilisateurs');
-      console.error(error);
     } finally {
       setLoadingUsers(false);
     }
@@ -395,7 +398,6 @@ export default function Chat() {
       toast.success('Pièce jointe envoyée');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Erreur lors de l\'envoi de la pièce jointe');
-      console.error(error);
     } finally {
       setSending(false);
     }
@@ -506,29 +508,83 @@ export default function Chat() {
       toast.success('Enregistrement démarré');
     } catch (error) {
       toast.error('Impossible de démarrer l\'enregistrement');
-      console.error(error);
       setIsRecording(false);
     }
   };
 
-  const handleOpenImageGallery = (messageId) => {
+  const handleOpenImageInNewTab = (url) => {
+    if (!url) return;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleDownloadImage = async (url, fileName) => {
+    if (!url) return;
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Impossible de télécharger le fichier');
+      }
+
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = fileName || `image-${Date.now()}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
+    } catch {
+      const fallbackLink = document.createElement('a');
+      fallbackLink.href = url;
+      fallbackLink.download = fileName || `image-${Date.now()}.jpg`;
+      fallbackLink.target = '_blank';
+      fallbackLink.rel = 'noopener noreferrer';
+      document.body.appendChild(fallbackLink);
+      fallbackLink.click();
+      fallbackLink.remove();
+      toast('Téléchargement lancé');
+    }
+  };
+
+  const handleOpenImageGallery = (messageId, fallbackUrl) => {
+    if (isGalleryActionLocked()) return;
+    lockGalleryAction();
+
     const images = messages.filter(message => message.type === 'IMAGE' && !!message.attachmentUrl);
     if (images.length === 0) {
-      toast.error('Aucune image à prévisualiser');
+      if (fallbackUrl) {
+        handleOpenImageInNewTab(fallbackUrl);
+      } else {
+        toast.error('Aucune image à prévisualiser');
+      }
       return;
     }
 
     const index = images.findIndex(image => image.id === messageId);
+    if (index < 0 && fallbackUrl) {
+      handleOpenImageInNewTab(fallbackUrl);
+      return;
+    }
+
+    setGalleryImageLoadError(false);
     setGalleryItems(images);
     setGalleryImageIndex(index >= 0 ? index : 0);
     setShowImageGalleryModal(true);
   };
 
   const handlePreviousGalleryImage = () => {
+    if (isGalleryActionLocked()) return;
+    lockGalleryAction();
+    setGalleryImageLoadError(false);
     setGalleryImageIndex(prev => (prev > 0 ? prev - 1 : prev));
   };
 
   const handleNextGalleryImage = () => {
+    if (isGalleryActionLocked()) return;
+    lockGalleryAction();
+    setGalleryImageLoadError(false);
     setGalleryImageIndex(prev => {
       const maxIndex = Math.max(0, galleryImages.length - 1);
       return prev < maxIndex ? prev + 1 : prev;
@@ -567,7 +623,6 @@ export default function Chat() {
       toast.success('Membre ajouté au groupe');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Erreur lors de l\'ajout du membre');
-      console.error(error);
     } finally {
       setAddingMember(false);
     }
@@ -597,7 +652,6 @@ export default function Chat() {
       toast.success('Conversation supprimée');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Erreur lors de la suppression de la conversation');
-      console.error(error);
     }
   };
 
@@ -627,7 +681,6 @@ export default function Chat() {
       toast.success(nextMuted ? 'Notifications désactivées' : 'Notifications activées');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Erreur lors de la mise à jour des notifications');
-      console.error(error);
     }
   };
 
@@ -677,7 +730,6 @@ export default function Chat() {
       toast.success(currentlyBlocked ? 'Utilisateur débloqué' : 'Utilisateur bloqué');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Erreur lors de la mise à jour du blocage');
-      console.error(error);
     }
   };
 
@@ -692,7 +744,6 @@ export default function Chat() {
       if (!silent) {
         toast.error(error?.response?.data?.message || 'Erreur lors du chargement des utilisateurs bloqués');
       }
-      console.error(error);
     } finally {
       setLoadingBlockedUsers(false);
     }
@@ -734,7 +785,6 @@ export default function Chat() {
       toast.success('Utilisateur débloqué');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Erreur lors du déblocage');
-      console.error(error);
     } finally {
       setUnblockingUserId(null);
     }
@@ -769,7 +819,6 @@ export default function Chat() {
       toast.success('Conversation créée');
     } catch (error) {
       toast.error('Erreur lors de la création de la conversation');
-      console.error(error);
     }
   };
 
@@ -824,7 +873,6 @@ export default function Chat() {
       toast.success('Groupe créé');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Erreur lors de la création du groupe');
-      console.error(error);
     }
   };
 
@@ -907,11 +955,11 @@ export default function Chat() {
 
   return (
     <>
-      <main className="nxl-container apps-container apps-chat">
-        <div className="nxl-content without-header nxl-full-content">
-          <div className="main-content d-flex">
+      <main className="nxl-container apps-container apps-chat" style={{ height: '100dvh' }}>
+        <div className="nxl-content without-header nxl-full-content" style={{ height: '100%' }}>
+          <div className="main-content d-flex" style={{ height: '100%', overflow: 'hidden' }}>
             {/* Sidebar - Liste des conversations */}
-            <div className="content-sidebar content-sidebar-xl" data-scrollbar-target="#psScrollbarInit">
+            <div className="content-sidebar content-sidebar-xl" data-scrollbar-target="#psScrollbarInit" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
               <div className="content-sidebar-header bg-white sticky-top hstack justify-content-between">
                 <h4 className="fw-bolder mb-0">Chat</h4>
                 <div className="hstack gap-2">
@@ -929,7 +977,7 @@ export default function Chat() {
                     </button>
                     <ul className="dropdown-menu dropdown-menu-end">
                       <li>
-                        <a 
+                        <a
                           className="dropdown-item" 
                           href="#" 
                           data-bs-toggle="modal" 
@@ -987,7 +1035,7 @@ export default function Chat() {
                 </div>
               </div>
               
-              <div className="content-sidebar-body">
+              <div className="content-sidebar-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                 <div className="py-0 px-4 d-flex align-items-center justify-content-between border-bottom">
                   <form className="sidebar-search" onSubmit={(e) => e.preventDefault()}>
                     <input
@@ -1150,15 +1198,15 @@ export default function Chat() {
                   )}
                 </div>
               </div>
-              <a href="#" onClick={(e) => e.preventDefault()} className="content-sidebar-footer px-4 py-3 fs-11 text-uppercase d-block text-center">Load More</a>
+              <a href="#" onClick={(e) => e.preventDefault()} className="content-sidebar-footer px-4 py-3 fs-11 text-uppercase d-block text-center" style={{ flexShrink: 0 }}>Load More</a>
             </div>
 
             {/* Zone principale - Messages */}
-            <div className="content-area" data-scrollbar-target="#psScrollbarInit">
+            <div className="content-area" data-scrollbar-target="#psScrollbarInit" style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {selectedConversation ? (
                 <>
                   {/* Header */}
-                  <div className="content-area-header sticky-top">
+                  <div className="content-area-header sticky-top" style={{ flexShrink: 0 }}>
                     <div className="page-header-left hstack gap-4">
                       <a href="#" onClick={(e) => e.preventDefault()} className="app-sidebar-open-trigger">
                         <i className="feather-align-left fs-20"></i>
@@ -1258,7 +1306,7 @@ export default function Chat() {
                   </div>
 
                   {/* Messages */}
-                  <div className="content-area-body">
+                  <div className="content-area-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                     {messages.length === 0 ? (
                       <div className="text-center py-5">
                         <i className="feather-message-circle fs-1 text-muted d-block mb-3"></i>
@@ -1343,7 +1391,7 @@ export default function Chat() {
                                       <button
                                         type="button"
                                         className="p-0 border-0 bg-transparent"
-                                        onClick={() => handleOpenImageGallery(message.id)}
+                                        onClick={() => handleOpenImageGallery(message.id, message.attachmentUrl)}
                                       >
                                         <img
                                           src={message.attachmentUrl}
@@ -1438,7 +1486,7 @@ export default function Chat() {
                   </div>
 
                   {/* Zone de saisie */}
-                  <div className="content-area-footer">
+                  <div className="content-area-footer" style={{ flexShrink: 0 }}>
                     {isSendingBlocked && (
                       <div className="px-3 pt-2 pb-1 fs-12 text-danger">
                         Vous avez bloqué cet utilisateur. Débloquez-le pour envoyer des messages.
@@ -1831,26 +1879,34 @@ export default function Chat() {
 
       {/* Modal Galerie images */}
       {showImageGalleryModal && activeGalleryImage && (
-        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)' }}>
-          <div className="modal-dialog modal-xl modal-dialog-centered">
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)' }} onClick={handleCloseImageGallery}>
+          <div className="modal-dialog modal-xl modal-dialog-centered" onClick={(event) => event.stopPropagation()}>
             <div className="modal-content bg-transparent border-0">
               <div className="modal-header border-0">
                 <h6 className="modal-title text-white">
                   Galerie ({galleryImageIndex + 1}/{galleryImages.length})
                 </h6>
                 <div className="d-flex align-items-center gap-2">
-                  <a
-                    href={activeGalleryImage.attachmentUrl}
-                    download={activeGalleryDownloadName}
+                  <button
+                    type="button"
                     className="btn btn-sm btn-light"
+                    onClick={() => handleDownloadImage(activeGalleryImage.attachmentUrl, activeGalleryDownloadName)}
                   >
                     <i className="feather-download me-1"></i>
                     Télécharger
-                  </a>
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-light"
+                    onClick={() => handleOpenImageInNewTab(activeGalleryImage.attachmentUrl)}
+                  >
+                    <i className="feather-external-link me-1"></i>
+                    Ouvrir
+                  </button>
                   <button
                     type="button"
                     className="btn-close btn-close-white"
-                    onClick={() => setShowImageGalleryModal(false)}
+                    onClick={handleCloseImageGallery}
                   ></button>
                 </div>
               </div>
@@ -1865,12 +1921,26 @@ export default function Chat() {
                     <i className="feather-chevron-left"></i>
                   </button>
 
-                  <img
-                    src={activeGalleryImage.attachmentUrl}
-                    alt={activeGalleryImage.content || 'Image'}
-                    className="img-fluid rounded"
-                    style={{ maxHeight: '70vh', objectFit: 'contain' }}
-                  />
+                  {galleryImageLoadError ? (
+                    <div className="text-center text-white">
+                      <p className="mb-2">Impossible de charger l'image dans la galerie.</p>
+                      <button
+                        type="button"
+                        className="btn btn-light btn-sm"
+                        onClick={() => handleOpenImageInNewTab(activeGalleryImage.attachmentUrl)}
+                      >
+                        Ouvrir dans un nouvel onglet
+                      </button>
+                    </div>
+                  ) : (
+                    <img
+                      src={activeGalleryImage.attachmentUrl}
+                      alt={activeGalleryImage.content || 'Image'}
+                      className="img-fluid rounded"
+                      style={{ maxHeight: '70vh', objectFit: 'contain' }}
+                      onError={() => setGalleryImageLoadError(true)}
+                    />
+                  )}
 
                   <button
                     type="button"
@@ -1889,7 +1959,12 @@ export default function Chat() {
                         key={image.id}
                         type="button"
                         className={`p-0 border-0 bg-transparent ${index === galleryImageIndex ? 'opacity-100' : 'opacity-50'}`}
-                        onClick={() => setGalleryImageIndex(index)}
+                        onClick={() => {
+                          if (isGalleryActionLocked()) return;
+                          lockGalleryAction();
+                          setGalleryImageLoadError(false);
+                          setGalleryImageIndex(index);
+                        }}
                       >
                         <img
                           src={image.attachmentUrl}

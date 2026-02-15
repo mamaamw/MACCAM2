@@ -16,8 +16,7 @@ api.interceptors.request.use(
         if (parsed.state && parsed.state.token) {
           config.headers.Authorization = `Bearer ${parsed.state.token}`;
         }
-      } catch (error) {
-        console.error('Erreur parse token:', error);
+      } catch {
       }
     }
     return config;
