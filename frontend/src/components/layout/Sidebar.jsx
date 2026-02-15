@@ -59,7 +59,6 @@ export default function Sidebar() {
               </a>
               <ul className="nxl-submenu">
                 <li className="nxl-item"><Link className="nxl-link" to="/apps/chat">Chat</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/apps/email">Email</Link></li>
                 <li className="nxl-item"><Link className={`nxl-link ${isActive('/tasks')}`} to="/tasks">Tasks</Link></li>
                 <li className="nxl-item"><Link className="nxl-link" to="/apps/notes">Notes</Link></li>
                 <li className="nxl-item"><Link className="nxl-link" to="/apps/storage">Storage</Link></li>

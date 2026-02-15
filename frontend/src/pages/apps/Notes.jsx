@@ -26,6 +26,13 @@ export default function Notes() {
   const [showDrawingModal, setShowDrawingModal] = useState(false)
   const [currentTab, setCurrentTab] = useState('content') // content, media, drawing
   
+  // Media Viewer States
+  const [showMediaViewer, setShowMediaViewer] = useState(false)
+  const [viewingNote, setViewingNote] = useState(null)
+  const [viewingMediaType, setViewingMediaType] = useState(null) // 'images', 'documents', 'audios', 'drawings'
+  const [currentMediaIndex, setCurrentMediaIndex] = useState(0)
+  const [showLightbox, setShowLightbox] = useState(false)
+  
   // Audio Recording States
   const [isRecording, setIsRecording] = useState(false)
   const [recordingTime, setRecordingTime] = useState(0)
@@ -261,6 +268,72 @@ export default function Notes() {
     setNotes([duplicatedNote, ...notes])
     toast.success('Note dupliquée')
   }
+
+  const handleViewMedia = (note, mediaType) => {
+    setViewingNote(note)
+    setViewingMediaType(mediaType)
+    setCurrentMediaIndex(0)
+    setShowMediaViewer(true)
+  }
+
+  const handleCloseMediaViewer = () => {
+    setShowMediaViewer(false)
+    setViewingNote(null)
+    setViewingMediaType(null)
+    setCurrentMediaIndex(0)
+    setShowLightbox(false)
+  }
+
+  const handleOpenLightbox = (index) => {
+    setCurrentMediaIndex(index)
+    setShowLightbox(true)
+  }
+
+  const handleCloseLightbox = () => {
+    setShowLightbox(false)
+  }
+
+  const handleNextMedia = () => {
+    if (!viewingNote || !viewingMediaType) return
+    const mediaList = viewingNote[viewingMediaType]
+    if (mediaList && currentMediaIndex < mediaList.length - 1) {
+      setCurrentMediaIndex(currentMediaIndex + 1)
+    }
+  }
+
+  const handlePrevMedia = () => {
+    if (currentMediaIndex > 0) {
+      setCurrentMediaIndex(currentMediaIndex - 1)
+    }
+  }
+
+  const handleDownloadMedia = (media, filename) => {
+    const link = document.createElement('a')
+    link.href = media.data
+    link.download = filename || media.name
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    toast.success('Téléchargement démarré')
+  }
+
+  // Keyboard navigation for lightbox
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!showLightbox) return
+      
+      if (e.key === 'ArrowRight') {
+        handleNextMedia()
+      } else if (e.key === 'ArrowLeft') {
+        handlePrevMedia()
+      } else if (e.key === 'Escape') {
+        handleCloseLightbox()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [showLightbox, currentMediaIndex, viewingNote, viewingMediaType])
 
   // TODO Management Functions
   const handleAddTodo = () => {
@@ -859,28 +932,52 @@ export default function Notes() {
                       <div className="mb-3">
                         <div className="d-flex gap-2 flex-wrap">
                           {note.images && note.images.length > 0 && (
-                            <span className="badge bg-primary">
+                            <button
+                              type="button"
+                              className="badge bg-primary border-0"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => handleViewMedia(note, 'images')}
+                              title="Voir les photos"
+                            >
                               <i className="feather-image me-1"></i>
                               {note.images.length} photo{note.images.length > 1 ? 's' : ''}
-                            </span>
+                            </button>
                           )}
                           {note.documents && note.documents.length > 0 && (
-                            <span className="badge bg-info">
+                            <button
+                              type="button"
+                              className="badge bg-info border-0"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => handleViewMedia(note, 'documents')}
+                              title="Voir les documents"
+                            >
                               <i className="feather-file me-1"></i>
                               {note.documents.length} doc{note.documents.length > 1 ? 's' : ''}
-                            </span>
+                            </button>
                           )}
                           {note.audios && note.audios.length > 0 && (
-                            <span className="badge bg-success">
+                            <button
+                              type="button"
+                              className="badge bg-success border-0"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => handleViewMedia(note, 'audios')}
+                              title="Écouter les audios"
+                            >
                               <i className="feather-mic me-1"></i>
                               {note.audios.length} audio{note.audios.length > 1 ? 's' : ''}
-                            </span>
+                            </button>
                           )}
                           {note.drawings && note.drawings.length > 0 && (
-                            <span className="badge bg-warning">
+                            <button
+                              type="button"
+                              className="badge bg-warning border-0"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => handleViewMedia(note, 'drawings')}
+                              title="Voir les dessins"
+                            >
                               <i className="feather-edit-2 me-1"></i>
                               {note.drawings.length} dessin{note.drawings.length > 1 ? 's' : ''}
-                            </span>
+                            </button>
                           )}
                         </div>
                         {viewMode === 'list' && note.images && note.images.length > 0 && (
@@ -1577,6 +1674,375 @@ export default function Notes() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Media Viewer Modal */}
+      {showMediaViewer && viewingNote && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }}>
+          <div className="modal-dialog modal-dialog-centered modal-xl">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  {viewingMediaType === 'images' && <><i className="feather-image me-2"></i>Photos ({viewingNote.images?.length || 0})</>}
+                  {viewingMediaType === 'documents' && <><i className="feather-file me-2"></i>Documents ({viewingNote.documents?.length || 0})</>}
+                  {viewingMediaType === 'audios' && <><i className="feather-mic me-2"></i>Fichiers audio ({viewingNote.audios?.length || 0})</>}
+                  {viewingMediaType === 'drawings' && <><i className="feather-edit-2 me-2"></i>Dessins ({viewingNote.drawings?.length || 0})</>}
+                  {' '}- {viewingNote.title}
+                </h5>
+                <button type="button" className="btn-close" onClick={handleCloseMediaViewer}></button>
+              </div>
+              <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                {/* Images */}
+                {viewingMediaType === 'images' && viewingNote.images && (
+                  <div className="row g-3">
+                    {viewingNote.images.map((img, index) => (
+                      <div key={img.id} className="col-md-4">
+                        <div className="card h-100">
+                          <div 
+                            style={{ 
+                              height: '200px', 
+                              overflow: 'hidden', 
+                              backgroundColor: '#f8f9fa',
+                              cursor: 'pointer',
+                              position: 'relative'
+                            }}
+                            onClick={() => handleOpenLightbox(index)}
+                          >
+                            <img 
+                              src={img.data} 
+                              alt={img.name}
+                              style={{ 
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover'
+                              }}
+                            />
+                            <div 
+                              className="position-absolute top-0 end-0 m-2"
+                              style={{ opacity: 0.9 }}
+                            >
+                              <span className="badge bg-dark">
+                                <i className="feather-maximize-2"></i>
+                              </span>
+                            </div>
+                          </div>
+                          <div className="card-body">
+                            <p className="card-text text-truncate mb-2" title={img.name}>
+                              <i className="feather-image me-2 text-primary"></i>
+                              <small>{img.name}</small>
+                            </p>
+                            <div className="d-flex justify-content-between align-items-center">
+                              <small className="text-muted">{formatFileSize(img.size)}</small>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-primary"
+                                onClick={() => handleDownloadMedia(img, img.name)}
+                              >
+                                <i className="feather-download"></i>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Documents */}
+                {viewingMediaType === 'documents' && viewingNote.documents && (
+                  <div className="list-group">
+                    {viewingNote.documents.map((doc, index) => (
+                      <div key={doc.id} className="list-group-item">
+                        <div className="d-flex align-items-center">
+                          <i className="feather-file-text me-3 text-info" style={{ fontSize: '2rem' }}></i>
+                          <div className="flex-grow-1">
+                            <h6 className="mb-1">{doc.name}</h6>
+                            <small className="text-muted">{formatFileSize(doc.size)}</small>
+                          </div>
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-primary"
+                            onClick={() => handleDownloadMedia(doc, doc.name)}
+                          >
+                            <i className="feather-download me-2"></i>
+                            Télécharger
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Audios */}
+                {viewingMediaType === 'audios' && viewingNote.audios && (
+                  <div className="row g-3">
+                    {viewingNote.audios.map((audio, index) => (
+                      <div key={audio.id} className="col-md-6">
+                        <div className="card">
+                          <div className="card-body">
+                            <div className="d-flex justify-content-between align-items-start mb-2">
+                              <h6 className="card-title d-flex align-items-center mb-0">
+                                <i className={`feather-${audio.isRecorded ? 'mic' : 'music'} me-2 text-success`}></i>
+                                {audio.name}
+                                {audio.isRecorded && (
+                                  <span className="badge bg-danger ms-2">
+                                    <i className="feather-mic" style={{ fontSize: '0.7rem' }}></i>
+                                  </span>
+                                )}
+                              </h6>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-primary"
+                                onClick={() => handleDownloadMedia(audio, audio.name)}
+                              >
+                                <i className="feather-download"></i>
+                              </button>
+                            </div>
+                            <p className="text-muted small mb-2">{formatFileSize(audio.size)}</p>
+                            <audio controls className="w-100" style={{ height: '45px' }}>
+                              <source src={audio.data} type={audio.type} />
+                            </audio>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Drawings */}
+                {viewingMediaType === 'drawings' && viewingNote.drawings && (
+                  <div className="row g-3">
+                    {viewingNote.drawings.map((drawing, index) => (
+                      <div key={drawing.id} className="col-md-4">
+                        <div className="card h-100">
+                          <div 
+                            style={{ 
+                              height: '200px', 
+                              overflow: 'hidden', 
+                              backgroundColor: '#f8f9fa',
+                              cursor: 'pointer',
+                              position: 'relative'
+                            }}
+                            onClick={() => handleOpenLightbox(index)}
+                          >
+                            <img 
+                              src={drawing.data} 
+                              alt="Dessin"
+                              style={{ 
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain'
+                              }}
+                            />
+                            <div 
+                              className="position-absolute top-0 end-0 m-2"
+                              style={{ opacity: 0.9 }}
+                            >
+                              <span className="badge bg-dark">
+                                <i className="feather-maximize-2"></i>
+                              </span>
+                            </div>
+                          </div>
+                          <div className="card-body">
+                            <p className="card-text mb-2">
+                              <i className="feather-calendar me-2 text-warning"></i>
+                              <small className="text-muted">
+                                {new Date(drawing.date).toLocaleDateString('fr-FR', { 
+                                  day: '2-digit', 
+                                  month: 'short', 
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </small>
+                            </p>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-primary w-100"
+                              onClick={() => handleDownloadMedia(drawing, `Dessin-${new Date(drawing.date).toISOString()}.png`)}
+                            >
+                              <i className="feather-download me-2"></i>
+                              Télécharger
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Empty state */}
+                {((viewingMediaType === 'images' && (!viewingNote.images || viewingNote.images.length === 0)) ||
+                  (viewingMediaType === 'documents' && (!viewingNote.documents || viewingNote.documents.length === 0)) ||
+                  (viewingMediaType === 'audios' && (!viewingNote.audios || viewingNote.audios.length === 0)) ||
+                  (viewingMediaType === 'drawings' && (!viewingNote.drawings || viewingNote.drawings.length === 0))) && (
+                  <div className="text-center py-5">
+                    <i className="feather-inbox text-muted" style={{ fontSize: '4rem', opacity: 0.3 }}></i>
+                    <p className="text-muted mt-3">Aucun média de ce type</p>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={handleCloseMediaViewer}>
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox Modal */}
+      {showLightbox && viewingNote && viewingMediaType && (
+        <div 
+          className="modal fade show d-block" 
+          tabIndex="-1" 
+          style={{ backgroundColor: 'rgba(0,0,0,0.95)', zIndex: 1060 }}
+          onClick={handleCloseLightbox}
+        >
+          <button 
+            type="button" 
+            className="btn-close btn-close-white position-absolute top-0 end-0 m-3"
+            style={{ zIndex: 1061 }}
+            onClick={handleCloseLightbox}
+          ></button>
+          
+          <div className="d-flex align-items-center justify-content-center" style={{ height: '100vh' }}>
+            {/* Previous Button */}
+            {currentMediaIndex > 0 && (
+              <button
+                type="button"
+                className="btn btn-light position-absolute start-0 ms-3"
+                style={{ zIndex: 1061, width: '50px', height: '50px' }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handlePrevMedia()
+                }}
+              >
+                <i className="feather-chevron-left"></i>
+              </button>
+            )}
+
+            {/* Media Content */}
+            <div className="text-center" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '90vw', maxHeight: '90vh' }}>
+              {viewingMediaType === 'images' && viewingNote.images && viewingNote.images[currentMediaIndex] && (
+                <div>
+                  <img
+                    src={viewingNote.images[currentMediaIndex].data}
+                    alt={viewingNote.images[currentMediaIndex].name}
+                    style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain' }}
+                  />
+                  <div className="bg-dark bg-opacity-75 text-white p-3 mt-2 rounded">
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong>{viewingNote.images[currentMediaIndex].name}</strong>
+                        <br />
+                        <small>{formatFileSize(viewingNote.images[currentMediaIndex].size)}</small>
+                        <small className="ms-3">{currentMediaIndex + 1} / {viewingNote.images.length}</small>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-light"
+                        onClick={() => handleDownloadMedia(viewingNote.images[currentMediaIndex], viewingNote.images[currentMediaIndex].name)}
+                      >
+                        <i className="feather-download me-2"></i>
+                        Télécharger
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {viewingMediaType === 'drawings' && viewingNote.drawings && viewingNote.drawings[currentMediaIndex] && (
+                <div>
+                  <img
+                    src={viewingNote.drawings[currentMediaIndex].data}
+                    alt="Dessin"
+                    style={{ maxWidth: '100%', maxHeight: '80vh', objectFit: 'contain', backgroundColor: 'white' }}
+                  />
+                  <div className="bg-dark bg-opacity-75 text-white p-3 mt-2 rounded">
+                    <div className="d-flex justify-content-between align-items-center">
+                      <div>
+                        <strong>Dessin</strong>
+                        <br />
+                        <small>
+                          {new Date(viewingNote.drawings[currentMediaIndex].date).toLocaleDateString('fr-FR', { 
+                            day: '2-digit', 
+                            month: 'long', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </small>
+                        <small className="ms-3">{currentMediaIndex + 1} / {viewingNote.drawings.length}</small>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-sm btn-light"
+                        onClick={() => handleDownloadMedia(
+                          viewingNote.drawings[currentMediaIndex], 
+                          `Dessin-${new Date(viewingNote.drawings[currentMediaIndex].date).toISOString()}.png`
+                        )}
+                      >
+                        <i className="feather-download me-2"></i>
+                        Télécharger
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {viewingMediaType === 'audios' && viewingNote.audios && viewingNote.audios[currentMediaIndex] && (
+                <div className="bg-dark bg-opacity-75 text-white p-4 rounded" style={{ minWidth: '500px' }}>
+                  <div className="text-center mb-3">
+                    <i className={`feather-${viewingNote.audios[currentMediaIndex].isRecorded ? 'mic' : 'music'} text-success`} style={{ fontSize: '4rem' }}></i>
+                  </div>
+                  <h5 className="text-white mb-3">{viewingNote.audios[currentMediaIndex].name}</h5>
+                  <audio controls className="w-100 mb-3" autoPlay style={{ height: '50px' }}>
+                    <source src={viewingNote.audios[currentMediaIndex].data} type={viewingNote.audios[currentMediaIndex].type} />
+                  </audio>
+                  <div className="d-flex justify-content-between align-items-center">
+                    <small>{formatFileSize(viewingNote.audios[currentMediaIndex].size)}</small>
+                    <small>{currentMediaIndex + 1} / {viewingNote.audios.length}</small>
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-light"
+                      onClick={() => handleDownloadMedia(
+                        viewingNote.audios[currentMediaIndex], 
+                        viewingNote.audios[currentMediaIndex].name
+                      )}
+                    >
+                      <i className="feather-download me-2"></i>
+                      Télécharger
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Next Button */}
+            {viewingNote[viewingMediaType] && currentMediaIndex < viewingNote[viewingMediaType].length - 1 && (
+              <button
+                type="button"
+                className="btn btn-light position-absolute end-0 me-3"
+                style={{ zIndex: 1061, width: '50px', height: '50px' }}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleNextMedia()
+                }}
+              >
+                <i className="feather-chevron-right"></i>
+              </button>
+            )}
+          </div>
+
+          {/* Navigation hint */}
+          <div className="position-absolute bottom-0 start-50 translate-middle-x mb-3 text-white text-center" style={{ zIndex: 1061 }}>
+            <small>
+              <kbd>←</kbd> Précédent · <kbd>→</kbd> Suivant · <kbd>Esc</kbd> Fermer
+            </small>
           </div>
         </div>
       )}

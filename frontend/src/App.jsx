@@ -38,7 +38,6 @@ import ContactDetail from './pages/ContactDetail'
 
 // Apps
 import Chat from './pages/apps/Chat'
-import Email from './pages/apps/Email'
 import Notes from './pages/apps/Notes'
 import Storage from './pages/apps/Storage'
 import Calendar from './pages/apps/Calendar'
@@ -320,14 +319,6 @@ function App() {
         <ProtectedRoute>
           <DashboardLayout>
             <Chat />
-          </DashboardLayout>
-        </ProtectedRoute>
-      } />
-      
-      <Route path="/apps/email" element={
-        <ProtectedRoute>
-          <DashboardLayout>
-            <Email />
           </DashboardLayout>
         </ProtectedRoute>
       } />
