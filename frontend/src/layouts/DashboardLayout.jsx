@@ -4,7 +4,7 @@ import Header from '../components/layout/Header'
 
 export default function DashboardLayout({ children }) {
   const location = useLocation()
-  const isChatPage = location.pathname === '/apps/chat'
+  const isAppLikePage = location.pathname === '/apps/chat' || location.pathname === '/tasks'
 
   return (
     <>
@@ -12,7 +12,7 @@ export default function DashboardLayout({ children }) {
       <Header />
       <main className="nxl-container">
         <div className="nxl-content">
-          <div className={`main-content ${isChatPage ? 'p-0' : ''}`}>
+          <div className={`main-content ${isAppLikePage ? 'p-0' : ''}`}>
             {children || <Outlet />}
           </div>
         </div>
