@@ -1,9 +1,33 @@
 import express from 'express';
 import { PrismaClient } from '@prisma/client';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { protect as authMiddleware } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+const chatUploadsDir = path.join(process.cwd(), 'uploads', 'chat');
+if (!fs.existsSync(chatUploadsDir)) {
+  fs.mkdirSync(chatUploadsDir, { recursive: true });
+}
+
+const chatUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, chatUploadsDir),
+    filename: (_req, file, cb) => {
+      const ext = path.extname(file.originalname || '').toLowerCase();
+      const baseName = path.basename(file.originalname || 'attachment', ext)
+        .replace(/[^a-zA-Z0-9-_]/g, '_')
+        .slice(0, 50) || 'attachment';
+      cb(null, `${Date.now()}-${Math.round(Math.random() * 1e9)}-${baseName}${ext}`);
+    }
+  }),
+  limits: {
+    fileSize: 20 * 1024 * 1024
+  }
+});
 
 const getBlockState = async (currentUserId, otherUserId) => {
   if (!otherUserId) return false;
@@ -22,6 +46,54 @@ const getBlockState = async (currentUserId, otherUserId) => {
 
 // Middleware d'authentification pour toutes les routes
 router.use(authMiddleware);
+
+/**
+ * POST /api/chat/attachments
+ * Upload d'une pièce jointe locale pour le chat
+ * FormData: file, conversationId
+ */
+router.post('/attachments', chatUpload.single('file'), async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { conversationId } = req.body;
+
+    if (!conversationId) {
+      return res.status(400).json({ message: 'conversationId requis' });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: 'Aucun fichier fourni' });
+    }
+
+    const membership = await prisma.conversationMember.findFirst({
+      where: {
+        conversationId,
+        userId,
+        leftAt: null
+      }
+    });
+
+    if (!membership) {
+      return res.status(403).json({ message: 'Accès refusé à cette conversation' });
+    }
+
+    const fileUrl = `${req.protocol}://${req.get('host')}/uploads/chat/${req.file.filename}`;
+
+    return res.status(201).json({
+      success: true,
+      file: {
+        name: req.file.originalname,
+        size: req.file.size,
+        mimeType: req.file.mimetype,
+        url: fileUrl,
+        path: `/uploads/chat/${req.file.filename}`
+      }
+    });
+  } catch (error) {
+    console.error('Erreur lors de l\'upload de pièce jointe:', error);
+    return res.status(500).json({ message: 'Erreur lors de l\'upload de la pièce jointe' });
+  }
+});
 
 // ============================================
 // CONVERSATIONS

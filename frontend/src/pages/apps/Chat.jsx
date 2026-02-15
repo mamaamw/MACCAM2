@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 
 export default function Chat() {
   const { user, token } = useAuthStore();
+  const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024;
   
   // Log de débogage
   console.log('🎯 Chat Component Mounted', {
@@ -23,6 +24,9 @@ export default function Chat() {
   const [showNewGroupModal, setShowNewGroupModal] = useState(false);
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showBlockedUsersModal, setShowBlockedUsersModal] = useState(false);
+  const [showImageGalleryModal, setShowImageGalleryModal] = useState(false);
+  const [galleryImageIndex, setGalleryImageIndex] = useState(0);
+  const [galleryItems, setGalleryItems] = useState([]);
   const [users, setUsers] = useState([]);
   const [blockedUsers, setBlockedUsers] = useState([]);
   const [blockedUsersCount, setBlockedUsersCount] = useState(0);
@@ -42,7 +46,14 @@ export default function Chat() {
   const [addingMember, setAddingMember] = useState(false);
   const [loadingBlockedUsers, setLoadingBlockedUsers] = useState(false);
   const [unblockingUserId, setUnblockingUserId] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
   const messagesEndRef = useRef(null);
+  const imageFileInputRef = useRef(null);
+  const documentFileInputRef = useRef(null);
+  const messageInputRef = useRef(null);
+  const mediaRecorderRef = useRef(null);
+  const audioStreamRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   // Charger les conversations au démarrage
   useEffect(() => {
@@ -55,6 +66,9 @@ export default function Chat() {
   useEffect(() => {
     if (selectedConversation?.id) {
       loadMessages(selectedConversation.id);
+      setShowImageGalleryModal(false);
+      setGalleryItems([]);
+      setGalleryImageIndex(0);
     }
   }, [selectedConversation?.id]);
 
@@ -62,6 +76,44 @@ export default function Chat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
+
+      if (audioStreamRef.current) {
+        audioStreamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, []);
+
+  const galleryImages = galleryItems.length > 0
+    ? galleryItems
+    : messages.filter(message => message.type === 'IMAGE' && !!message.attachmentUrl);
+
+  useEffect(() => {
+    if (!showImageGalleryModal) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setShowImageGalleryModal(false);
+      }
+      if (event.key === 'ArrowLeft') {
+        setGalleryImageIndex(prev => (prev > 0 ? prev - 1 : prev));
+      }
+      if (event.key === 'ArrowRight') {
+        setGalleryImageIndex(prev => {
+          const maxIndex = Math.max(0, galleryImages.length - 1);
+          return prev < maxIndex ? prev + 1 : prev;
+        });
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showImageGalleryModal, galleryImages.length]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -310,6 +362,177 @@ export default function Chat() {
 
   const handleFeatureNotAvailable = (featureLabel) => {
     toast.info(`${featureLabel} sera disponible bientôt`);
+  };
+
+  const sendAttachmentMessage = async (file, type, fallbackContent) => {
+    if (!selectedConversation?.id) {
+      toast.error('Sélectionnez une conversation');
+      return;
+    }
+
+    if (!file) return;
+
+    if (file.size > MAX_ATTACHMENT_SIZE) {
+      toast.error('Fichier trop volumineux (max 20 MB)');
+      return;
+    }
+
+    try {
+      setSending(true);
+      const uploadResult = await chatService.uploadAttachment(selectedConversation.id, file);
+      const attachmentUrl = uploadResult?.file?.url;
+
+      if (!attachmentUrl) {
+        throw new Error('URL de pièce jointe non reçue');
+      }
+
+      const message = await chatService.sendMessage(selectedConversation.id, {
+        content: file.name || fallbackContent,
+        type,
+        attachmentUrl
+      });
+      setMessages(prev => [...prev, message]);
+      toast.success('Pièce jointe envoyée');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Erreur lors de l\'envoi de la pièce jointe');
+      console.error(error);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleInsertHash = () => {
+    if (isSendingBlocked) return;
+
+    const inputElement = messageInputRef.current;
+    if (!inputElement) {
+      setNewMessage(prev => `${prev}#`);
+      return;
+    }
+
+    const start = inputElement.selectionStart ?? newMessage.length;
+    const end = inputElement.selectionEnd ?? newMessage.length;
+    const nextValue = `${newMessage.slice(0, start)}#${newMessage.slice(end)}`;
+    setNewMessage(nextValue);
+
+    requestAnimationFrame(() => {
+      inputElement.focus();
+      const cursorPos = start + 1;
+      inputElement.setSelectionRange(cursorPos, cursorPos);
+    });
+  };
+
+  const handlePickImage = () => {
+    if (isSendingBlocked) return;
+    imageFileInputRef.current?.click();
+  };
+
+  const handlePickDocument = () => {
+    if (isSendingBlocked) return;
+    documentFileInputRef.current?.click();
+  };
+
+  const handleImageSelected = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await sendAttachmentMessage(file, 'IMAGE', 'Image');
+    event.target.value = '';
+  };
+
+  const handleDocumentSelected = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    await sendAttachmentMessage(file, 'FILE', 'Document');
+    event.target.value = '';
+  };
+
+  const handleToggleVoiceRecording = async () => {
+    if (isSendingBlocked) return;
+
+    if (isRecording) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      setIsRecording(false);
+      return;
+    }
+
+    if (!selectedConversation?.id) {
+      toast.error('Sélectionnez une conversation');
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      toast.error('Enregistrement vocal non supporté sur ce navigateur');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioStreamRef.current = stream;
+
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        try {
+          if (audioChunksRef.current.length === 0) {
+            return;
+          }
+
+          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+          const audioFile = new File([audioBlob], `voice-${Date.now()}.webm`, { type: 'audio/webm' });
+          await sendAttachmentMessage(audioFile, 'AUDIO', 'Message vocal');
+        } finally {
+          if (audioStreamRef.current) {
+            audioStreamRef.current.getTracks().forEach(track => track.stop());
+            audioStreamRef.current = null;
+          }
+          audioChunksRef.current = [];
+          mediaRecorderRef.current = null;
+          setIsRecording(false);
+        }
+      };
+
+      recorder.start();
+      setIsRecording(true);
+      toast.success('Enregistrement démarré');
+    } catch (error) {
+      toast.error('Impossible de démarrer l\'enregistrement');
+      console.error(error);
+      setIsRecording(false);
+    }
+  };
+
+  const handleOpenImageGallery = (messageId) => {
+    const images = messages.filter(message => message.type === 'IMAGE' && !!message.attachmentUrl);
+    if (images.length === 0) {
+      toast.error('Aucune image à prévisualiser');
+      return;
+    }
+
+    const index = images.findIndex(image => image.id === messageId);
+    setGalleryItems(images);
+    setGalleryImageIndex(index >= 0 ? index : 0);
+    setShowImageGalleryModal(true);
+  };
+
+  const handlePreviousGalleryImage = () => {
+    setGalleryImageIndex(prev => (prev > 0 ? prev - 1 : prev));
+  };
+
+  const handleNextGalleryImage = () => {
+    setGalleryImageIndex(prev => {
+      const maxIndex = Math.max(0, galleryImages.length - 1);
+      return prev < maxIndex ? prev + 1 : prev;
+    });
   };
 
   const handleOpenAddMemberModal = async () => {
@@ -667,6 +890,12 @@ export default function Chat() {
   const selectedConversationNotificationsMuted = !!selectedConversation?.notificationsMuted;
   const selectedConversationUserBlocked = !!selectedConversation?.otherUserIsBlocked;
   const isSendingBlocked = !!selectedConversation && selectedConversation.type === 'DIRECT' && selectedConversationUserBlocked;
+  const activeGalleryImage = galleryImages[galleryImageIndex] || null;
+  const activeGalleryDownloadName = activeGalleryImage
+    ? (activeGalleryImage.content && activeGalleryImage.content !== 'Image'
+      ? activeGalleryImage.content
+      : `image-${galleryImageIndex + 1}.jpg`)
+    : 'image.jpg';
 
   const selectedGroupMemberIds = new Set(
     (selectedConversation?.members || [])
@@ -1109,16 +1338,50 @@ export default function Chat() {
                                 </div>
                               ) : (
                                 <>
-                                  <p
-                                    className={`py-2 px-3 rounded-5 bg-white text-break ${!isLastInGroup ? 'mb-2' : 'mb-0'}`}
-                                    style={{
-                                      whiteSpace: 'pre-wrap',
-                                      overflowWrap: 'anywhere',
-                                      wordBreak: 'break-word'
-                                    }}
-                                  >
-                                    {message.content}
-                                  </p>
+                                  {message.type === 'IMAGE' && message.attachmentUrl && (
+                                    <div className="mb-2">
+                                      <button
+                                        type="button"
+                                        className="p-0 border-0 bg-transparent"
+                                        onClick={() => handleOpenImageGallery(message.id)}
+                                      >
+                                        <img
+                                          src={message.attachmentUrl}
+                                          alt={message.content || 'Image'}
+                                          className="img-fluid rounded-4 border"
+                                          style={{ maxHeight: '260px', objectFit: 'cover', cursor: 'zoom-in' }}
+                                        />
+                                      </button>
+                                    </div>
+                                  )}
+                                  {message.type === 'FILE' && message.attachmentUrl && (
+                                    <a
+                                      href={message.attachmentUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="d-inline-flex align-items-center gap-2 py-2 px-3 rounded-5 bg-white text-decoration-none mb-2"
+                                    >
+                                      <i className="feather-file-text"></i>
+                                      <span className="text-break" style={{ overflowWrap: 'anywhere' }}>{message.content || 'Document'}</span>
+                                    </a>
+                                  )}
+                                  {message.type === 'AUDIO' && message.attachmentUrl && (
+                                    <div className="mb-2 p-2 bg-white rounded-4">
+                                      <audio controls src={message.attachmentUrl} className="w-100" />
+                                    </div>
+                                  )}
+                                  {(message.type === 'TEXT' || (message.type === 'IMAGE' && message.content)) && (
+                                    <p
+                                      className={`py-2 px-3 rounded-5 bg-white text-break ${!isLastInGroup ? 'mb-2' : 'mb-0'}`}
+                                      style={{
+                                        whiteSpace: 'pre-wrap',
+                                        overflowWrap: 'anywhere',
+                                        wordBreak: 'break-word'
+                                      }}
+                                    >
+                                      {message.content}
+                                    </p>
+                                  )}
                                   <div className="d-flex align-items-center justify-content-between mt-1 px-2">
                                     <div className="d-flex align-items-center gap-2">
                                       {message.isEdited && (
@@ -1182,7 +1445,7 @@ export default function Chat() {
                       </div>
                     )}
                     <form onSubmit={handleSendMessage} className="d-flex align-items-center gap-2">
-                      <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('Les commandes rapides'); }} className="d-flex">
+                      <a href="#" onClick={(e) => { e.preventDefault(); handleInsertHash(); }} className="d-flex" title="Insérer #">
                         <div className="wd-60 d-flex align-items-center justify-content-center" style={{ height: '59px' }}>
                           <i className="feather-hash"></i>
                         </div>
@@ -1195,23 +1458,26 @@ export default function Chat() {
                         </a>
                         <ul className="dropdown-menu dropdown-menu-start">
                           <li>
-                            <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('L\'envoi d\'image'); }} className="dropdown-item">
+                            <a href="#" onClick={(e) => { e.preventDefault(); handlePickImage(); }} className="dropdown-item">
                               <i className="feather-image me-3"></i>Image
                             </a>
                           </li>
                           <li>
-                            <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('L\'envoi de document'); }} className="dropdown-item">
+                            <a href="#" onClick={(e) => { e.preventDefault(); handlePickDocument(); }} className="dropdown-item">
                               <i className="feather-file me-3"></i>Document
                             </a>
                           </li>
+                          <li><hr className="dropdown-divider" /></li>
+                          <li className="px-3 py-2 fs-12 text-muted">Taille max: 20 MB</li>
                         </ul>
                       </div>
-                      <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('Les messages vocaux'); }} className="d-flex">
+                      <a href="#" onClick={(e) => { e.preventDefault(); handleToggleVoiceRecording(); }} className="d-flex" title={isRecording ? 'Arrêter l\'enregistrement' : 'Message vocal'}>
                         <div className="wd-60 d-flex align-items-center justify-content-center" style={{ height: '59px' }}>
-                          <i className="feather-mic"></i>
+                          <i className={`feather-${isRecording ? 'square' : 'mic'} ${isRecording ? 'text-danger' : ''}`}></i>
                         </div>
                       </a>
                       <input
+                        ref={messageInputRef}
                         type="text"
                         className="form-control border-0"
                         placeholder={isSendingBlocked ? 'Débloquez cet utilisateur pour écrire...' : 'Type your message here...'}
@@ -1241,6 +1507,19 @@ export default function Chat() {
                           )}
                         </button>
                       </div>
+                      <input
+                        ref={imageFileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="d-none"
+                        onChange={handleImageSelected}
+                      />
+                      <input
+                        ref={documentFileInputRef}
+                        type="file"
+                        className="d-none"
+                        onChange={handleDocumentSelected}
+                      />
                     </form>
                   </div>
                 </>
@@ -1544,6 +1823,84 @@ export default function Chat() {
                 <button type="button" className="btn btn-secondary" onClick={() => setShowBlockedUsersModal(false)}>
                   Fermer
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Galerie images */}
+      {showImageGalleryModal && activeGalleryImage && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)' }}>
+          <div className="modal-dialog modal-xl modal-dialog-centered">
+            <div className="modal-content bg-transparent border-0">
+              <div className="modal-header border-0">
+                <h6 className="modal-title text-white">
+                  Galerie ({galleryImageIndex + 1}/{galleryImages.length})
+                </h6>
+                <div className="d-flex align-items-center gap-2">
+                  <a
+                    href={activeGalleryImage.attachmentUrl}
+                    download={activeGalleryDownloadName}
+                    className="btn btn-sm btn-light"
+                  >
+                    <i className="feather-download me-1"></i>
+                    Télécharger
+                  </a>
+                  <button
+                    type="button"
+                    className="btn-close btn-close-white"
+                    onClick={() => setShowImageGalleryModal(false)}
+                  ></button>
+                </div>
+              </div>
+              <div className="modal-body">
+                <div className="d-flex align-items-center justify-content-center gap-3">
+                  <button
+                    type="button"
+                    className="btn btn-light"
+                    onClick={handlePreviousGalleryImage}
+                    disabled={galleryImageIndex === 0}
+                  >
+                    <i className="feather-chevron-left"></i>
+                  </button>
+
+                  <img
+                    src={activeGalleryImage.attachmentUrl}
+                    alt={activeGalleryImage.content || 'Image'}
+                    className="img-fluid rounded"
+                    style={{ maxHeight: '70vh', objectFit: 'contain' }}
+                  />
+
+                  <button
+                    type="button"
+                    className="btn btn-light"
+                    onClick={handleNextGalleryImage}
+                    disabled={galleryImageIndex >= galleryImages.length - 1}
+                  >
+                    <i className="feather-chevron-right"></i>
+                  </button>
+                </div>
+
+                {galleryImages.length > 1 && (
+                  <div className="d-flex align-items-center justify-content-center gap-2 mt-3 flex-wrap">
+                    {galleryImages.map((image, index) => (
+                      <button
+                        key={image.id}
+                        type="button"
+                        className={`p-0 border-0 bg-transparent ${index === galleryImageIndex ? 'opacity-100' : 'opacity-50'}`}
+                        onClick={() => setGalleryImageIndex(index)}
+                      >
+                        <img
+                          src={image.attachmentUrl}
+                          alt={image.content || `Image ${index + 1}`}
+                          className="rounded border"
+                          style={{ width: '64px', height: '64px', objectFit: 'cover' }}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

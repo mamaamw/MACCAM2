@@ -94,6 +94,23 @@ const chatService = {
   },
 
   /**
+   * Uploader une pièce jointe pour une conversation
+   */
+  uploadAttachment: async (conversationId, file) => {
+    const formData = new FormData();
+    formData.append('conversationId', conversationId);
+    formData.append('file', file);
+
+    const response = await api.post('/chat/attachments', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+
+    return response.data;
+  },
+
+  /**
    * Envoyer un message texte simple
    */
   sendTextMessage: async (conversationId, content) => {
