@@ -21,27 +21,42 @@ export default function Chat() {
   const [sending, setSending] = useState(false);
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [showNewGroupModal, setShowNewGroupModal] = useState(false);
+  const [showAddMemberModal, setShowAddMemberModal] = useState(false);
+  const [showBlockedUsersModal, setShowBlockedUsersModal] = useState(false);
   const [users, setUsers] = useState([]);
+  const [blockedUsers, setBlockedUsers] = useState([]);
+  const [blockedUsersCount, setBlockedUsersCount] = useState(0);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [groupTitle, setGroupTitle] = useState('');
   const [groupDescription, setGroupDescription] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [conversationFilter, setConversationFilter] = useState('Newest');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editingContent, setEditingContent] = useState('');
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [historyMessage, setHistoryMessage] = useState(null);
+  const [messageHistory, setMessageHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
+  const [loadingBlockedUsers, setLoadingBlockedUsers] = useState(false);
+  const [unblockingUserId, setUnblockingUserId] = useState(null);
   const messagesEndRef = useRef(null);
 
   // Charger les conversations au démarrage
   useEffect(() => {
     console.log('📥 Loading conversations...');
     loadConversations();
+    loadBlockedUsers(true);
   }, []);
 
-  // Charger les messages quand une conversation est sélectionnée
+  // Charger les messages uniquement quand l'ID de conversation change
   useEffect(() => {
-    if (selectedConversation) {
+    if (selectedConversation?.id) {
       loadMessages(selectedConversation.id);
     }
-  }, [selectedConversation]);
+  }, [selectedConversation?.id]);
 
   // Auto-scroll vers le bas quand de nouveaux messages arrivent
   useEffect(() => {
@@ -88,7 +103,33 @@ export default function Chat() {
           content: loadedMessages[0].content?.substring(0, 20)
         } : null
       });
-      setMessages(loadedMessages);
+
+      const hasUnreadIncoming = loadedMessages.some(
+        msg => !msg.isRead && String(msg.senderId || msg.sender?.id) !== String(user?.id)
+      );
+
+      const conversationInList = conversations.find(conv => conv.id === conversationId);
+      const hasUnreadBadge = (conversationInList?.unreadCount || 0) > 0;
+
+      if (hasUnreadIncoming || hasUnreadBadge) {
+        await chatService.markConversationAsRead(conversationId, true);
+
+        setConversations(prev => prev.map(conv =>
+          conv.id === conversationId ? { ...conv, unreadCount: 0 } : conv
+        ));
+
+        setSelectedConversation(prev => (
+          prev?.id === conversationId ? { ...prev, unreadCount: 0 } : prev
+        ));
+
+        setMessages(loadedMessages.map(msg =>
+          String(msg.senderId || msg.sender?.id) === String(user?.id)
+            ? msg
+            : { ...msg, isRead: true }
+        ));
+      } else {
+        setMessages(loadedMessages);
+      }
     } catch (error) {
       toast.error('Erreur lors du chargement des messages');
       console.error(error);
@@ -106,10 +147,147 @@ export default function Chat() {
       setMessages([...messages, message]);
       setNewMessage('');
     } catch (error) {
-      toast.error('Erreur lors de l\'envoi du message');
+      toast.error(error?.response?.data?.message || 'Erreur lors de l\'envoi du message');
       console.error(error);
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleStartEditMessage = (message) => {
+    setEditingMessageId(message.id);
+    setEditingContent(message.content);
+  };
+
+  const handleCancelEditMessage = () => {
+    setEditingMessageId(null);
+    setEditingContent('');
+  };
+
+  const handleSaveEditMessage = async (messageId) => {
+    if (!editingContent.trim()) {
+      toast.error('Le message ne peut pas être vide');
+      return;
+    }
+
+    try {
+      const updatedMessage = await chatService.editMessage(messageId, editingContent.trim());
+      setMessages(prev => prev.map(msg => msg.id === messageId ? { ...msg, ...updatedMessage } : msg));
+      setEditingMessageId(null);
+      setEditingContent('');
+      toast.success('Message modifié');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Erreur lors de la modification');
+      console.error(error);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId, scope) => {
+    try {
+      const result = await chatService.deleteMessage(messageId, scope);
+
+      if (scope === 'me') {
+        setMessages(prev => prev.filter(msg => msg.id !== messageId));
+        toast.success('Message supprimé pour vous');
+        return;
+      }
+
+      if (result?.message) {
+        setMessages(prev => prev.map(msg => msg.id === messageId ? { ...msg, ...result.message } : msg));
+      }
+
+      toast.success('Message supprimé pour tout le monde');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Erreur lors de la suppression');
+      console.error(error);
+    }
+  };
+
+  const handleOpenMessageHistory = async (message) => {
+    try {
+      setShowHistoryModal(true);
+      setHistoryMessage(message);
+      setLoadingHistory(true);
+      const history = await chatService.getMessageHistory(message.id);
+      setMessageHistory(history);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Erreur lors du chargement de l\'historique');
+      console.error(error);
+      setShowHistoryModal(false);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleMarkConversationAsRead = async (conversationIdOrIsRead, isRead = undefined) => {
+    // Si le premier paramètre est un boolean, c'est l'ancien format (depuis l'en-tête)
+    let conversationId;
+    let readStatus;
+    
+    if (typeof conversationIdOrIsRead === 'boolean') {
+      // Appelé depuis l'en-tête avec juste isRead
+      if (!selectedConversation) return;
+      conversationId = selectedConversation.id;
+      readStatus = conversationIdOrIsRead;
+    } else {
+      // Appelé depuis la sidebar avec conversationId et isRead
+      conversationId = conversationIdOrIsRead;
+      readStatus = isRead;
+    }
+    
+    try {
+      await chatService.markConversationAsRead(conversationId, readStatus);
+
+      // Mettre à jour la conversation dans la sidebar (badge non-lu)
+      setConversations(prev => prev.map(conv => {
+        if (conv.id !== conversationId) return conv;
+
+        const computedUnread = readStatus
+          ? 0
+          : Math.max(
+              1,
+              conv.unreadCount || messages.filter(
+                msg => String(msg.senderId || msg.sender?.id) !== String(user?.id)
+              ).length
+            );
+
+        return {
+          ...conv,
+          unreadCount: computedUnread
+        };
+      }));
+
+      setSelectedConversation(prev => {
+        if (!prev || prev.id !== conversationId) return prev;
+
+        const computedUnread = readStatus
+          ? 0
+          : Math.max(
+              1,
+              prev.unreadCount || messages.filter(
+                msg => String(msg.senderId || msg.sender?.id) !== String(user?.id)
+              ).length
+            );
+
+        return {
+          ...prev,
+          unreadCount: computedUnread
+        };
+      });
+      
+      // Si c'est la conversation actuellement sélectionnée, mettre à jour les messages
+      if (selectedConversation?.id === conversationId) {
+        setMessages(messages.map(msg =>
+          String(msg.senderId || msg.sender?.id) === String(user?.id)
+            ? msg
+            : { ...msg, isRead: readStatus }
+        ));
+      }
+      
+      toast.success(readStatus ? 'Discussion marquée comme lue' : 'Discussion marquée comme non-lue');
+    } catch (error) {
+      toast.error('Erreur lors de la mise à jour du statut');
+      console.error(error);
     }
   };
 
@@ -130,8 +308,237 @@ export default function Chat() {
     }
   };
 
+  const handleFeatureNotAvailable = (featureLabel) => {
+    toast.info(`${featureLabel} sera disponible bientôt`);
+  };
+
+  const handleOpenAddMemberModal = async () => {
+    if (!selectedConversation) return;
+
+    if (selectedConversation.type !== 'GROUP') {
+      toast.error('Ajout disponible uniquement pour les groupes');
+      return;
+    }
+
+    if (users.length === 0) {
+      await loadUsers();
+    }
+
+    setShowAddMemberModal(true);
+  };
+
+  const handleAddMemberToGroup = async (newUserId) => {
+    if (!selectedConversation || selectedConversation.type !== 'GROUP') {
+      toast.error('Aucun groupe sélectionné');
+      return;
+    }
+
+    try {
+      setAddingMember(true);
+      await chatService.addMember(selectedConversation.id, newUserId);
+      await Promise.all([
+        loadConversations(),
+        loadMessages(selectedConversation.id)
+      ]);
+      setShowAddMemberModal(false);
+      toast.success('Membre ajouté au groupe');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Erreur lors de l\'ajout du membre');
+      console.error(error);
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  const handleDeleteConversation = async (conversationArg = null) => {
+    const conversationToDelete = conversationArg || selectedConversation;
+
+    if (!conversationToDelete?.id) {
+      toast.error('Aucune conversation sélectionnée');
+      return;
+    }
+
+    const confirmed = window.confirm('Supprimer cette conversation pour vous ?');
+    if (!confirmed) return;
+
+    try {
+      await chatService.deleteConversation(conversationToDelete.id);
+
+      setConversations(prev => prev.filter(conv => conv.id !== conversationToDelete.id));
+
+      if (selectedConversation?.id === conversationToDelete.id) {
+        setSelectedConversation(null);
+        setMessages([]);
+      }
+
+      toast.success('Conversation supprimée');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Erreur lors de la suppression de la conversation');
+      console.error(error);
+    }
+  };
+
+  const handleToggleConversationNotifications = async (conversationArg = null) => {
+    const conversationToUpdate = conversationArg || selectedConversation;
+
+    if (!conversationToUpdate?.id) {
+      toast.error('Aucune conversation sélectionnée');
+      return;
+    }
+
+    const nextMuted = !conversationToUpdate.notificationsMuted;
+
+    try {
+      await chatService.setConversationNotifications(conversationToUpdate.id, nextMuted);
+
+      setConversations(prev => prev.map(conv =>
+        conv.id === conversationToUpdate.id
+          ? { ...conv, notificationsMuted: nextMuted }
+          : conv
+      ));
+
+      if (selectedConversation?.id === conversationToUpdate.id) {
+        setSelectedConversation(prev => prev ? { ...prev, notificationsMuted: nextMuted } : prev);
+      }
+
+      toast.success(nextMuted ? 'Notifications désactivées' : 'Notifications activées');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Erreur lors de la mise à jour des notifications');
+      console.error(error);
+    }
+  };
+
+  const handleToggleBlockUser = async () => {
+    if (!selectedConversation) {
+      toast.error('Aucune conversation sélectionnée');
+      return;
+    }
+
+    if (selectedConversation.type !== 'DIRECT') {
+      toast.error('Le blocage est disponible uniquement pour les discussions directes');
+      return;
+    }
+
+    const otherUserId = selectedConversation.otherUser?.id
+      || selectedConversation.members?.find(m => m?.user?.id && m.user.id !== user?.id)?.user?.id;
+
+    if (!otherUserId) {
+      toast.error('Utilisateur introuvable');
+      return;
+    }
+
+    const currentlyBlocked = !!selectedConversation.otherUserIsBlocked;
+
+    try {
+      if (currentlyBlocked) {
+        await chatService.unblockUser(otherUserId);
+      } else {
+        await chatService.blockUser(otherUserId);
+      }
+
+      setConversations(prev => prev.map(conv =>
+        conv.id === selectedConversation.id
+          ? { ...conv, otherUserIsBlocked: !currentlyBlocked }
+          : conv
+      ));
+
+      setSelectedConversation(prev => prev ? { ...prev, otherUserIsBlocked: !currentlyBlocked } : prev);
+
+      if (currentlyBlocked) {
+        setBlockedUsers(prev => prev.filter(blockedUser => blockedUser.id !== otherUserId));
+        setBlockedUsersCount(prev => Math.max(0, prev - 1));
+      } else {
+        setBlockedUsersCount(prev => prev + 1);
+      }
+
+      toast.success(currentlyBlocked ? 'Utilisateur débloqué' : 'Utilisateur bloqué');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Erreur lors de la mise à jour du blocage');
+      console.error(error);
+    }
+  };
+
+  const loadBlockedUsers = async (silent = false) => {
+    try {
+      setLoadingBlockedUsers(true);
+      const data = await chatService.getBlockedUsers();
+      const blockedList = data || [];
+      setBlockedUsers(blockedList);
+      setBlockedUsersCount(blockedList.length);
+    } catch (error) {
+      if (!silent) {
+        toast.error(error?.response?.data?.message || 'Erreur lors du chargement des utilisateurs bloqués');
+      }
+      console.error(error);
+    } finally {
+      setLoadingBlockedUsers(false);
+    }
+  };
+
+  const handleOpenBlockedUsersModal = async () => {
+    await loadBlockedUsers();
+    setShowBlockedUsersModal(true);
+  };
+
+  const handleUnblockFromList = async (blockedUserId) => {
+    try {
+      setUnblockingUserId(blockedUserId);
+      await chatService.unblockUser(blockedUserId);
+
+      setBlockedUsers(prev => prev.filter(blockedUser => blockedUser.id !== blockedUserId));
+      setBlockedUsersCount(prev => Math.max(0, prev - 1));
+
+      setConversations(prev => prev.map(conv => {
+        if (conv.type !== 'DIRECT') return conv;
+
+        const otherMemberId = conv.otherUser?.id
+          || conv.members?.find(m => m?.user?.id && m.user.id !== user?.id)?.user?.id;
+
+        if (String(otherMemberId) !== String(blockedUserId)) return conv;
+        return { ...conv, otherUserIsBlocked: false };
+      }));
+
+      setSelectedConversation(prev => {
+        if (!prev || prev.type !== 'DIRECT') return prev;
+
+        const otherMemberId = prev.otherUser?.id
+          || prev.members?.find(m => m?.user?.id && m.user.id !== user?.id)?.user?.id;
+
+        if (String(otherMemberId) !== String(blockedUserId)) return prev;
+        return { ...prev, otherUserIsBlocked: false };
+      });
+
+      toast.success('Utilisateur débloqué');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Erreur lors du déblocage');
+      console.error(error);
+    } finally {
+      setUnblockingUserId(null);
+    }
+  };
+
   const handleCreateDirectChat = async (userId) => {
     try {
+      // Vérifier si une conversation directe avec cet utilisateur existe déjà
+      const existingConversation = conversations.find(conv => {
+        if (conv.type !== 'DIRECT') return false;
+        
+        // Trouver l'autre membre de la conversation (pas nous)
+        const otherMember = conv.members?.find(m => m?.user?.id && m.user.id !== user?.id);
+        
+        // Vérifier si c'est le bon utilisateur
+        return otherMember?.user?.id === userId;
+      });
+
+      if (existingConversation) {
+        // Conversation déjà existante, on la sélectionne
+        setSelectedConversation(existingConversation);
+        setShowNewChatModal(false);
+        toast.info('Cette conversation existe déjà');
+        return;
+      }
+
+      // Sinon, créer une nouvelle conversation
       const conversation = await chatService.createDirectConversation(userId);
       setConversations([conversation, ...conversations]);
       setSelectedConversation(conversation);
@@ -152,6 +559,34 @@ export default function Chat() {
     }
 
     try {
+      // Vérifier si un groupe avec exactement les mêmes participants existe déjà
+      const selectedUserIds = selectedUsers.map(u => u.id).sort();
+      const existingGroup = conversations.find(conv => {
+        if (conv.type !== 'GROUP') return false;
+        
+        // Obtenir les IDs de tous les membres du groupe (sauf nous)
+        const memberIds = conv.members
+          ?.filter(m => m?.user?.id && m.user.id !== user?.id)
+          .map(m => m.user.id)
+          .sort();
+        
+        // Vérifier si les listes de participants sont identiques
+        if (memberIds?.length !== selectedUserIds.length) return false;
+        return memberIds?.every((id, index) => id === selectedUserIds[index]);
+      });
+
+      if (existingGroup) {
+        // Groupe déjà existant avec les mêmes participants, on le sélectionne
+        setSelectedConversation(existingGroup);
+        setShowNewGroupModal(false);
+        setGroupTitle('');
+        setGroupDescription('');
+        setSelectedUsers([]);
+        toast.info('Ce groupe existe déjà');
+        return;
+      }
+
+      // Sinon, créer un nouveau groupe
       const conversation = await chatService.createGroup(
         groupTitle,
         selectedUsers.map(u => u.id),
@@ -165,7 +600,7 @@ export default function Chat() {
       setSelectedUsers([]);
       toast.success('Groupe créé');
     } catch (error) {
-      toast.error('Erreur lors de la création du groupe');
+      toast.error(error?.response?.data?.message || 'Erreur lors de la création du groupe');
       console.error(error);
     }
   };
@@ -203,10 +638,43 @@ export default function Chat() {
     return otherMember?.user?.avatar || '/assets/images/avatar/1.png';
   };
 
-  const filteredConversations = conversations.filter(conv => {
-    const title = getConversationTitle(conv).toLowerCase();
-    return title.includes(searchQuery.toLowerCase());
-  });
+  const filteredConversations = conversations
+    .filter(conv => {
+      const title = getConversationTitle(conv).toLowerCase();
+      const matchesSearch = title.includes(searchQuery.toLowerCase());
+      const matchesUnread = conversationFilter === 'Unread' ? (conv.unreadCount || 0) > 0 : true;
+
+      const isHiddenBlockedDirect =
+        conv.type === 'DIRECT' &&
+        conv.otherUserIsBlocked &&
+        selectedConversation?.id !== conv.id;
+
+      return matchesSearch && matchesUnread && !isHiddenBlockedDirect;
+    })
+    .sort((a, b) => {
+      if (conversationFilter === 'Oldest') {
+        return new Date(a.lastMessageAt || a.updatedAt || 0) - new Date(b.lastMessageAt || b.updatedAt || 0);
+      }
+
+      return new Date(b.lastMessageAt || b.updatedAt || 0) - new Date(a.lastMessageAt || a.updatedAt || 0);
+    });
+
+  const selectedConversationHasUnread = !!selectedConversation && (
+    (selectedConversation.unreadCount || 0) > 0 ||
+    messages.some(msg => !msg.isRead && String(msg.senderId || msg.sender?.id) !== String(user?.id))
+  );
+
+  const selectedConversationNotificationsMuted = !!selectedConversation?.notificationsMuted;
+  const selectedConversationUserBlocked = !!selectedConversation?.otherUserIsBlocked;
+  const isSendingBlocked = !!selectedConversation && selectedConversation.type === 'DIRECT' && selectedConversationUserBlocked;
+
+  const selectedGroupMemberIds = new Set(
+    (selectedConversation?.members || [])
+      .map(m => m?.user?.id)
+      .filter(Boolean)
+  );
+
+  const availableUsersToAdd = users.filter(u => !selectedGroupMemberIds.has(u.id));
 
   return (
     <>
@@ -261,6 +729,27 @@ export default function Chat() {
                           Nouveau groupe
                         </a>
                       </li>
+                      <li><hr className="dropdown-divider" /></li>
+                      <li>
+                        <a
+                          className="dropdown-item d-flex align-items-center justify-content-between"
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleOpenBlockedUsersModal();
+                          }}
+                        >
+                          <span>
+                            <i className="feather-slash me-2"></i>
+                            Personnes bloquées
+                          </span>
+                          {blockedUsersCount > 0 && (
+                            <span className="badge bg-danger rounded-pill ms-2">
+                              {blockedUsersCount}
+                            </span>
+                          )}
+                        </a>
+                      </li>
                     </ul>
                   </div>
                   <a href="#" onClick={(e) => e.preventDefault()} className="app-sidebar-close-trigger d-flex">
@@ -283,12 +772,36 @@ export default function Chat() {
                   </form>
                   <div className="dropdown sidebar-filter">
                     <a href="#" onClick={(e) => e.preventDefault()} data-bs-toggle="dropdown" className="d-flex align-items-center justify-content-center dropdown-toggle" data-bs-offset="0, 15">
-                      Newest
+                      {conversationFilter}
                     </a>
                     <ul className="dropdown-menu dropdown-menu-end overflow-auto">
-                      <li><a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item active">Newest</a></li>
-                      <li><a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">Oldest</a></li>
-                      <li><a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">Unread</a></li>
+                      <li>
+                        <a
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); setConversationFilter('Newest'); }}
+                          className={`dropdown-item ${conversationFilter === 'Newest' ? 'active' : ''}`}
+                        >
+                          Newest
+                        </a>
+                      </li>
+                      <li>
+                        <a
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); setConversationFilter('Oldest'); }}
+                          className={`dropdown-item ${conversationFilter === 'Oldest' ? 'active' : ''}`}
+                        >
+                          Oldest
+                        </a>
+                      </li>
+                      <li>
+                        <a
+                          href="#"
+                          onClick={(e) => { e.preventDefault(); setConversationFilter('Unread'); }}
+                          className={`dropdown-item ${conversationFilter === 'Unread' ? 'active' : ''}`}
+                        >
+                          Unread
+                        </a>
+                      </li>
                     </ul>
                   </div>
                 </div>
@@ -324,7 +837,7 @@ export default function Chat() {
                         <div className="ms-3 item-desc">
                           <div className="w-100 d-flex align-items-center justify-content-between">
                             <a href="#" onClick={(e) => e.preventDefault()} className="hstack gap-2 me-2">
-                              <span>{getConversationTitle(conversation)}</span>
+                              <span className={conversation.unreadCount > 0 ? 'fw-bold' : ''}>{getConversationTitle(conversation)}</span>
                               <div className={`wd-5 ht-5 rounded-circle opacity-75 me-1 ${
                                 conversation.type === 'GROUP' ? 'bg-info' : 'bg-success'
                               }`}></div>
@@ -333,33 +846,65 @@ export default function Chat() {
                                   {formatMessageTime(conversation.lastMessage.createdAt)}
                                 </span>
                               )}
+                              {conversation.unreadCount > 0 && (
+                                <span className="badge bg-danger rounded-pill ms-1">
+                                  {conversation.unreadCount}
+                                </span>
+                              )}
                             </a>
                             <div className="dropdown">
                               <a href="#" onClick={(e) => { e.stopPropagation(); e.preventDefault(); }} className="avatar-text avatar-sm" data-bs-toggle="dropdown">
                                 <i className="feather-more-vertical"></i>
                               </a>
                               <ul className="dropdown-menu dropdown-menu-end overflow-auto">
+                                {conversation.unreadCount > 0 && (
+                                  <li>
+                                    <a 
+                                      href="#" 
+                                      onClick={(e) => { 
+                                        e.preventDefault(); 
+                                        e.stopPropagation(); 
+                                        handleMarkConversationAsRead(conversation.id, true); 
+                                      }} 
+                                      className="dropdown-item"
+                                    >
+                                      <i className="feather-check-circle me-3"></i>
+                                      <span>Marquer comme lu</span>
+                                    </a>
+                                  </li>
+                                )}
+                                {conversation.unreadCount === 0 && (
+                                  <li>
+                                    <a 
+                                      href="#" 
+                                      onClick={(e) => { 
+                                        e.preventDefault(); 
+                                        e.stopPropagation(); 
+                                        handleMarkConversationAsRead(conversation.id, false); 
+                                      }} 
+                                      className="dropdown-item"
+                                    >
+                                      <i className="feather-eye-off me-3"></i>
+                                      <span>Marquer comme non-lu</span>
+                                    </a>
+                                  </li>
+                                )}
+                                <li className="dropdown-divider"></li>
                                 <li>
-                                  <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
-                                    <i className="feather-check-circle me-3"></i>
-                                    <span>Marquer comme lu</span>
-                                  </a>
-                                </li>
-                                <li>
-                                  <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                                  <a href="#" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFeatureNotAvailable('Les favoris'); }} className="dropdown-item">
                                     <i className="feather-star me-3"></i>
                                     <span>Favoris</span>
                                   </a>
                                 </li>
                                 <li>
-                                  <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
-                                    <i className="feather-bell-off me-3"></i>
-                                    <span>Notifications</span>
+                                  <a href="#" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleToggleConversationNotifications(conversation); }} className="dropdown-item">
+                                    <i className={`feather-${conversation.notificationsMuted ? 'bell' : 'bell-off'} me-3`}></i>
+                                    <span>{conversation.notificationsMuted ? 'Activer les notifications' : 'Désactiver les notifications'}</span>
                                   </a>
                                 </li>
                                 <li className="dropdown-divider"></li>
                                 <li>
-                                  <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                                  <a href="#" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteConversation(conversation); }} className="dropdown-item">
                                     <i className="feather-trash-2 me-3"></i>
                                     <span>Supprimer</span>
                                   </a>
@@ -367,7 +912,7 @@ export default function Chat() {
                               </ul>
                             </div>
                           </div>
-                          <p className="fs-12 fw-semibold text-dark mt-2 mb-0 text-truncate-2-line">
+                          <p className={`fs-12 mt-2 mb-0 text-truncate-2-line ${conversation.unreadCount > 0 ? 'fw-bold text-dark' : 'fw-semibold text-muted'}`}>
                             {conversation.lastMessage?.content || 'Aucun message pour le moment'}
                           </p>
                         </div>
@@ -416,22 +961,41 @@ export default function Chat() {
                     </div>
                     <div className="page-header-right ms-auto">
                       <div className="d-flex align-items-center justify-content-center gap-2">
-                        <a href="#" onClick={(e) => e.preventDefault()} className="d-flex">
+                        <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('Les appels vocaux'); }} className="d-flex">
                           <div className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Appel vocal">
                             <i className="feather-phone-call"></i>
                           </div>
                         </a>
-                        <a href="#" onClick={(e) => e.preventDefault()} className="d-flex">
+                        <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('Les appels vidéo'); }} className="d-flex">
                           <div className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Appel vidéo">
                             <i className="feather-video"></i>
                           </div>
                         </a>
-                        <a href="#" onClick={(e) => e.preventDefault()} className="d-flex d-none d-sm-block">
+                        <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('Les favoris'); }} className="d-flex d-none d-sm-block">
                           <div className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Favoris">
                             <i className="feather-star"></i>
                           </div>
                         </a>
-                        <a href="#" onClick={(e) => e.preventDefault()} className="d-flex">
+                        <div className="dropdown">
+                          <a href="#" onClick={(e) => e.preventDefault()} className="d-flex avatar-text avatar-md" data-bs-toggle="dropdown" data-bs-offset="0,15" title="Marquer comme lu/non-lu">
+                            <i className="feather-eye"></i>
+                          </a>
+                          <div className="dropdown-menu dropdown-menu-end">
+                            {selectedConversationHasUnread && (
+                              <a href="#" onClick={(e) => { e.preventDefault(); handleMarkConversationAsRead(true); }} className="dropdown-item">
+                                <i className="feather-check-circle me-3"></i>
+                                <span>Marquer comme lu</span>
+                              </a>
+                            )}
+                            {!selectedConversationHasUnread && (
+                              <a href="#" onClick={(e) => { e.preventDefault(); handleMarkConversationAsRead(false); }} className="dropdown-item">
+                                <i className="feather-eye-off me-3"></i>
+                                <span>Marquer comme non-lu</span>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('Les informations détaillées'); }} className="d-flex">
                           <div className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Informations">
                             <i className="feather-info"></i>
                           </div>
@@ -441,20 +1005,20 @@ export default function Chat() {
                             <i className="feather-more-vertical"></i>
                           </a>
                           <div className="dropdown-menu dropdown-menu-end">
-                            <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                            <a href="#" onClick={(e) => { e.preventDefault(); handleOpenAddMemberModal(); }} className="dropdown-item">
                               <i className="feather-user-plus me-3"></i>
                               <span>Ajouter au groupe</span>
                             </a>
-                            <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
-                              <i className="feather-bell-off me-3"></i>
-                              <span>Notifications</span>
+                            <a href="#" onClick={(e) => { e.preventDefault(); handleToggleConversationNotifications(); }} className="dropdown-item">
+                              <i className={`feather-${selectedConversationNotificationsMuted ? 'bell' : 'bell-off'} me-3`}></i>
+                              <span>{selectedConversationNotificationsMuted ? 'Activer les notifications' : 'Désactiver les notifications'}</span>
                             </a>
                             <div className="dropdown-divider"></div>
-                            <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                            <a href="#" onClick={(e) => { e.preventDefault(); handleToggleBlockUser(); }} className="dropdown-item">
                               <i className="feather-slash me-3"></i>
-                              <span>Bloquer</span>
+                              <span>{selectedConversationUserBlocked ? 'Débloquer' : 'Bloquer'}</span>
                             </a>
-                            <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                            <a href="#" onClick={(e) => { e.preventDefault(); handleDeleteConversation(); }} className="dropdown-item">
                               <i className="feather-trash-2 me-3"></i>
                               <span>Supprimer la conversation</span>
                             </a>
@@ -530,7 +1094,78 @@ export default function Chat() {
                               </div>
                             )}
                             <div className={`wd-500 ${shouldShowHeader ? 'p-3' : 'px-3 pb-3 pt-0'} rounded-5 bg-gray-200 ${isOwnMessage ? 'ms-auto' : ''}`}>
-                              <p className={`py-2 px-3 rounded-5 bg-white ${!isLastInGroup ? 'mb-2' : 'mb-0'}`}>{message.content}</p>
+                              {editingMessageId === message.id ? (
+                                <div className="d-flex flex-column gap-2">
+                                  <textarea
+                                    className="form-control"
+                                    rows="3"
+                                    value={editingContent}
+                                    onChange={(e) => setEditingContent(e.target.value)}
+                                  />
+                                  <div className="d-flex justify-content-end gap-2">
+                                    <button type="button" className="btn btn-sm btn-light" onClick={handleCancelEditMessage}>Annuler</button>
+                                    <button type="button" className="btn btn-sm btn-primary" onClick={() => handleSaveEditMessage(message.id)}>Enregistrer</button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <>
+                                  <p
+                                    className={`py-2 px-3 rounded-5 bg-white text-break ${!isLastInGroup ? 'mb-2' : 'mb-0'}`}
+                                    style={{
+                                      whiteSpace: 'pre-wrap',
+                                      overflowWrap: 'anywhere',
+                                      wordBreak: 'break-word'
+                                    }}
+                                  >
+                                    {message.content}
+                                  </p>
+                                  <div className="d-flex align-items-center justify-content-between mt-1 px-2">
+                                    <div className="d-flex align-items-center gap-2">
+                                      {message.isEdited && (
+                                        <span className="fs-11 text-muted">modifié</span>
+                                      )}
+                                    </div>
+                                    <div className="d-flex align-items-center gap-2">
+                                      {isOwnMessage && (
+                                        <span className={`fs-11 ${message.isRead ? 'text-primary' : 'text-muted'}`} title={message.isRead ? 'Lu' : 'Envoyé'}>
+                                          <i className={`feather-${message.isRead ? 'check-circle' : 'check'}`}></i>
+                                        </span>
+                                      )}
+                                      {message.type !== 'SYSTEM' && (
+                                        <div className="dropdown">
+                                          <a href="#" onClick={(e) => e.preventDefault()} className="text-muted" data-bs-toggle="dropdown">
+                                            <i className="feather-more-vertical"></i>
+                                          </a>
+                                          <div className="dropdown-menu dropdown-menu-end">
+                                            {isOwnMessage && !message.deletedForEveryone && (
+                                              <a href="#" onClick={(e) => { e.preventDefault(); handleStartEditMessage(message); }} className="dropdown-item">
+                                                <i className="feather-edit-2 me-2"></i>
+                                                Modifier
+                                              </a>
+                                            )}
+                                            {message.isEdited && (
+                                              <a href="#" onClick={(e) => { e.preventDefault(); handleOpenMessageHistory(message); }} className="dropdown-item">
+                                                <i className="feather-clock me-2"></i>
+                                                Historique
+                                              </a>
+                                            )}
+                                            <a href="#" onClick={(e) => { e.preventDefault(); handleDeleteMessage(message.id, 'me'); }} className="dropdown-item">
+                                              <i className="feather-trash me-2"></i>
+                                              Supprimer pour moi
+                                            </a>
+                                            {isOwnMessage && !message.deletedForEveryone && (
+                                              <a href="#" onClick={(e) => { e.preventDefault(); handleDeleteMessage(message.id, 'everyone'); }} className="dropdown-item text-danger">
+                                                <i className="feather-trash-2 me-2"></i>
+                                                Supprimer pour tout le monde
+                                              </a>
+                                            )}
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </div>
                         );
@@ -541,8 +1176,13 @@ export default function Chat() {
 
                   {/* Zone de saisie */}
                   <div className="content-area-footer">
+                    {isSendingBlocked && (
+                      <div className="px-3 pt-2 pb-1 fs-12 text-danger">
+                        Vous avez bloqué cet utilisateur. Débloquez-le pour envoyer des messages.
+                      </div>
+                    )}
                     <form onSubmit={handleSendMessage} className="d-flex align-items-center gap-2">
-                      <a href="#" onClick={(e) => e.preventDefault()} className="d-flex">
+                      <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('Les commandes rapides'); }} className="d-flex">
                         <div className="wd-60 d-flex align-items-center justify-content-center" style={{ height: '59px' }}>
                           <i className="feather-hash"></i>
                         </div>
@@ -555,18 +1195,18 @@ export default function Chat() {
                         </a>
                         <ul className="dropdown-menu dropdown-menu-start">
                           <li>
-                            <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                            <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('L\'envoi d\'image'); }} className="dropdown-item">
                               <i className="feather-image me-3"></i>Image
                             </a>
                           </li>
                           <li>
-                            <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                            <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('L\'envoi de document'); }} className="dropdown-item">
                               <i className="feather-file me-3"></i>Document
                             </a>
                           </li>
                         </ul>
                       </div>
-                      <a href="#" onClick={(e) => e.preventDefault()} className="d-flex">
+                      <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('Les messages vocaux'); }} className="d-flex">
                         <div className="wd-60 d-flex align-items-center justify-content-center" style={{ height: '59px' }}>
                           <i className="feather-mic"></i>
                         </div>
@@ -574,12 +1214,12 @@ export default function Chat() {
                       <input
                         type="text"
                         className="form-control border-0"
-                        placeholder="Type your message here..."
+                        placeholder={isSendingBlocked ? 'Débloquez cet utilisateur pour écrire...' : 'Type your message here...'}
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
-                        disabled={sending}
+                        disabled={sending || isSendingBlocked}
                       />
-                      <a href="#" onClick={(e) => e.preventDefault()} className="d-flex">
+                      <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('Les emojis'); }} className="d-flex">
                         <div className="wd-60 d-flex align-items-center justify-content-center" style={{ height: '59px' }}>
                           <i className="feather-smile"></i>
                         </div>
@@ -589,7 +1229,7 @@ export default function Chat() {
                           type="submit" 
                           className="wd-60 d-flex align-items-center justify-content-center border-0 bg-transparent"
                           style={{ height: '59px' }}
-                          disabled={sending || !newMessage.trim()}
+                          disabled={sending || isSendingBlocked || !newMessage.trim()}
                           data-bs-toggle="tooltip"
                           data-bs-trigger="hover"
                           title="Send Message"
@@ -731,6 +1371,184 @@ export default function Chat() {
           </div>
         </div>
       </div>
+
+      {/* Modal Historique des modifications */}
+      {showHistoryModal && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="modal-dialog modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Historique des modifications</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => {
+                    setShowHistoryModal(false);
+                    setHistoryMessage(null);
+                    setMessageHistory([]);
+                  }}
+                ></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-3">
+                  <div className="fs-12 text-muted">Message actuel</div>
+                  <div className="p-3 bg-light rounded">{historyMessage?.content}</div>
+                </div>
+
+                {loadingHistory ? (
+                  <div className="text-center py-3">
+                    <span className="spinner-border spinner-border-sm"></span>
+                  </div>
+                ) : messageHistory.length === 0 ? (
+                  <div className="text-muted">Aucune modification enregistrée.</div>
+                ) : (
+                  <div className="list-group">
+                    {messageHistory.map((entry) => (
+                      <div key={entry.id} className="list-group-item">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                          <span className="fw-semibold">
+                            {entry.editor?.firstName} {entry.editor?.lastName}
+                          </span>
+                          <span className="fs-12 text-muted">
+                            {new Date(entry.editedAt).toLocaleString('fr-FR')}
+                          </span>
+                        </div>
+                        <div className="fs-12 text-muted mb-1">Avant</div>
+                        <div className="p-2 bg-light rounded mb-2">{entry.previousContent}</div>
+                        <div className="fs-12 text-muted mb-1">Après</div>
+                        <div className="p-2 bg-soft-primary rounded">{entry.newContent}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowHistoryModal(false);
+                    setHistoryMessage(null);
+                    setMessageHistory([]);
+                  }}
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Ajouter un membre */}
+      {showAddMemberModal && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Ajouter au groupe</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowAddMemberModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                {loadingUsers ? (
+                  <div className="text-center py-3">
+                    <span className="spinner-border spinner-border-sm"></span>
+                  </div>
+                ) : availableUsersToAdd.length === 0 ? (
+                  <div className="text-muted">Aucun utilisateur disponible à ajouter.</div>
+                ) : (
+                  <div className="list-group">
+                    {availableUsersToAdd.map((u) => (
+                      <button
+                        key={u.id}
+                        type="button"
+                        className="list-group-item list-group-item-action d-flex align-items-center justify-content-between"
+                        disabled={addingMember}
+                        onClick={() => handleAddMemberToGroup(u.id)}
+                      >
+                        <span>{u.firstName} {u.lastName}</span>
+                        <span className="fs-12 text-muted">{u.email}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAddMemberModal(false)}>
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Personnes bloquées */}
+      {showBlockedUsersModal && (
+        <div className="modal fade show d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Personnes bloquées</h5>
+                <button
+                  type="button"
+                  className="btn-close"
+                  onClick={() => setShowBlockedUsersModal(false)}
+                ></button>
+              </div>
+              <div className="modal-body">
+                {loadingBlockedUsers ? (
+                  <div className="text-center py-3">
+                    <span className="spinner-border spinner-border-sm"></span>
+                  </div>
+                ) : blockedUsers.length === 0 ? (
+                  <div className="text-muted">Aucune personne bloquée.</div>
+                ) : (
+                  <div className="list-group">
+                    {blockedUsers.map((blockedUser) => (
+                      <div
+                        key={blockedUser.id}
+                        className="list-group-item d-flex align-items-center justify-content-between"
+                      >
+                        <div className="d-flex align-items-center gap-2">
+                          <div className="avatar-image">
+                            <img
+                              src={blockedUser.avatar || '/assets/images/avatar/1.png'}
+                              className="img-fluid rounded-circle"
+                              alt={`${blockedUser.firstName} ${blockedUser.lastName}`}
+                            />
+                          </div>
+                          <div>
+                            <div className="fw-semibold">{blockedUser.firstName} {blockedUser.lastName}</div>
+                            <div className="fs-12 text-muted">{blockedUser.email}</div>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-primary"
+                          disabled={unblockingUserId === blockedUser.id}
+                          onClick={() => handleUnblockFromList(blockedUser.id)}
+                        >
+                          {unblockingUserId === blockedUser.id ? '...' : 'Débloquer'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowBlockedUsersModal(false)}>
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

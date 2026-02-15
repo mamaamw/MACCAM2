@@ -69,6 +69,11 @@ model User {
   // Relations pour le chat
   conversationMemberships ConversationMember[]
   sentMessages    Message[] @relation("SentMessages")
+  deletedMessages Message[] @relation("DeletedMessages")
+  messageEditHistory MessageEditHistory[] @relation("EditedBy")
+  hiddenMessages  MessageHidden[]
+  blockedUsers    UserBlock[] @relation("Blocker")
+  blockedByUsers  UserBlock[] @relation("Blocked")
   
   // Relations pour le calendrier
   events          Event[]   @relation("UserEvents")
@@ -419,6 +424,7 @@ model ConversationMember {
   userId          String
   joinedAt        DateTime  @default(now())
   isAdmin         Boolean   @default(false) // Pour les groupes
+  notificationsMuted Boolean @default(false)
   leftAt          DateTime? // Date de départ (si quitté)
   
   // Relations
@@ -438,14 +444,66 @@ model Message {
   type            String    @default("TEXT") // TEXT, IMAGE, FILE, SYSTEM
   attachmentUrl   String?   // URL du fichier joint
   isRead          Boolean   @default(false)
+  isEdited        Boolean   @default(false)
+  editedAt        DateTime?
+  deletedForEveryone Boolean @default(false)
+  deletedAt       DateTime?
+  deletedById     String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
   // Relations
   conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender          User      @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  deletedBy       User?     @relation("DeletedMessages", fields: [deletedById], references: [id], onDelete: SetNull)
+  editHistory     MessageEditHistory[]
+  hiddenFor       MessageHidden[]
   
   @@map("messages")
+}
+
+model MessageEditHistory {
+  id              String    @id @default(uuid())
+  messageId       String
+  editorId        String
+  previousContent String
+  newContent      String
+  editedAt        DateTime  @default(now())
+
+  message         Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  editor          User      @relation("EditedBy", fields: [editorId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@map("message_edit_history")
+}
+
+model MessageHidden {
+  id              String    @id @default(uuid())
+  messageId       String
+  userId          String
+  hiddenAt        DateTime  @default(now())
+
+  message         Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])
+  @@map("message_hidden")
+}
+
+model UserBlock {
+  id              String    @id @default(uuid())
+  blockerId       String
+  blockedId       String
+  createdAt       DateTime  @default(now())
+
+  blocker         User      @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked         User      @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+  @@map("user_blocks")
 }
 
 // Calendar Events

@@ -5,6 +5,21 @@ import { protect as authMiddleware } from '../middleware/auth.middleware.js';
 const router = express.Router();
 const prisma = new PrismaClient();
 
+const getBlockState = async (currentUserId, otherUserId) => {
+  if (!otherUserId) return false;
+
+  const block = await prisma.userBlock.findUnique({
+    where: {
+      blockerId_blockedId: {
+        blockerId: currentUserId,
+        blockedId: otherUserId
+      }
+    }
+  });
+
+  return !!block;
+};
+
 // Middleware d'authentification pour toutes les routes
 router.use(authMiddleware);
 
@@ -46,10 +61,28 @@ router.get('/conversations', async (req, res) => {
           }
         },
         messages: {
+          where: {
+            hiddenFor: {
+              none: { userId }
+            }
+          },
           orderBy: { createdAt: 'desc' },
           take: 1, // Dernier message seulement
           include: {
             conversation: false
+          }
+        },
+        _count: {
+          select: {
+            messages: {
+              where: {
+                isRead: false,
+                senderId: { not: userId },
+                hiddenFor: {
+                  none: { userId }
+                }
+              }
+            }
           }
         }
       },
@@ -58,20 +91,45 @@ router.get('/conversations', async (req, res) => {
       }
     });
 
+    const directOtherUserIds = conversations
+      .filter(conv => conv.type === 'DIRECT')
+      .map(conv => conv.members.find(m => m.userId !== userId)?.userId)
+      .filter(Boolean);
+
+    const blockedRows = directOtherUserIds.length > 0
+      ? await prisma.userBlock.findMany({
+          where: {
+            blockerId: userId,
+            blockedId: { in: directOtherUserIds }
+          },
+          select: {
+            blockedId: true
+          }
+        })
+      : [];
+
+    const blockedSet = new Set(blockedRows.map(row => row.blockedId));
+
     // Enrichir les conversations avec des infos utiles
     const enrichedConversations = conversations.map(conv => {
       // Pour les conversations directes, trouver l'autre utilisateur
       let otherUser = null;
+      let otherUserIsBlocked = false;
       if (conv.type === 'DIRECT') {
         otherUser = conv.members.find(m => m.userId !== userId)?.user || null;
+        otherUserIsBlocked = !!otherUser?.id && blockedSet.has(otherUser.id);
       }
 
-      // Compter les messages non lus (on pourrait ajouter un champ readBy later)
-      const unreadCount = 0; // TODO: implémenter le système de lecture
+      const currentMembership = conv.members.find(m => m.userId === userId);
+
+      // Compter les messages non lus reçus (pas ceux envoyés par l'utilisateur)
+      const unreadCount = conv._count?.messages || 0;
 
       return {
         ...conv,
         otherUser, // Pour les conversations directes
+        otherUserIsBlocked,
+        notificationsMuted: !!currentMembership?.notificationsMuted,
         unreadCount,
         lastMessage: conv.messages[0] || null
       };
@@ -125,10 +183,23 @@ router.get('/conversations/:id', async (req, res) => {
           }
         },
         messages: {
+          where: {
+            hiddenFor: {
+              none: { userId }
+            }
+          },
           orderBy: { createdAt: 'asc' },
           take: 100, // Limiter à 100 messages récents
           include: {
-            conversation: false // On a déjà la conversation
+            conversation: false, // On a déjà la conversation
+            sender: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatar: true
+              }
+            }
           }
         }
       }
@@ -140,13 +211,17 @@ router.get('/conversations/:id', async (req, res) => {
 
     // Enrichir avec l'autre utilisateur pour les conversations directes
     let otherUser = null;
+    let otherUserIsBlocked = false;
     if (conversation.type === 'DIRECT') {
       otherUser = conversation.members.find(m => m.userId !== userId)?.user || null;
+      otherUserIsBlocked = await getBlockState(userId, otherUser?.id);
     }
 
     res.json({
       ...conversation,
-      otherUser
+      otherUser,
+      otherUserIsBlocked,
+      notificationsMuted: !!membership.notificationsMuted
     });
   } catch (error) {
     console.error('Erreur lors de la récupération de la conversation:', error);
@@ -173,10 +248,43 @@ router.post('/conversations', async (req, res) => {
       return res.status(400).json({ message: 'Au moins un participant requis' });
     }
 
+    const uniqueParticipantIds = [...new Set(participantIds.filter(Boolean))];
+
+    // Vérifier que tous les participants existent
+    const existingParticipants = await prisma.user.findMany({
+      where: {
+        id: { in: uniqueParticipantIds },
+        isActive: true
+      },
+      select: { id: true }
+    });
+
+    if (existingParticipants.length !== uniqueParticipantIds.length) {
+      return res.status(400).json({ message: 'Un ou plusieurs participants sont invalides ou inactifs' });
+    }
+
     // Pour les conversations directes, vérifier qu'il n'y a qu'un seul participant (+ le créateur)
     if (type === 'DIRECT') {
       if (participantIds.length !== 1) {
         return res.status(400).json({ message: 'Une conversation directe ne peut avoir qu\'un seul participant' });
+      }
+
+      const targetUserId = uniqueParticipantIds[0];
+
+      const blockingRelation = await prisma.userBlock.findFirst({
+        where: {
+          OR: [
+            { blockerId: userId, blockedId: targetUserId },
+            { blockerId: targetUserId, blockedId: userId }
+          ]
+        }
+      });
+
+      if (blockingRelation) {
+        if (blockingRelation.blockerId === userId) {
+          return res.status(403).json({ message: 'Vous avez bloqué cet utilisateur. Débloquez-le pour démarrer une discussion.' });
+        }
+        return res.status(403).json({ message: 'Cet utilisateur vous a bloqué.' });
       }
 
       // Vérifier si une conversation directe existe déjà entre ces 2 utilisateurs
@@ -184,12 +292,14 @@ router.post('/conversations', async (req, res) => {
         where: {
           type: 'DIRECT',
           AND: [
-            { members: { some: { userId: userId } } },
-            { members: { some: { userId: participantIds[0] } } }
+            { members: { some: { userId: userId, leftAt: null } } },
+            { members: { some: { userId: participantIds[0], leftAt: null } } }
           ]
         },
         include: {
-          members: true
+          members: {
+            where: { leftAt: null }
+          }
         }
       });
 
@@ -203,8 +313,12 @@ router.post('/conversations', async (req, res) => {
       return res.status(400).json({ message: 'Un titre est requis pour les groupes' });
     }
 
+    if (type === 'GROUP' && uniqueParticipantIds.length < 2) {
+      return res.status(400).json({ message: 'Un groupe nécessite au moins 2 participants' });
+    }
+
     // Créer la conversation avec ses membres
-    const allParticipants = [userId, ...participantIds.filter(id => id !== userId)];
+    const allParticipants = [userId, ...uniqueParticipantIds.filter(id => id !== userId)];
 
     const conversation = await prisma.conversation.create({
       data: {
@@ -258,6 +372,69 @@ router.post('/conversations', async (req, res) => {
   }
 });
 
+/**
+ * DELETE /api/chat/conversations/:id
+ * Supprimer (masquer) une conversation pour l'utilisateur courant
+ */
+router.delete('/conversations/:id', async (req, res) => {
+  try {
+    const { id: conversationId } = req.params;
+    const userId = req.user.id;
+
+    const membership = await prisma.conversationMember.findFirst({
+      where: {
+        conversationId,
+        userId,
+        leftAt: null
+      },
+      include: {
+        conversation: {
+          select: {
+            id: true,
+            type: true
+          }
+        }
+      }
+    });
+
+    if (!membership) {
+      return res.status(403).json({ message: 'Accès refusé à cette conversation' });
+    }
+
+    await prisma.conversationMember.updateMany({
+      where: {
+        conversationId,
+        userId,
+        leftAt: null
+      },
+      data: {
+        leftAt: new Date()
+      }
+    });
+
+    if (membership.conversation.type === 'GROUP') {
+      await prisma.message.create({
+        data: {
+          conversationId,
+          senderId: userId,
+          content: `${req.user.firstName} ${req.user.lastName} a quitté le groupe`,
+          type: 'SYSTEM'
+        }
+      });
+
+      await prisma.conversation.update({
+        where: { id: conversationId },
+        data: { lastMessageAt: new Date() }
+      });
+    }
+
+    return res.json({ success: true, message: 'Conversation supprimée pour vous' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression de la conversation:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
 // ============================================
 // MESSAGES
 // ============================================
@@ -289,6 +466,38 @@ router.post('/conversations/:id/messages', async (req, res) => {
 
     if (!membership) {
       return res.status(403).json({ message: 'Vous n\'êtes pas membre de cette conversation' });
+    }
+
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      include: {
+        members: {
+          where: { leftAt: null },
+          select: { userId: true }
+        }
+      }
+    });
+
+    if (conversation?.type === 'DIRECT') {
+      const otherUserId = conversation.members.find(member => member.userId !== userId)?.userId;
+
+      if (otherUserId) {
+        const blockingRelation = await prisma.userBlock.findFirst({
+          where: {
+            OR: [
+              { blockerId: userId, blockedId: otherUserId },
+              { blockerId: otherUserId, blockedId: userId }
+            ]
+          }
+        });
+
+        if (blockingRelation) {
+          if (blockingRelation.blockerId === userId) {
+            return res.status(403).json({ message: 'Vous avez bloqué cet utilisateur. Débloquez-le pour envoyer un message.' });
+          }
+          return res.status(403).json({ message: 'Cet utilisateur vous a bloqué.' });
+        }
+      }
     }
 
     // Créer le message
@@ -370,7 +579,10 @@ router.get('/conversations/:id/messages', async (req, res) => {
 
     // Construire la requête de messages
     const whereClause = {
-      conversationId
+      conversationId,
+      hiddenFor: {
+        none: { userId }
+      }
     };
 
     // Si 'before' est fourni, récupérer les messages avant ce message (pagination)
@@ -397,6 +609,11 @@ router.get('/conversations/:id/messages', async (req, res) => {
         type: true,
         attachmentUrl: true,
         senderId: true,
+        isRead: true,
+        isEdited: true,
+        editedAt: true,
+        deletedForEveryone: true,
+        deletedAt: true,
         createdAt: true,
         updatedAt: true
       }
@@ -426,6 +643,225 @@ router.get('/conversations/:id/messages', async (req, res) => {
     res.json(enrichedMessages);
   } catch (error) {
     console.error('Erreur lors de la récupération des messages:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * PATCH /api/chat/messages/:id
+ * Modifier un message et conserver l'historique des modifications
+ */
+router.patch('/messages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { content } = req.body;
+    const userId = req.user.id;
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({ message: 'Le contenu est requis' });
+    }
+
+    const message = await prisma.message.findUnique({
+      where: { id },
+      include: {
+        conversation: {
+          include: {
+            members: {
+              where: { userId, leftAt: null }
+            }
+          }
+        }
+      }
+    });
+
+    if (!message) {
+      return res.status(404).json({ message: 'Message non trouvé' });
+    }
+
+    if (message.conversation.members.length === 0) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    if (message.senderId !== userId) {
+      return res.status(403).json({ message: 'Vous ne pouvez modifier que vos messages' });
+    }
+
+    if (message.type === 'SYSTEM' || message.deletedForEveryone) {
+      return res.status(400).json({ message: 'Ce message ne peut pas être modifié' });
+    }
+
+    const newContent = content.trim();
+    if (newContent === message.content) {
+      return res.json(message);
+    }
+
+    await prisma.messageEditHistory.create({
+      data: {
+        messageId: id,
+        editorId: userId,
+        previousContent: message.content,
+        newContent
+      }
+    });
+
+    const updatedMessage = await prisma.message.update({
+      where: { id },
+      data: {
+        content: newContent,
+        isEdited: true,
+        editedAt: new Date()
+      },
+      include: {
+        sender: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatar: true
+          }
+        }
+      }
+    });
+
+    res.json(updatedMessage);
+  } catch (error) {
+    console.error('Erreur lors de la modification du message:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * GET /api/chat/messages/:id/history
+ * Historique des modifications d'un message
+ */
+router.get('/messages/:id/history', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    const message = await prisma.message.findUnique({
+      where: { id },
+      include: {
+        conversation: {
+          include: {
+            members: {
+              where: { userId, leftAt: null }
+            }
+          }
+        }
+      }
+    });
+
+    if (!message) {
+      return res.status(404).json({ message: 'Message non trouvé' });
+    }
+
+    if (message.conversation.members.length === 0) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    const history = await prisma.messageEditHistory.findMany({
+      where: { messageId: id },
+      orderBy: { editedAt: 'desc' },
+      include: {
+        editor: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            avatar: true
+          }
+        }
+      }
+    });
+
+    res.json(history);
+  } catch (error) {
+    console.error('Erreur lors de la récupération de l\'historique:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * DELETE /api/chat/messages/:id
+ * Supprimer un message pour moi ou pour tout le monde
+ * Body: { scope: 'me' | 'everyone' }
+ */
+router.delete('/messages/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { scope = 'me' } = req.body || {};
+    const userId = req.user.id;
+
+    const message = await prisma.message.findUnique({
+      where: { id },
+      include: {
+        conversation: {
+          include: {
+            members: {
+              where: { userId, leftAt: null }
+            }
+          }
+        }
+      }
+    });
+
+    if (!message) {
+      return res.status(404).json({ message: 'Message non trouvé' });
+    }
+
+    if (message.conversation.members.length === 0) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    if (scope === 'everyone') {
+      if (message.senderId !== userId) {
+        return res.status(403).json({ message: 'Vous ne pouvez supprimer pour tout le monde que vos messages' });
+      }
+
+      const updatedMessage = await prisma.message.update({
+        where: { id },
+        data: {
+          content: 'Ce message a été supprimé',
+          attachmentUrl: null,
+          deletedForEveryone: true,
+          deletedAt: new Date(),
+          deletedById: userId,
+          isEdited: false,
+          isRead: true
+        },
+        include: {
+          sender: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              avatar: true
+            }
+          }
+        }
+      });
+
+      return res.json({ success: true, scope: 'everyone', message: updatedMessage });
+    }
+
+    await prisma.messageHidden.upsert({
+      where: {
+        messageId_userId: {
+          messageId: id,
+          userId
+        }
+      },
+      create: {
+        messageId: id,
+        userId
+      },
+      update: {}
+    });
+
+    return res.json({ success: true, scope: 'me' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression du message:', error);
     res.status(500).json({ message: 'Erreur serveur' });
   }
 });
@@ -639,6 +1075,207 @@ router.get('/users', async (req, res) => {
   } catch (error) {
     console.error('Erreur lors de la récupération des utilisateurs:', error);
     res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * GET /api/chat/users/blocked
+ * Récupérer la liste des utilisateurs bloqués par l'utilisateur courant
+ */
+router.get('/users/blocked', async (req, res) => {
+  try {
+    const blockerId = req.user.id;
+
+    const blockedUsers = await prisma.userBlock.findMany({
+      where: { blockerId },
+      include: {
+        blocked: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatar: true,
+            isActive: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return res.json(
+      blockedUsers
+        .filter(entry => !!entry.blocked)
+        .map(entry => ({
+          id: entry.blocked.id,
+          firstName: entry.blocked.firstName,
+          lastName: entry.blocked.lastName,
+          email: entry.blocked.email,
+          avatar: entry.blocked.avatar,
+          isActive: entry.blocked.isActive,
+          blockedAt: entry.createdAt
+        }))
+    );
+  } catch (error) {
+    console.error('Erreur lors de la récupération des utilisateurs bloqués:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * PATCH /api/chat/conversations/:id/read
+ * Marquer tous les messages d'une conversation comme lus ou non-lus
+ */
+router.patch('/conversations/:id/read', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+    const { isRead } = req.body;
+
+    // Vérifier que l'utilisateur est membre de cette conversation
+    const membership = await prisma.conversationMember.findFirst({
+      where: {
+        conversationId: id,
+        userId: userId,
+        leftAt: null
+      }
+    });
+
+    if (!membership) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    // Déterminer le nouveau statut (par défaut, basculer tous les messages à "lu")
+    const newStatus = typeof isRead === 'boolean' ? isRead : true;
+
+    // Mettre à jour uniquement les messages reçus par l'utilisateur connecté
+    // (lu = lu par le destinataire)
+    const result = await prisma.message.updateMany({
+      where: {
+        conversationId: id,
+        senderId: { not: userId }
+      },
+      data: {
+        isRead: newStatus
+      }
+    });
+
+    res.json({ 
+      success: true, 
+      updatedCount: result.count,
+      isRead: newStatus
+    });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du statut de lecture:', error);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * PATCH /api/chat/conversations/:id/notifications
+ * Activer/désactiver les notifications pour une conversation (utilisateur courant)
+ */
+router.patch('/conversations/:id/notifications', async (req, res) => {
+  try {
+    const { id: conversationId } = req.params;
+    const userId = req.user.id;
+    const { muted } = req.body;
+
+    if (typeof muted !== 'boolean') {
+      return res.status(400).json({ message: 'Le champ muted (boolean) est requis' });
+    }
+
+    const membership = await prisma.conversationMember.findFirst({
+      where: {
+        conversationId,
+        userId,
+        leftAt: null
+      }
+    });
+
+    if (!membership) {
+      return res.status(403).json({ message: 'Accès refusé' });
+    }
+
+    await prisma.conversationMember.update({
+      where: { id: membership.id },
+      data: { notificationsMuted: muted }
+    });
+
+    return res.json({ success: true, muted });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour des notifications:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/chat/users/:id/block
+ * Bloquer un utilisateur
+ */
+router.post('/users/:id/block', async (req, res) => {
+  try {
+    const blockerId = req.user.id;
+    const blockedId = req.params.id;
+
+    if (!blockedId || blockedId === blockerId) {
+      return res.status(400).json({ message: 'Utilisateur à bloquer invalide' });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: blockedId },
+      select: { id: true, isActive: true }
+    });
+
+    if (!user || !user.isActive) {
+      return res.status(404).json({ message: 'Utilisateur introuvable ou inactif' });
+    }
+
+    await prisma.userBlock.upsert({
+      where: {
+        blockerId_blockedId: {
+          blockerId,
+          blockedId
+        }
+      },
+      create: {
+        blockerId,
+        blockedId
+      },
+      update: {}
+    });
+
+    return res.json({ success: true, blocked: true });
+  } catch (error) {
+    console.error('Erreur lors du blocage utilisateur:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * DELETE /api/chat/users/:id/block
+ * Débloquer un utilisateur
+ */
+router.delete('/users/:id/block', async (req, res) => {
+  try {
+    const blockerId = req.user.id;
+    const blockedId = req.params.id;
+
+    if (!blockedId || blockedId === blockerId) {
+      return res.status(400).json({ message: 'Utilisateur à débloquer invalide' });
+    }
+
+    await prisma.userBlock.deleteMany({
+      where: {
+        blockerId,
+        blockedId
+      }
+    });
+
+    return res.json({ success: true, blocked: false });
+  } catch (error) {
+    console.error('Erreur lors du déblocage utilisateur:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
   }
 });
 
