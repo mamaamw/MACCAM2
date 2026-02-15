@@ -44,6 +44,8 @@ model User {
   // 2FA
   twoFactorEnabled Boolean  @default(false)
   twoFactorSecret  String?
+  chatRecentEmojis String?  // JSON array des emojis récents du chat
+  chatLastSeenAt   DateTime? // Dernière activité chat pour présence en ligne/hors ligne
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

@@ -235,6 +235,34 @@ const chatService = {
   getBlockedUsers: async () => {
     const response = await api.get('/chat/users/blocked');
     return response.data;
+  },
+
+  // ============================================
+  // PREFERENCES CHAT
+  // ============================================
+
+  /**
+   * Récupérer les emojis récents synchronisés côté backend
+   */
+  getRecentEmojis: async () => {
+    const response = await api.get('/chat/preferences/recent-emojis');
+    return response.data;
+  },
+
+  /**
+   * Sauvegarder les emojis récents côté backend
+   */
+  updateRecentEmojis: async (emojis) => {
+    const response = await api.put('/chat/preferences/recent-emojis', { emojis });
+    return response.data;
+  },
+
+  /**
+   * Heartbeat de présence chat (en ligne / dernière activité)
+   */
+  heartbeatPresence: async () => {
+    const response = await api.patch('/chat/presence/heartbeat');
+    return response.data;
   }
 };
 

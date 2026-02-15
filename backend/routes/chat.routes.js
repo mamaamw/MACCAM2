@@ -4,9 +4,40 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { protect as authMiddleware } from '../middleware/auth.middleware.js';
+import { emitPresenceUpdate } from '../utils/socket.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+const MAX_RECENT_EMOJIS = 24;
+const ONLINE_THRESHOLD_MS = 75 * 1000;
+
+const chatUserSelect = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  email: true,
+  avatar: true,
+  isActive: true,
+  chatLastSeenAt: true
+};
+
+const attachPresenceToUser = (user) => {
+  if (!user) return null;
+
+  const lastSeenAt = user.chatLastSeenAt || null;
+  const isOnline = !!lastSeenAt && (Date.now() - new Date(lastSeenAt).getTime()) <= ONLINE_THRESHOLD_MS;
+
+  return {
+    ...user,
+    lastSeenAt,
+    isOnline
+  };
+};
+
+const attachPresenceToMembers = (members = []) => members.map(member => ({
+  ...member,
+  user: attachPresenceToUser(member.user)
+}));
 
 const chatUploadsDir = path.join(process.cwd(), 'uploads', 'chat');
 if (!fs.existsSync(chatUploadsDir)) {
@@ -46,6 +77,116 @@ const getBlockState = async (currentUserId, otherUserId) => {
 
 // Middleware d'authentification pour toutes les routes
 router.use(authMiddleware);
+
+const normalizeRecentEmojisPayload = (emojis) => {
+  if (!Array.isArray(emojis)) {
+    return null;
+  }
+
+  const unique = [];
+
+  for (const emoji of emojis) {
+    if (typeof emoji !== 'string') continue;
+    const value = emoji.trim();
+    if (!value) continue;
+    if (unique.includes(value)) continue;
+    unique.push(value);
+    if (unique.length >= MAX_RECENT_EMOJIS) break;
+  }
+
+  return unique;
+};
+
+/**
+ * GET /api/chat/preferences/recent-emojis
+ * Récupérer les emojis récents de l'utilisateur connecté
+ */
+router.get('/preferences/recent-emojis', async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { chatRecentEmojis: true }
+    });
+
+    let emojis = [];
+    if (user?.chatRecentEmojis) {
+      try {
+        const parsed = JSON.parse(user.chatRecentEmojis);
+        if (Array.isArray(parsed)) {
+          emojis = normalizeRecentEmojisPayload(parsed) || [];
+        }
+      } catch {
+        emojis = [];
+      }
+    }
+
+    return res.json({ emojis });
+  } catch (error) {
+    console.error('Erreur récupération emojis récents:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * PUT /api/chat/preferences/recent-emojis
+ * Mettre à jour les emojis récents de l'utilisateur connecté
+ * Body: { emojis: string[] }
+ */
+router.put('/preferences/recent-emojis', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const sanitized = normalizeRecentEmojisPayload(req.body?.emojis);
+
+    if (!sanitized) {
+      return res.status(400).json({ message: 'Format invalide pour les emojis récents' });
+    }
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        chatRecentEmojis: JSON.stringify(sanitized)
+      }
+    });
+
+    return res.json({
+      success: true,
+      emojis: sanitized
+    });
+  } catch (error) {
+    console.error('Erreur mise à jour emojis récents:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
+
+/**
+ * PATCH /api/chat/presence/heartbeat
+ * Mettre à jour la présence chat de l'utilisateur connecté
+ */
+router.patch('/presence/heartbeat', async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { chatLastSeenAt: now },
+      select: { id: true, chatLastSeenAt: true }
+    });
+
+    emitPresenceUpdate(userId, true, updatedUser.chatLastSeenAt).catch(() => {});
+
+    return res.json({
+      success: true,
+      lastSeenAt: now,
+      isOnline: true
+    });
+  } catch (error) {
+    console.error('Erreur heartbeat de présence chat:', error);
+    return res.status(500).json({ message: 'Erreur serveur' });
+  }
+});
 
 /**
  * POST /api/chat/attachments
@@ -121,14 +262,7 @@ router.get('/conversations', async (req, res) => {
           where: { leftAt: null },
           include: {
             user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                avatar: true,
-                isActive: true
-              }
+              select: chatUserSelect
             }
           }
         },
@@ -184,21 +318,24 @@ router.get('/conversations', async (req, res) => {
 
     // Enrichir les conversations avec des infos utiles
     const enrichedConversations = conversations.map(conv => {
+      const membersWithPresence = attachPresenceToMembers(conv.members);
+
       // Pour les conversations directes, trouver l'autre utilisateur
       let otherUser = null;
       let otherUserIsBlocked = false;
       if (conv.type === 'DIRECT') {
-        otherUser = conv.members.find(m => m.userId !== userId)?.user || null;
+        otherUser = membersWithPresence.find(m => m.userId !== userId)?.user || null;
         otherUserIsBlocked = !!otherUser?.id && blockedSet.has(otherUser.id);
       }
 
-      const currentMembership = conv.members.find(m => m.userId === userId);
+      const currentMembership = membersWithPresence.find(m => m.userId === userId);
 
       // Compter les messages non lus reçus (pas ceux envoyés par l'utilisateur)
       const unreadCount = conv._count?.messages || 0;
 
       return {
         ...conv,
+        members: membersWithPresence,
         otherUser, // Pour les conversations directes
         otherUserIsBlocked,
         notificationsMuted: !!currentMembership?.notificationsMuted,
@@ -243,14 +380,7 @@ router.get('/conversations/:id', async (req, res) => {
           where: { leftAt: null },
           include: {
             user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                avatar: true,
-                isActive: true
-              }
+              select: chatUserSelect
             }
           }
         },
@@ -281,16 +411,19 @@ router.get('/conversations/:id', async (req, res) => {
       return res.status(404).json({ message: 'Conversation non trouvée' });
     }
 
+    const membersWithPresence = attachPresenceToMembers(conversation.members);
+
     // Enrichir avec l'autre utilisateur pour les conversations directes
     let otherUser = null;
     let otherUserIsBlocked = false;
     if (conversation.type === 'DIRECT') {
-      otherUser = conversation.members.find(m => m.userId !== userId)?.user || null;
+      otherUser = membersWithPresence.find(m => m.userId !== userId)?.user || null;
       otherUserIsBlocked = await getBlockState(userId, otherUser?.id);
     }
 
     res.json({
       ...conversation,
+      members: membersWithPresence,
       otherUser,
       otherUserIsBlocked,
       notificationsMuted: !!membership.notificationsMuted
@@ -410,14 +543,7 @@ router.post('/conversations', async (req, res) => {
         members: {
           include: {
             user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                avatar: true,
-                isActive: true
-              }
+              select: chatUserSelect
             }
           }
         },
@@ -437,7 +563,10 @@ router.post('/conversations', async (req, res) => {
       });
     }
 
-    res.status(201).json(conversation);
+    res.status(201).json({
+      ...conversation,
+      members: attachPresenceToMembers(conversation.members)
+    });
   } catch (error) {
     console.error('Erreur lors de la création de la conversation:', error);
     res.status(500).json({ message: 'Erreur serveur' });
@@ -618,6 +747,14 @@ router.post('/conversations/:id/messages', async (req, res) => {
     res.status(201).json({
       ...enrichedMessage,
       sender
+    });
+
+    emitToConversation(conversationId, 'chat:message:new', {
+      conversationId,
+      message: {
+        ...enrichedMessage,
+        sender
+      }
     });
   } catch (error) {
     console.error('Erreur lors de l\'envoi du message:', error);
@@ -1006,14 +1143,7 @@ router.post('/conversations/:id/members', async (req, res) => {
       },
       include: {
         user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            avatar: true,
-            isActive: true
-          }
+          select: chatUserSelect
         }
       }
     });
@@ -1033,7 +1163,10 @@ router.post('/conversations/:id/members', async (req, res) => {
       }
     });
 
-    res.status(201).json(newMember);
+    res.status(201).json({
+      ...newMember,
+      user: attachPresenceToUser(newMember.user)
+    });
   } catch (error) {
     console.error('Erreur lors de l\'ajout du membre:', error);
     res.status(500).json({ message: 'Erreur serveur' });
@@ -1136,14 +1269,15 @@ router.get('/users', async (req, res) => {
         email: true,
         avatar: true,
         jobTitle: true,
-        company: true
+        company: true,
+        chatLastSeenAt: true
       },
       orderBy: {
         firstName: 'asc'
       }
     });
 
-    res.json(users);
+    res.json(users.map(userEntry => attachPresenceToUser(userEntry)));
   } catch (error) {
     console.error('Erreur lors de la récupération des utilisateurs:', error);
     res.status(500).json({ message: 'Erreur serveur' });
@@ -1168,7 +1302,8 @@ router.get('/users/blocked', async (req, res) => {
             lastName: true,
             email: true,
             avatar: true,
-            isActive: true
+            isActive: true,
+            chatLastSeenAt: true
           }
         }
       },
@@ -1179,12 +1314,12 @@ router.get('/users/blocked', async (req, res) => {
       blockedUsers
         .filter(entry => !!entry.blocked)
         .map(entry => ({
+          ...attachPresenceToUser(entry.blocked),
           id: entry.blocked.id,
           firstName: entry.blocked.firstName,
           lastName: entry.blocked.lastName,
           email: entry.blocked.email,
           avatar: entry.blocked.avatar,
-          isActive: entry.blocked.isActive,
           blockedAt: entry.createdAt
         }))
     );

@@ -1,12 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { io } from 'socket.io-client';
 import chatService from '../../services/chatService';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../../stores/authStore';
+import { emojiCatalog, emojiCategoryOptions, normalizeEmojiSearchValue } from './chatEmojiData';
 
 export default function Chat() {
-  const { user } = useAuthStore();
+  const { user, token } = useAuthStore();
   const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024;
   const GALLERY_ACTION_LOCK_MS = 150;
+  const RECENT_EMOJIS_STORAGE_KEY = 'chat_recent_emojis_v1';
+  const MAX_RECENT_EMOJIS = 24;
+  const PRESENCE_HEARTBEAT_INTERVAL_MS = 30000;
+  const TYPING_THROTTLE_MS = 2000;
+  const SOCKET_SERVER_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace(/\/api\/v1\/?$/, '');
 
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
@@ -19,6 +26,11 @@ export default function Chat() {
   const [showAddMemberModal, setShowAddMemberModal] = useState(false);
   const [showBlockedUsersModal, setShowBlockedUsersModal] = useState(false);
   const [showImageGalleryModal, setShowImageGalleryModal] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiSearchQuery, setEmojiSearchQuery] = useState('');
+  const [emojiCategory, setEmojiCategory] = useState('ALL');
+  const [recentEmojis, setRecentEmojis] = useState([]);
+  const [typingUsers, setTypingUsers] = useState([]);
   const [galleryImageIndex, setGalleryImageIndex] = useState(0);
   const [galleryItems, setGalleryItems] = useState([]);
   const [galleryImageLoadError, setGalleryImageLoadError] = useState(false);
@@ -46,16 +58,170 @@ export default function Chat() {
   const imageFileInputRef = useRef(null);
   const documentFileInputRef = useRef(null);
   const messageInputRef = useRef(null);
+  const emojiPickerRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioStreamRef = useRef(null);
   const audioChunksRef = useRef([]);
   const galleryActionLockedUntilRef = useRef(0);
+  const socketRef = useRef(null);
+  const selectedConversationIdRef = useRef(null);
+  const currentUserIdRef = useRef(user?.id || null);
+  const typingStateRef = useRef({
+    conversationId: null,
+    isTyping: false,
+    lastSentAt: 0
+  });
+
+  useEffect(() => {
+    selectedConversationIdRef.current = selectedConversation?.id || null;
+  }, [selectedConversation?.id]);
+
+  useEffect(() => {
+    currentUserIdRef.current = user?.id || null;
+  }, [user?.id]);
 
   // Charger les conversations au démarrage
   useEffect(() => {
     loadConversations();
     loadBlockedUsers(true);
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const sendHeartbeat = async () => {
+      try {
+        await chatService.heartbeatPresence();
+      } catch {
+      }
+    };
+
+    sendHeartbeat();
+    const heartbeatInterval = setInterval(() => {
+      if (!isMounted) return;
+      sendHeartbeat();
+    }, PRESENCE_HEARTBEAT_INTERVAL_MS);
+
+    return () => {
+      isMounted = false;
+      clearInterval(heartbeatInterval);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user?.id || !token) return;
+
+    const socket = io(SOCKET_SERVER_URL, {
+      auth: { token },
+      transports: ['websocket', 'polling']
+    });
+
+    socketRef.current = socket;
+
+    socket.on('chat:message:new', (payload) => {
+      const incomingConversationId = payload?.conversationId;
+      const incomingMessage = payload?.message;
+
+      if (!incomingConversationId || !incomingMessage?.id) return;
+
+      setConversations(prev => {
+        const next = [...prev];
+        const targetIndex = next.findIndex(conv => conv.id === incomingConversationId);
+        if (targetIndex >= 0) {
+          const existing = next[targetIndex];
+          next[targetIndex] = {
+            ...existing,
+            lastMessage: incomingMessage,
+            lastMessageAt: incomingMessage.createdAt,
+            unreadCount: String(incomingMessage.senderId || incomingMessage.sender?.id) === String(user?.id)
+              ? (existing.unreadCount || 0)
+              : (existing.unreadCount || 0) + 1
+          };
+          next.sort((a, b) => new Date(b.lastMessageAt || b.updatedAt || 0) - new Date(a.lastMessageAt || a.updatedAt || 0));
+        }
+        return next;
+      });
+
+      setMessages(prev => {
+        if (selectedConversationIdRef.current !== incomingConversationId) return prev;
+        if (prev.some(msg => msg.id === incomingMessage.id)) return prev;
+        return [...prev, incomingMessage];
+      });
+    });
+
+    socket.on('chat:presence:update', (payload) => {
+      const presenceUserId = payload?.userId;
+      if (!presenceUserId) return;
+
+      setConversations(prev => prev.map(conv => {
+        if (conv.type !== 'DIRECT') return conv;
+
+        const hasTarget = (conv.otherUser?.id === presenceUserId)
+          || conv.members?.some(member => member?.user?.id === presenceUserId);
+
+        if (!hasTarget) return conv;
+
+        return {
+          ...conv,
+          otherUser: conv.otherUser?.id === presenceUserId
+            ? {
+                ...conv.otherUser,
+                isOnline: !!payload.isOnline,
+                lastSeenAt: payload.lastSeenAt || conv.otherUser?.lastSeenAt || null,
+                chatLastSeenAt: payload.lastSeenAt || conv.otherUser?.chatLastSeenAt || null
+              }
+            : conv.otherUser,
+          members: (conv.members || []).map(member => (
+            member?.user?.id === presenceUserId
+              ? {
+                  ...member,
+                  user: {
+                    ...member.user,
+                    isOnline: !!payload.isOnline,
+                    lastSeenAt: payload.lastSeenAt || member.user?.lastSeenAt || null,
+                    chatLastSeenAt: payload.lastSeenAt || member.user?.chatLastSeenAt || null
+                  }
+                }
+              : member
+          ))
+        };
+      }));
+    });
+
+    socket.on('chat:typing:update', (payload) => {
+      if (!payload?.conversationId || payload.conversationId !== selectedConversationIdRef.current) return;
+      if (!payload?.userId || String(payload.userId) === String(currentUserIdRef.current)) return;
+
+      setTypingUsers(prev => {
+        if (payload.isTyping) {
+          if (prev.some(typingUser => typingUser.id === payload.userId)) return prev;
+          return [...prev, payload.user || { id: payload.userId }];
+        }
+
+        return prev.filter(typingUser => typingUser.id !== payload.userId);
+      });
+    });
+
+    socket.on('connect', () => {
+      const conversationIds = conversations.map(conv => conv.id).filter(Boolean);
+      socket.emit('chat:subscribe', conversationIds);
+    });
+
+    return () => {
+      socket.disconnect();
+      if (socketRef.current === socket) {
+        socketRef.current = null;
+      }
+    };
+  }, [user?.id, token, SOCKET_SERVER_URL]);
+
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket || !socket.connected) return;
+
+    const conversationIds = conversations.map(conv => conv.id).filter(Boolean);
+    socket.emit('chat:subscribe', conversationIds);
+  }, [conversations]);
 
   // Charger les messages uniquement quand l'ID de conversation change
   useEffect(() => {
@@ -64,8 +230,43 @@ export default function Chat() {
       setShowImageGalleryModal(false);
       setGalleryItems([]);
       setGalleryImageIndex(0);
+      setShowEmojiPicker(false);
+      setEmojiSearchQuery('');
+      setEmojiCategory('ALL');
     }
   }, [selectedConversation?.id]);
+
+  useEffect(() => {
+    const currentConversationId = selectedConversation?.id || null;
+    const previousConversationId = typingStateRef.current.conversationId;
+
+    if (previousConversationId && previousConversationId !== currentConversationId && typingStateRef.current.isTyping) {
+      socketRef.current?.emit('chat:typing:set', {
+        conversationId: previousConversationId,
+        isTyping: false
+      });
+      typingStateRef.current.isTyping = false;
+      typingStateRef.current.lastSentAt = 0;
+    }
+
+    typingStateRef.current.conversationId = currentConversationId;
+    setTypingUsers([]);
+  }, [selectedConversation?.id]);
+
+  useEffect(() => {
+    if (!selectedConversation?.id) return;
+
+    const refreshedSelected = conversations.find(conv => conv.id === selectedConversation.id);
+    if (!refreshedSelected) return;
+
+    setSelectedConversation(prev => {
+      if (!prev || prev.id !== refreshedSelected.id) return prev;
+      return {
+        ...prev,
+        ...refreshedSelected
+      };
+    });
+  }, [conversations, selectedConversation?.id]);
 
   // Auto-scroll vers le bas quand de nouveaux messages arrivent
   useEffect(() => {
@@ -89,6 +290,100 @@ export default function Chat() {
     : messages.filter(message => message.type === 'IMAGE' && !!message.attachmentUrl);
 
   const isGalleryActionLocked = () => Date.now() < galleryActionLockedUntilRef.current;
+
+  const emojiMapByValue = useMemo(() => {
+    return new Map(emojiCatalog.map(item => [item.emoji, item]));
+  }, []);
+
+  const recentEmojiItems = useMemo(() => {
+    return recentEmojis
+      .map(emoji => emojiMapByValue.get(emoji))
+      .filter(Boolean);
+  }, [recentEmojis, emojiMapByValue]);
+
+  const sanitizeRecentEmojis = (emojis) => {
+    if (!Array.isArray(emojis)) return [];
+
+    const unique = [];
+    for (const emoji of emojis) {
+      if (typeof emoji !== 'string') continue;
+      if (!emojiMapByValue.has(emoji)) continue;
+      if (unique.includes(emoji)) continue;
+      unique.push(emoji);
+      if (unique.length >= MAX_RECENT_EMOJIS) break;
+    }
+
+    return unique;
+  };
+
+  const filteredEmojis = useMemo(() => {
+    const normalizedQuery = normalizeEmojiSearchValue(emojiSearchQuery.trim());
+    const baseFiltered = emojiCatalog.filter(item => {
+      const matchCategory = emojiCategory === 'ALL' || item.category === emojiCategory;
+      const matchQuery = !normalizedQuery
+        || item.emoji.includes(normalizedQuery)
+        || item.searchTokens.includes(normalizedQuery);
+
+      return matchCategory && matchQuery;
+    });
+
+    if (emojiCategory === 'RECENT') {
+      return recentEmojiItems.filter(item => (
+        !normalizedQuery
+        || item.emoji.includes(normalizedQuery)
+        || item.searchTokens.includes(normalizedQuery)
+      ));
+    }
+
+    if (emojiCategory !== 'ALL' || normalizedQuery || recentEmojiItems.length === 0) {
+      return baseFiltered;
+    }
+
+    const recentSet = new Set(recentEmojiItems.map(item => item.emoji));
+    const remaining = baseFiltered.filter(item => !recentSet.has(item.emoji));
+    return [...recentEmojiItems, ...remaining];
+  }, [emojiSearchQuery, emojiCategory, recentEmojiItems]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadRecentEmojis = async () => {
+      let localRecent = [];
+      try {
+        const rawRecentEmojis = localStorage.getItem(RECENT_EMOJIS_STORAGE_KEY);
+        if (rawRecentEmojis) {
+          localRecent = sanitizeRecentEmojis(JSON.parse(rawRecentEmojis));
+        }
+      } catch {
+        localRecent = [];
+      }
+
+      try {
+        const response = await chatService.getRecentEmojis();
+        const serverRecent = sanitizeRecentEmojis(response?.emojis);
+
+        if (!isMounted) return;
+
+        if (serverRecent.length > 0 || localRecent.length === 0) {
+          setRecentEmojis(serverRecent);
+          localStorage.setItem(RECENT_EMOJIS_STORAGE_KEY, JSON.stringify(serverRecent));
+          return;
+        }
+
+        setRecentEmojis(localRecent);
+        chatService.updateRecentEmojis(localRecent).catch(() => {});
+      } catch {
+        if (!isMounted) return;
+        setRecentEmojis(localRecent);
+      }
+    };
+
+    loadRecentEmojis();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [emojiMapByValue]);
 
   const lockGalleryAction = () => {
     galleryActionLockedUntilRef.current = Date.now() + GALLERY_ACTION_LOCK_MS;
@@ -145,19 +440,40 @@ export default function Chat() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [showImageGalleryModal, galleryImages.length]);
 
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+
+    const handleClickOutside = (event) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target)) {
+        setShowEmojiPicker(false);
+        setEmojiSearchQuery('');
+        setEmojiCategory('ALL');
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showEmojiPicker]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const loadConversations = async () => {
+  const loadConversations = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) {
+        setLoading(true);
+      }
       const data = await chatService.getConversations();
       setConversations(data);
     } catch (error) {
-      toast.error('Erreur lors du chargement des conversations');
+      if (!silent) {
+        toast.error('Erreur lors du chargement des conversations');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -165,12 +481,22 @@ export default function Chat() {
     try {
       const data = await chatService.getConversation(conversationId);
       const loadedMessages = data.messages || [];
+      const conversationInList = conversations.find(conv => conv.id === conversationId);
+      const { messages: _ignoredMessages, ...conversationDetails } = data || {};
+      const mergedConversation = {
+        ...conversationInList,
+        ...conversationDetails,
+        unreadCount: conversationInList?.unreadCount ?? conversationDetails?.unreadCount ?? 0
+      };
+
+      setSelectedConversation(prev => (
+        prev?.id === conversationId ? { ...prev, ...mergedConversation } : prev
+      ));
 
       const hasUnreadIncoming = loadedMessages.some(
         msg => !msg.isRead && String(msg.senderId || msg.sender?.id) !== String(user?.id)
       );
 
-      const conversationInList = conversations.find(conv => conv.id === conversationId);
       const hasUnreadBadge = (conversationInList?.unreadCount || 0) > 0;
 
       if (hasUnreadIncoming || hasUnreadBadge) {
@@ -181,7 +507,7 @@ export default function Chat() {
         ));
 
         setSelectedConversation(prev => (
-          prev?.id === conversationId ? { ...prev, unreadCount: 0 } : prev
+          prev?.id === conversationId ? { ...prev, ...mergedConversation, unreadCount: 0 } : prev
         ));
 
         setMessages(loadedMessages.map(msg =>
@@ -197,6 +523,43 @@ export default function Chat() {
     }
   };
 
+  const updateTypingStatus = async (isTyping, force = false) => {
+    const conversationId = selectedConversation?.id;
+    if (!conversationId) return;
+
+    const now = Date.now();
+    const shouldThrottle = !force && isTyping && typingStateRef.current.isTyping && (now - typingStateRef.current.lastSentAt) < TYPING_THROTTLE_MS;
+
+    if (shouldThrottle) return;
+
+    if (!force && typingStateRef.current.isTyping === isTyping && typingStateRef.current.conversationId === conversationId) {
+      return;
+    }
+
+    typingStateRef.current.conversationId = conversationId;
+    typingStateRef.current.isTyping = isTyping;
+    typingStateRef.current.lastSentAt = now;
+
+    socketRef.current?.emit('chat:typing:set', {
+      conversationId,
+      isTyping
+    });
+  };
+
+  const handleMessageInputChange = (value) => {
+    setNewMessage(value);
+
+    const hasContent = value.trim().length > 0;
+    if (!selectedConversation?.id || sending || isSendingBlocked) return;
+
+    if (!hasContent) {
+      updateTypingStatus(false, true);
+      return;
+    }
+
+    updateTypingStatus(true);
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     
@@ -204,9 +567,13 @@ export default function Chat() {
 
     try {
       setSending(true);
+      await updateTypingStatus(false, true);
       const message = await chatService.sendTextMessage(selectedConversation.id, newMessage.trim());
       setMessages([...messages, message]);
       setNewMessage('');
+      setShowEmojiPicker(false);
+      setEmojiSearchQuery('');
+      setEmojiCategory('ALL');
     } catch (error) {
       toast.error(error?.response?.data?.message || 'Erreur lors de l\'envoi du message');
     } finally {
@@ -420,6 +787,55 @@ export default function Chat() {
     requestAnimationFrame(() => {
       inputElement.focus();
       const cursorPos = start + 1;
+      inputElement.setSelectionRange(cursorPos, cursorPos);
+    });
+  };
+
+  const handleToggleEmojiPicker = () => {
+    if (isSendingBlocked) return;
+    setShowEmojiPicker(prev => {
+      const next = !prev;
+      if (!next) {
+        setEmojiSearchQuery('');
+        setEmojiCategory('ALL');
+      }
+      return next;
+    });
+  };
+
+  const handleInsertEmoji = (emoji) => {
+    if (isSendingBlocked) return;
+
+    setRecentEmojis(prev => {
+      const nextRecent = [emoji, ...prev.filter(item => item !== emoji)].slice(0, MAX_RECENT_EMOJIS);
+      try {
+        localStorage.setItem(RECENT_EMOJIS_STORAGE_KEY, JSON.stringify(nextRecent));
+      } catch {
+      }
+      chatService.updateRecentEmojis(nextRecent).catch(() => {});
+      return nextRecent;
+    });
+
+    const inputElement = messageInputRef.current;
+    if (!inputElement) {
+      setNewMessage(prev => `${prev}${emoji}`);
+      setShowEmojiPicker(false);
+      setEmojiSearchQuery('');
+      setEmojiCategory('ALL');
+      return;
+    }
+
+    const start = inputElement.selectionStart ?? newMessage.length;
+    const end = inputElement.selectionEnd ?? newMessage.length;
+    const nextValue = `${newMessage.slice(0, start)}${emoji}${newMessage.slice(end)}`;
+    setNewMessage(nextValue);
+    setShowEmojiPicker(false);
+    setEmojiSearchQuery('');
+    setEmojiCategory('ALL');
+
+    requestAnimationFrame(() => {
+      inputElement.focus();
+      const cursorPos = start + emoji.length;
       inputElement.setSelectionRange(cursorPos, cursorPos);
     });
   };
@@ -655,6 +1071,33 @@ export default function Chat() {
       toast.error(error?.response?.data?.message || 'Erreur lors de l\'ajout du membre');
     } finally {
       setAddingMember(false);
+    }
+  };
+
+  const handleLeaveSelectedGroup = async (conversationArg = null) => {
+    const conversationToLeave = conversationArg || selectedConversation;
+
+    if (!conversationToLeave || conversationToLeave.type !== 'GROUP') {
+      toast.error('Aucun groupe sélectionné');
+      return;
+    }
+
+    const confirmed = window.confirm('Voulez-vous vraiment quitter ce groupe ?');
+    if (!confirmed) return;
+
+    try {
+      await chatService.leaveGroup(conversationToLeave.id, user?.id);
+
+      setConversations(prev => prev.filter(conv => conv.id !== conversationToLeave.id));
+
+      if (selectedConversation?.id === conversationToLeave.id) {
+        setSelectedConversation(null);
+        setMessages([]);
+      }
+
+      toast.success('Vous avez quitté le groupe');
+    } catch (error) {
+      toast.error(error?.response?.data?.message || 'Erreur lors de la sortie du groupe');
     }
   };
 
@@ -921,6 +1364,50 @@ export default function Chat() {
     return messageDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }).toUpperCase();
   };
 
+  const formatLastSeenFull = (date) => {
+    if (!date) return 'Hors ligne';
+
+    const parsedDate = new Date(date);
+    if (Number.isNaN(parsedDate.getTime())) return 'Hors ligne';
+
+    return `Vu le ${parsedDate.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    })} à ${parsedDate.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    })}`;
+  };
+
+  const getDirectPresence = (conversation) => {
+    const directUser = conversation?.otherUser
+      || conversation?.members?.find(member => member?.user?.id && member.user.id !== user?.id)?.user
+      || null;
+
+    const isOnline = !!directUser?.isOnline;
+    const lastSeenAt = directUser?.lastSeenAt || directUser?.chatLastSeenAt || null;
+
+    if (isOnline) {
+      return {
+        isOnline: true,
+        dotClass: 'bg-success',
+        labelClass: 'text-success',
+        shortLabel: 'EN LIGNE',
+        fullLabel: 'En ligne'
+      };
+    }
+
+    return {
+      isOnline: false,
+      lastSeenAt,
+      dotClass: 'bg-secondary',
+      labelClass: 'text-muted',
+      shortLabel: lastSeenAt ? `VU ${formatMessageTime(lastSeenAt)}` : 'HORS LIGNE',
+      fullLabel: formatLastSeenFull(lastSeenAt)
+    };
+  };
+
   const getConversationTitle = (conversation) => {
     if (conversation.type === 'GROUP') {
       return conversation.title;
@@ -965,8 +1452,50 @@ export default function Chat() {
     messages.some(msg => !msg.isRead && String(msg.senderId || msg.sender?.id) !== String(user?.id))
   );
 
+  const selectedTypingLabel = useMemo(() => {
+    if (!selectedConversation?.id || typingUsers.length === 0) return null;
+
+    if (selectedConversation.type === 'DIRECT') {
+      return 'En train d\'écrire…';
+    }
+
+    const typingNames = typingUsers
+      .map(typingUser => `${typingUser.firstName || ''} ${typingUser.lastName || ''}`.trim())
+      .filter(Boolean);
+
+    if (typingNames.length === 0) {
+      return 'Quelqu\'un est en train d\'écrire…';
+    }
+
+    if (typingNames.length === 1) {
+      return `${typingNames[0]} écrit…`;
+    }
+
+    if (typingNames.length === 2) {
+      return `${typingNames[0]} et ${typingNames[1]} écrivent…`;
+    }
+
+    return `${typingNames[0]}, ${typingNames[1]} et ${typingNames.length - 2} autres écrivent…`;
+  }, [selectedConversation?.id, selectedConversation?.type, typingUsers]);
+
+  const selectedGroupMembers = selectedConversation?.type === 'GROUP'
+    ? (selectedConversation.members || [])
+        .map(member => member?.user)
+        .filter(Boolean)
+    : [];
+
+  const selectedGroupMembersLabel = selectedGroupMembers.length > 0
+    ? selectedGroupMembers
+        .map(member => `${member.firstName || ''} ${member.lastName || ''}`.trim())
+        .filter(Boolean)
+        .join(', ')
+    : 'Aucun membre';
+
   const selectedConversationNotificationsMuted = !!selectedConversation?.notificationsMuted;
   const selectedConversationUserBlocked = !!selectedConversation?.otherUserIsBlocked;
+  const selectedDirectPresence = selectedConversation?.type === 'DIRECT'
+    ? getDirectPresence(selectedConversation)
+    : null;
   const isSendingBlocked = !!selectedConversation && selectedConversation.type === 'DIRECT' && selectedConversationUserBlocked;
   const activeGalleryImage = galleryImages[galleryImageIndex] || null;
   const activeGalleryDownloadName = activeGalleryImage
@@ -1154,8 +1683,13 @@ export default function Chat() {
                               <span className={conversation.unreadCount > 0 ? 'fw-bold' : ''}>{getConversationTitle(conversation)}</span>
                               {conversation.type === 'DIRECT' && (
                                 <>
-                                  <div className="wd-5 ht-5 rounded-circle opacity-75 me-1 bg-success"></div>
-                                  <span className="fs-10 fw-medium text-success text-uppercase d-none d-sm-block">EN LIGNE</span>
+                                  <div className={`wd-5 ht-5 rounded-circle opacity-75 me-1 ${getDirectPresence(conversation).dotClass}`}></div>
+                                  <span
+                                    className={`fs-10 fw-medium text-uppercase d-none d-sm-block ${getDirectPresence(conversation).labelClass}`}
+                                    title={getDirectPresence(conversation).fullLabel}
+                                  >
+                                    {getDirectPresence(conversation).shortLabel}
+                                  </span>
                                 </>
                               )}
                               {conversation.lastMessage && (
@@ -1220,6 +1754,22 @@ export default function Chat() {
                                   </a>
                                 </li>
                                 <li className="dropdown-divider"></li>
+                                {conversation.type === 'GROUP' && (
+                                  <li>
+                                    <a
+                                      href="#"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleLeaveSelectedGroup(conversation);
+                                      }}
+                                      className="dropdown-item text-warning"
+                                    >
+                                      <i className="feather-log-out me-3"></i>
+                                      <span>Quitter le groupe</span>
+                                    </a>
+                                  </li>
+                                )}
                                 <li>
                                   <a href="#" onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteConversation(conversation); }} className="dropdown-item">
                                     <i className="feather-trash-2 me-3"></i>
@@ -1264,14 +1814,36 @@ export default function Chat() {
                             {getConversationTitle(selectedConversation)}
                           </div>
                           {selectedConversation?.type === 'GROUP' ? (
-                            <div className="fs-11 text-muted">
-                              {selectedConversation.members?.length} membres
+                            <div className="fs-11 text-muted" title={selectedGroupMembersLabel}>
+                              <span>{selectedConversation.members?.length || 0} membres</span>
+                              <span className="d-block text-truncate" style={{ maxWidth: '320px' }}>
+                                {selectedGroupMembersLabel}
+                              </span>
+                              {selectedTypingLabel && (
+                                <span className="d-block text-primary fw-semibold mt-1">
+                                  {selectedTypingLabel}
+                                </span>
+                              )}
                             </div>
                           ) : selectedConversation?.type === 'DIRECT' ? (
-                            <div className="d-flex align-items-center mt-1">
-                              <span className="wd-7 ht-7 rounded-circle opacity-75 me-2 bg-success"></span>
-                              <span className="fs-9 text-uppercase fw-bold text-success">EN LIGNE</span>
-                            </div>
+                            <>
+                              <div className="d-flex align-items-center mt-1">
+                                <span className={`wd-7 ht-7 rounded-circle opacity-75 me-2 ${selectedDirectPresence?.dotClass || 'bg-secondary'}`}></span>
+                                <span className={`fs-9 text-uppercase fw-bold ${selectedDirectPresence?.labelClass || 'text-muted'}`}>
+                                  {selectedDirectPresence?.isOnline ? 'EN LIGNE' : 'HORS LIGNE'}
+                                </span>
+                              </div>
+                              {selectedTypingLabel && (
+                                <div className="fs-11 text-primary fw-semibold mt-1">
+                                  {selectedTypingLabel}
+                                </div>
+                              )}
+                              {!selectedDirectPresence?.isOnline && selectedDirectPresence?.lastSeenAt && (
+                                <div className="fs-11 text-muted mt-1">
+                                  {selectedDirectPresence.fullLabel}
+                                </div>
+                              )}
+                            </>
                           ) : null}
                         </div>
                       </div>
@@ -1326,6 +1898,12 @@ export default function Chat() {
                               <a href="#" onClick={(e) => { e.preventDefault(); handleOpenAddMemberModal(); }} className="dropdown-item">
                                 <i className="feather-user-plus me-3"></i>
                                 <span>Ajouter au groupe</span>
+                              </a>
+                            )}
+                            {selectedConversation?.type === 'GROUP' && (
+                              <a href="#" onClick={(e) => { e.preventDefault(); handleLeaveSelectedGroup(); }} className="dropdown-item text-warning">
+                                <i className="feather-log-out me-3"></i>
+                                <span>Quitter le groupe</span>
                               </a>
                             )}
                             <a href="#" onClick={(e) => { e.preventDefault(); handleToggleConversationNotifications(); }} className="dropdown-item">
@@ -1575,17 +2153,71 @@ export default function Chat() {
                         className="form-control border-0"
                         placeholder={isSendingBlocked ? 'Débloquez cet utilisateur pour écrire...' : 'Écrivez votre message... (Entrée: envoyer, Ctrl+Entrée: nouvelle ligne)'}
                         value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
+                        onChange={(e) => handleMessageInputChange(e.target.value)}
                         onKeyDown={handleMessageKeyDown}
                         disabled={sending || isSendingBlocked}
                         rows={1}
                         style={{ minHeight: '59px', maxHeight: '140px', resize: 'none' }}
                       />
-                      <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('Les emojis'); }} className="d-flex">
-                        <div className="wd-60 d-flex align-items-center justify-content-center" style={{ height: '59px' }}>
-                          <i className="feather-smile"></i>
-                        </div>
-                      </a>
+                      <div className="position-relative d-flex" ref={emojiPickerRef}>
+                        <a href="#" onClick={(e) => { e.preventDefault(); handleToggleEmojiPicker(); }} className="d-flex" title="Ajouter un emoji">
+                          <div className="wd-60 d-flex align-items-center justify-content-center" style={{ height: '59px' }}>
+                            <i className="feather-smile"></i>
+                          </div>
+                        </a>
+                        {showEmojiPicker && !isSendingBlocked && (
+                          <div
+                            className="position-absolute bg-white border rounded-3 shadow-sm p-2"
+                            style={{ right: 0, bottom: 'calc(100% + 8px)', width: '280px', zIndex: 20 }}
+                          >
+                            <input
+                              type="text"
+                              className="form-control form-control-sm mb-2"
+                              placeholder="Rechercher emoji (FR/EN/NL/DE/ES)..."
+                              value={emojiSearchQuery}
+                              onChange={(e) => setEmojiSearchQuery(e.target.value)}
+                            />
+                            <div className="d-flex gap-1 mb-2" style={{ overflowX: 'auto', whiteSpace: 'nowrap' }}>
+                              {emojiCategoryOptions.map(category => (
+                                <button
+                                  key={category.id}
+                                  type="button"
+                                  className={`btn btn-sm ${emojiCategory === category.id ? 'btn-primary' : 'btn-light'}`}
+                                  onClick={() => setEmojiCategory(category.id)}
+                                  title={category.label}
+                                  disabled={category.id === 'RECENT' && recentEmojiItems.length === 0}
+                                  style={{ flexShrink: 0 }}
+                                >
+                                  <span className="me-1">{category.icon}</span>
+                                  {category.label}
+                                </button>
+                              ))}
+                            </div>
+                            <div
+                              className="d-flex flex-wrap gap-1"
+                              style={{ maxHeight: '220px', overflowY: 'auto' }}
+                            >
+                              {filteredEmojis.map(item => (
+                                <button
+                                  key={item.emoji}
+                                  type="button"
+                                  className="btn btn-light btn-sm"
+                                  style={{ width: '34px', height: '34px', lineHeight: 1 }}
+                                  onClick={() => handleInsertEmoji(item.emoji)}
+                                  title={item.emoji}
+                                >
+                                  {item.emoji}
+                                </button>
+                              ))}
+                              {filteredEmojis.length === 0 && (
+                                <div className="w-100 text-muted fs-12 text-center py-2">
+                                  Aucun emoji trouvé
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                       <div className="border-start border-gray-5 send-message">
                         <button 
                           type="submit" 
