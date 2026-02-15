@@ -424,6 +424,36 @@ export default function Chat() {
     });
   };
 
+  const handleMessageKeyDown = (event) => {
+    if (event.key !== 'Enter') return;
+
+    if (event.ctrlKey || event.metaKey) {
+      event.preventDefault();
+
+      const inputElement = messageInputRef.current;
+      if (!inputElement) {
+        setNewMessage(prev => `${prev}\n`);
+        return;
+      }
+
+      const start = inputElement.selectionStart ?? newMessage.length;
+      const end = inputElement.selectionEnd ?? newMessage.length;
+      const nextValue = `${newMessage.slice(0, start)}\n${newMessage.slice(end)}`;
+      setNewMessage(nextValue);
+
+      requestAnimationFrame(() => {
+        inputElement.focus();
+        const cursorPos = start + 1;
+        inputElement.setSelectionRange(cursorPos, cursorPos);
+      });
+      return;
+    }
+
+    event.preventDefault();
+    if (sending || isSendingBlocked || !newMessage.trim()) return;
+    handleSendMessage(event);
+  };
+
   const handlePickImage = () => {
     if (isSendingBlocked) return;
     imageFileInputRef.current?.click();
@@ -1285,10 +1315,12 @@ export default function Chat() {
                             <i className="feather-more-vertical"></i>
                           </a>
                           <div className="dropdown-menu dropdown-menu-end">
-                            <a href="#" onClick={(e) => { e.preventDefault(); handleOpenAddMemberModal(); }} className="dropdown-item">
-                              <i className="feather-user-plus me-3"></i>
-                              <span>Ajouter au groupe</span>
-                            </a>
+                            {selectedConversation?.type === 'GROUP' && (
+                              <a href="#" onClick={(e) => { e.preventDefault(); handleOpenAddMemberModal(); }} className="dropdown-item">
+                                <i className="feather-user-plus me-3"></i>
+                                <span>Ajouter au groupe</span>
+                              </a>
+                            )}
                             <a href="#" onClick={(e) => { e.preventDefault(); handleToggleConversationNotifications(); }} className="dropdown-item">
                               <i className={`feather-${selectedConversationNotificationsMuted ? 'bell' : 'bell-off'} me-3`}></i>
                               <span>{selectedConversationNotificationsMuted ? 'Activer les notifications' : 'Désactiver les notifications'}</span>
@@ -1309,7 +1341,7 @@ export default function Chat() {
                   </div>
 
                   {/* Messages */}
-                  <div className="content-area-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                  <div className="content-area-body" style={{ flex: 1, minHeight: 0, overflowY: 'auto', paddingBottom: '110px' }}>
                     {messages.length === 0 ? (
                       <div className="text-center py-5">
                         <i className="feather-message-circle fs-1 text-muted d-block mb-3"></i>
@@ -1356,7 +1388,7 @@ export default function Chat() {
                         }
 
                         return (
-                          <div key={message.id} className={`single-chat-item ${isLastInGroup ? 'mb-5' : 'mb-0'}`}>
+                          <div key={message.id} className={`single-chat-item ${isLastInGroup ? 'mb-5' : 'mb-0'}`} style={{ overflow: 'visible' }}>
                             {shouldShowHeader && (
                               <div className={`d-flex ${isOwnMessage ? 'flex-row-reverse' : ''} align-items-center gap-3 mb-3`}>
                                 <a href="#" onClick={(e) => e.preventDefault()} className="avatar-image">
@@ -1527,14 +1559,16 @@ export default function Chat() {
                           <i className={`feather-${isRecording ? 'square' : 'mic'} ${isRecording ? 'text-danger' : ''}`}></i>
                         </div>
                       </a>
-                      <input
+                      <textarea
                         ref={messageInputRef}
-                        type="text"
                         className="form-control border-0"
-                        placeholder={isSendingBlocked ? 'Débloquez cet utilisateur pour écrire...' : 'Type your message here...'}
+                        placeholder={isSendingBlocked ? 'Débloquez cet utilisateur pour écrire...' : 'Type your message here... (Enter: envoyer, Ctrl+Enter: nouvelle ligne)'}
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyDown={handleMessageKeyDown}
                         disabled={sending || isSendingBlocked}
+                        rows={1}
+                        style={{ minHeight: '59px', maxHeight: '140px', resize: 'none' }}
                       />
                       <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('Les emojis'); }} className="d-flex">
                         <div className="wd-60 d-flex align-items-center justify-content-center" style={{ height: '59px' }}>
