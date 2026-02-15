@@ -194,6 +194,18 @@ export default function Sidebar() {
               </Link>
             </li>
             
+            {/* Espace perso */}
+            <li className="nxl-item nxl-caption">
+              <label>Espace perso</label>
+            </li>
+            
+            <li className="nxl-item">
+              <Link to="/cv" className={`nxl-link ${isActive('/cv')}`}>
+                <span className="nxl-micon"><i className="feather-file-text"></i></span>
+                <span className="nxl-mtext">Mon CV</span>
+              </Link>
+            </li>
+            
             {/* Help Center */}
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">

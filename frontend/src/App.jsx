@@ -14,6 +14,10 @@ import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
+import CV from './pages/CV'
+import EditExperiences from './pages/cv/EditExperiences'
+import EditEducation from './pages/cv/EditEducation'
+import EditSkills from './pages/cv/EditSkills'
 import Customers from './pages/customers/Customers'
 import CustomerView from './pages/customers/CustomerView'
 import CustomerCreate from './pages/customers/CustomerCreate'
@@ -440,6 +444,39 @@ function App() {
         <ProtectedRoute>
           <DashboardLayout>
             <Profile />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* CV */}
+      <Route path="/cv" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <CV />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/cv/edit-experiences" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <EditExperiences />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/cv/edit-education" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <EditEducation />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/cv/edit-skills" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <EditSkills />
           </DashboardLayout>
         </ProtectedRoute>
       } />

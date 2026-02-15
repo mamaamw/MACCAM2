@@ -252,6 +252,10 @@ export default function Header() {
                   <i className="feather-user"></i>
                   <span>Profile Details</span>
                 </Link>
+                <Link to="/cv" className="dropdown-item">
+                  <i className="feather-file-text"></i>
+                  <span>Mon CV</span>
+                </Link>
                 <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
                   <i className="feather-activity"></i>
                   <span>Activity Feed</span>
