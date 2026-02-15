@@ -17,6 +17,7 @@ import taskRoutes from './routes/task.routes.js';
 import invoiceRoutes from './routes/invoice.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import storageRoutes from './routes/storage.js';
+import calendarRoutes from './routes/calendar.js';
 
 // Middleware d'erreur
 import { errorHandler } from './middleware/error.middleware.js';
@@ -66,6 +67,7 @@ app.use('/api/v1/tasks', taskRoutes);
 app.use('/api/v1/invoices', invoiceRoutes);
 app.use('/api/v1/chat', chatRoutes);
 app.use('/api/v1/storage', storageRoutes);
+app.use('/api/v1/calendar', calendarRoutes);
 
 // Route de test
 app.get('/api/v1/health', (req, res) => {

@@ -69,6 +69,9 @@ model User {
   // Relations pour le chat
   conversationMemberships ConversationMember[]
   sentMessages    Message[] @relation("SentMessages")
+  
+  // Relations pour le calendrier
+  events          Event[]   @relation("UserEvents")
 
   @@map("users")
 }
@@ -445,3 +448,29 @@ model Message {
   @@map("messages")
 }
 
+// Calendar Events
+model Event {
+  id              String    @id @default(uuid())
+  title           String
+  description     String?
+  startDate       DateTime
+  endDate         DateTime
+  allDay          Boolean   @default(false)
+  location        String?
+  type            String    @default("EVENT") // EVENT, MEETING, CALL, TASK, REMINDER, LUNCH
+  color           String    @default("primary") // primary, success, info, warning, danger
+  userId          String
+  reminder        Int?      // Minutes avant l'événement (15, 30, 60, etc.)
+  isRecurring     Boolean   @default(false)
+  recurrenceRule  String?   // DAILY, WEEKLY, MONTHLY, YEARLY
+  attendees       String?   // JSON array des participants
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  user            User      @relation("UserEvents", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([startDate])
+  @@map("events")
+}
