@@ -93,7 +93,7 @@ export default function Login() {
 
         <div className="alert alert-info mt-4">
           <p className="fw-bold mb-2 fs-12">Compte de test :</p>
-          <p className="mb-1 fs-12">Email: admin@maccam.com ou Username: admin</p>
+          <p className="mb-1 fs-12">Email: admin@maccam.com ou nom d'utilisateur: admin</p>
           <p className="mb-0 fs-12">Mot de passe: admin123</p>
         </div>
       </div>

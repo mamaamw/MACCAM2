@@ -231,7 +231,7 @@ export default function Contacts() {
                 </div>
                 <div>
                   <h6 className="mb-0">{contacts.filter(c => c.role === 'ADMIN').length}</h6>
-                  <small className="text-muted">Admins</small>
+                  <small className="text-muted">Administrateurs</small>
                 </div>
               </div>
             </div>
@@ -359,7 +359,7 @@ export default function Contacts() {
                             contact.role === 'MANAGER' ? 'bg-info' : 'bg-primary'
                           }`}>
                             <i className="feather-shield me-1"></i>
-                            {contact.role === 'ADMIN' ? 'Admin' : contact.role === 'MANAGER' ? 'Manager' : 'User'}
+                            {contact.role === 'ADMIN' ? 'Administrateur' : contact.role === 'MANAGER' ? 'Gestionnaire' : 'Utilisateur'}
                           </span>
                           {contact.isActive ? (
                             <span className="badge bg-success">
@@ -475,7 +475,7 @@ export default function Contacts() {
                       onChange={(e) => setActivationData({...activationData, role: e.target.value})}
                     >
                       <option value="USER">Utilisateur</option>
-                      <option value="MANAGER">Manager</option>
+                      <option value="MANAGER">Gestionnaire</option>
                       <option value="ADMIN">Administrateur</option>
                     </select>
                   </div>

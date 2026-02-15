@@ -143,7 +143,7 @@ export default function Users() {
   const getRoleLabel = (role) => {
     switch(role) {
       case 'ADMIN': return 'Administrateur';
-      case 'MANAGER': return 'Manager';
+      case 'MANAGER': return 'Gestionnaire';
       case 'USER': return 'Utilisateur';
       default: return role;
     }
@@ -194,7 +194,7 @@ export default function Users() {
               >
                 <option value="ALL">Tous les rôles</option>
                 <option value="ADMIN">Administrateurs</option>
-                <option value="MANAGER">Managers</option>
+                <option value="MANAGER">Gestionnaires</option>
                 <option value="USER">Utilisateurs</option>
               </select>
             </div>
@@ -397,7 +397,7 @@ export default function Users() {
                         onChange={(e) => setFormData({...formData, role: e.target.value})}
                       >
                         <option value="USER">Utilisateur</option>
-                        <option value="MANAGER">Manager</option>
+                        <option value="MANAGER">Gestionnaire</option>
                         <option value="ADMIN">Administrateur</option>
                       </select>
                     </div>
@@ -474,7 +474,7 @@ export default function Users() {
                         disabled={selectedUser.id === currentUser?.id}
                       >
                         <option value="USER">Utilisateur</option>
-                        <option value="MANAGER">Manager</option>
+                        <option value="MANAGER">Gestionnaire</option>
                         <option value="ADMIN">Administrateur</option>
                       </select>
                       {selectedUser.id === currentUser?.id && (

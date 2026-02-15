@@ -914,10 +914,10 @@ export default function Chat() {
     const diffInHours = Math.floor(diffInMinutes / 60);
     const diffInDays = Math.floor(diffInHours / 24);
 
-    if (diffInMinutes < 1) return 'NOW';
-    if (diffInMinutes < 60) return `${diffInMinutes} MIN AGO`;
-    if (diffInHours < 24) return `${diffInHours} HOUR AGO`;
-    if (diffInDays < 7) return `${diffInDays} DAY AGO`;
+    if (diffInMinutes < 1) return 'À L\'INSTANT';
+    if (diffInMinutes < 60) return `IL Y A ${diffInMinutes} MIN`;
+    if (diffInHours < 24) return `IL Y A ${diffInHours} H`;
+    if (diffInDays < 7) return `IL Y A ${diffInDays} J`;
     return messageDate.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }).toUpperCase();
   };
 
@@ -1075,14 +1075,18 @@ export default function Chat() {
                       type="search"
                       className="py-3 px-0 border-0"
                       id="chattingSearch"
-                      placeholder="Search..."
+                      placeholder="Rechercher..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
                   </form>
                   <div className="dropdown sidebar-filter">
                     <a href="#" onClick={(e) => e.preventDefault()} data-bs-toggle="dropdown" className="d-flex align-items-center justify-content-center dropdown-toggle" data-bs-offset="0, 15">
-                      {conversationFilter}
+                      {conversationFilter === 'Newest'
+                        ? 'Récentes'
+                        : conversationFilter === 'Oldest'
+                          ? 'Anciennes'
+                          : 'Non lues'}
                     </a>
                     <ul className="dropdown-menu dropdown-menu-end overflow-auto">
                       <li>
@@ -1091,7 +1095,7 @@ export default function Chat() {
                           onClick={(e) => { e.preventDefault(); setConversationFilter('Newest'); }}
                           className={`dropdown-item ${conversationFilter === 'Newest' ? 'active' : ''}`}
                         >
-                          Newest
+                          Récentes
                         </a>
                       </li>
                       <li>
@@ -1100,7 +1104,7 @@ export default function Chat() {
                           onClick={(e) => { e.preventDefault(); setConversationFilter('Oldest'); }}
                           className={`dropdown-item ${conversationFilter === 'Oldest' ? 'active' : ''}`}
                         >
-                          Oldest
+                          Anciennes
                         </a>
                       </li>
                       <li>
@@ -1109,7 +1113,7 @@ export default function Chat() {
                           onClick={(e) => { e.preventDefault(); setConversationFilter('Unread'); }}
                           className={`dropdown-item ${conversationFilter === 'Unread' ? 'active' : ''}`}
                         >
-                          Unread
+                          Non lues
                         </a>
                       </li>
                     </ul>
@@ -1148,9 +1152,12 @@ export default function Chat() {
                           <div className="w-100 d-flex align-items-center justify-content-between">
                             <a href="#" onClick={(e) => e.preventDefault()} className="hstack gap-2 me-2">
                               <span className={conversation.unreadCount > 0 ? 'fw-bold' : ''}>{getConversationTitle(conversation)}</span>
-                              <div className={`wd-5 ht-5 rounded-circle opacity-75 me-1 ${
-                                conversation.type === 'GROUP' ? 'bg-info' : 'bg-success'
-                              }`}></div>
+                              {conversation.type === 'DIRECT' && (
+                                <>
+                                  <div className="wd-5 ht-5 rounded-circle opacity-75 me-1 bg-success"></div>
+                                  <span className="fs-10 fw-medium text-success text-uppercase d-none d-sm-block">EN LIGNE</span>
+                                </>
+                              )}
                               {conversation.lastMessage && (
                                 <span className="fs-10 fw-medium text-muted text-uppercase d-none d-sm-block">
                                   {formatMessageTime(conversation.lastMessage.createdAt)}
@@ -1231,7 +1238,7 @@ export default function Chat() {
                   )}
                 </div>
               </div>
-              <a href="#" onClick={(e) => e.preventDefault()} className="content-sidebar-footer px-4 py-3 fs-11 text-uppercase d-block text-center" style={{ flexShrink: 0 }}>Load More</a>
+              <a href="#" onClick={(e) => e.preventDefault()} className="content-sidebar-footer px-4 py-3 fs-11 text-uppercase d-block text-center" style={{ flexShrink: 0 }}>Charger plus</a>
             </div>
 
             {/* Zone principale - Messages */}
@@ -1256,16 +1263,16 @@ export default function Chat() {
                           <div className="fw-bold d-flex align-items-center">
                             {getConversationTitle(selectedConversation)}
                           </div>
-                          {selectedConversation.type === 'GROUP' ? (
+                          {selectedConversation?.type === 'GROUP' ? (
                             <div className="fs-11 text-muted">
                               {selectedConversation.members?.length} membres
                             </div>
-                          ) : (
+                          ) : selectedConversation?.type === 'DIRECT' ? (
                             <div className="d-flex align-items-center mt-1">
                               <span className="wd-7 ht-7 rounded-circle opacity-75 me-2 bg-success"></span>
-                              <span className="fs-9 text-uppercase fw-bold text-success">ACTIVE NOW</span>
+                              <span className="fs-9 text-uppercase fw-bold text-success">EN LIGNE</span>
                             </div>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     </div>
@@ -1325,11 +1332,15 @@ export default function Chat() {
                               <i className={`feather-${selectedConversationNotificationsMuted ? 'bell' : 'bell-off'} me-3`}></i>
                               <span>{selectedConversationNotificationsMuted ? 'Activer les notifications' : 'Désactiver les notifications'}</span>
                             </a>
-                            <div className="dropdown-divider"></div>
-                            <a href="#" onClick={(e) => { e.preventDefault(); handleToggleBlockUser(); }} className="dropdown-item">
-                              <i className="feather-slash me-3"></i>
-                              <span>{selectedConversationUserBlocked ? 'Débloquer' : 'Bloquer'}</span>
-                            </a>
+                            {selectedConversation?.type === 'DIRECT' && (
+                              <>
+                                <div className="dropdown-divider"></div>
+                                <a href="#" onClick={(e) => { e.preventDefault(); handleToggleBlockUser(); }} className="dropdown-item">
+                                  <i className="feather-slash me-3"></i>
+                                  <span>{selectedConversationUserBlocked ? 'Débloquer' : 'Bloquer'}</span>
+                                </a>
+                              </>
+                            )}
                             <a href="#" onClick={(e) => { e.preventDefault(); handleDeleteConversation(); }} className="dropdown-item">
                               <i className="feather-trash-2 me-3"></i>
                               <span>Supprimer la conversation</span>
@@ -1562,7 +1573,7 @@ export default function Chat() {
                       <textarea
                         ref={messageInputRef}
                         className="form-control border-0"
-                        placeholder={isSendingBlocked ? 'Débloquez cet utilisateur pour écrire...' : 'Type your message here... (Enter: envoyer, Ctrl+Enter: nouvelle ligne)'}
+                        placeholder={isSendingBlocked ? 'Débloquez cet utilisateur pour écrire...' : 'Écrivez votre message... (Entrée: envoyer, Ctrl+Entrée: nouvelle ligne)'}
                         value={newMessage}
                         onChange={(e) => setNewMessage(e.target.value)}
                         onKeyDown={handleMessageKeyDown}
@@ -1583,7 +1594,7 @@ export default function Chat() {
                           disabled={sending || isSendingBlocked || !newMessage.trim()}
                           data-bs-toggle="tooltip"
                           data-bs-trigger="hover"
-                          title="Send Message"
+                          title="Envoyer le message"
                         >
                           {sending ? (
                             <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>

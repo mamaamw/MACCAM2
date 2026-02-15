@@ -50,7 +50,7 @@ export default function Email() {
                     </a>
                   </li>
                   <li className="nxl-item mt-4">
-                    <span className="nxl-mtext text-muted text-uppercase fs-11">Labels</span>
+                    <span className="nxl-mtext text-muted text-uppercase fs-11">Libellés</span>
                   </li>
                   <li className="nxl-item">
                     <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">

@@ -1,9 +1,13 @@
 import { useAuthStore } from '../../stores/authStore'
 import { useNavigate, Link } from 'react-router-dom'
+import { useI18n } from '../../i18n/I18nContext'
 
 export default function Header() {
   const { user, logout } = useAuthStore()
+  const { language, setLanguage, t, supportedLanguages } = useI18n()
   const navigate = useNavigate()
+
+  const currentLanguage = supportedLanguages.find((item) => item.code === language) || supportedLanguages[0]
 
   const handleLogout = () => {
     logout()
@@ -46,7 +50,7 @@ export default function Header() {
                   <span className="input-group-text">
                     <i className="feather-search fs-6 text-muted"></i>
                   </span>
-                  <input type="text" className="form-control search-input-field" placeholder="Search...." />
+                  <input type="text" className="form-control search-input-field" placeholder={t('header.searchPlaceholder')} />
                   <span className="input-group-text">
                     <button type="button" className="btn-close"></button>
                   </span>
@@ -56,37 +60,41 @@ export default function Header() {
             {/* Language Dropdown */}
             <div className="dropdown nxl-h-item nxl-header-language d-none d-sm-flex">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-head-link me-0 nxl-language-link" data-bs-toggle="dropdown" data-bs-auto-close="outside">
-                <img src="/assets/vendors/img/flags/4x3/us.svg" alt="" className="img-fluid wd-20" />
+                <img src={`/assets/vendors/img/flags/4x3/${currentLanguage.flag}.svg`} alt="" className="img-fluid wd-20" />
               </a>
               <div className="dropdown-menu dropdown-menu-end nxl-h-dropdown nxl-language-dropdown">
                 <div className="dropdown-divider mt-0"></div>
                 <div className="language-items-wrapper">
                   <div className="select-language px-4 py-2 hstack justify-content-between gap-4">
                     <div className="lh-lg">
-                      <h6 className="mb-0">Select Language</h6>
-                      <p className="fs-11 text-muted mb-0">12 languages available!</p>
+                      <h6 className="mb-0">{t('header.selectLanguage')}</h6>
+                      <p className="fs-11 text-muted mb-0">{t('header.availableLanguages', { count: supportedLanguages.length })}</p>
                     </div>
                   </div>
                   <div className="dropdown-divider"></div>
-                  <div className="row px-4 pt-3">
-                    <div className="col-sm-4 col-6 language_select active">
-                      <a href="#" onClick={(e) => e.preventDefault()} className="d-flex align-items-center gap-2">
-                        <div className="avatar-image avatar-sm"><img src="/assets/vendors/img/flags/1x1/us.svg" alt="" className="img-fluid" /></div>
-                        <span>English</span>
-                      </a>
-                    </div>
-                    <div className="col-sm-4 col-6 language_select">
-                      <a href="#" onClick={(e) => e.preventDefault()} className="d-flex align-items-center gap-2">
-                        <div className="avatar-image avatar-sm"><img src="/assets/vendors/img/flags/1x1/fr.svg" alt="" className="img-fluid" /></div>
-                        <span>French</span>
-                      </a>
-                    </div>
-                    <div className="col-sm-4 col-6 language_select">
-                      <a href="#" onClick={(e) => e.preventDefault()} className="d-flex align-items-center gap-2">
-                        <div className="avatar-image avatar-sm"><img src="/assets/vendors/img/flags/1x1/es.svg" alt="" className="img-fluid" /></div>
-                        <span>Spanish</span>
-                      </a>
-                    </div>
+                  <div className="px-3 py-2">
+                    {supportedLanguages.map((item) => {
+                      const isCurrent = language === item.code
+                      return (
+                        <a
+                          key={item.code}
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault()
+                            setLanguage(item.code)
+                          }}
+                          className={`dropdown-item d-flex align-items-center justify-content-between gap-2 rounded ${isCurrent ? 'active' : ''}`}
+                        >
+                          <span className="d-flex align-items-center gap-2">
+                            <span className="avatar-image avatar-sm">
+                              <img src={`/assets/vendors/img/flags/1x1/${item.flag}.svg`} alt="" className="img-fluid" />
+                            </span>
+                            <span>{t(`languages.${item.code}`)}</span>
+                          </span>
+                          {isCurrent ? <i className="feather-check"></i> : null}
+                        </a>
+                      )
+                    })}
                   </div>
                 </div>
               </div>
@@ -124,19 +132,19 @@ export default function Header() {
               </a>
               <div className="dropdown-menu dropdown-menu-end nxl-h-dropdown nxl-timesheets-menu">
                 <div className="d-flex justify-content-between align-items-center timesheets-head">
-                  <h6 className="fw-bold text-dark mb-0">Timesheets</h6>
-                  <a href="#" onClick={(e) => e.preventDefault()} className="fs-11 text-success text-end ms-auto" data-bs-toggle="tooltip" title="Upcoming Timers">
+                  <h6 className="fw-bold text-dark mb-0">{t('header.timesheets')}</h6>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="fs-11 text-success text-end ms-auto" data-bs-toggle="tooltip" title={t('header.upcomingTimers')}>
                     <i className="feather-clock"></i>
-                    <span>3 Upcoming</span>
+                    <span>{t('header.upcomingCount')}</span>
                   </a>
                 </div>
                 <div className="d-flex justify-content-between align-items-center flex-column timesheets-body">
                   <i className="feather-clock fs-1 mb-4"></i>
-                  <p className="text-muted">No started timers found yet!</p>
-                  <a href="#" onClick={(e) => e.preventDefault()} className="btn btn-sm btn-primary">Start Timer</a>
+                  <p className="text-muted">{t('header.noStartedTimers')}</p>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="btn btn-sm btn-primary">{t('header.startTimer')}</a>
                 </div>
                 <div className="text-center timesheets-footer">
-                  <a href="#" onClick={(e) => e.preventDefault()} className="fs-13 fw-semibold text-dark">All Timesheets</a>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="fs-13 fw-semibold text-dark">{t('header.allTimesheets')}</a>
                 </div>
               </div>
             </div>
@@ -148,10 +156,10 @@ export default function Header() {
               </a>
               <div className="dropdown-menu dropdown-menu-end nxl-h-dropdown nxl-notifications-menu">
                 <div className="d-flex justify-content-between align-items-center notifications-head">
-                  <h6 className="fw-bold text-dark mb-0">Notifications</h6>
-                  <a href="#" onClick={(e) => e.preventDefault()} className="fs-11 text-success text-end ms-auto" data-bs-toggle="tooltip" title="Make as Read">
+                  <h6 className="fw-bold text-dark mb-0">{t('header.notifications')}</h6>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="fs-11 text-success text-end ms-auto" data-bs-toggle="tooltip" title={t('header.markAllRead')}>
                     <i className="feather-check"></i>
-                    <span>Make as Read</span>
+                    <span>{t('header.markAllRead')}</span>
                   </a>
                 </div>
                 <div className="notifications-item">
@@ -159,13 +167,13 @@ export default function Header() {
                   <div className="notifications-desc">
                     <a href="#" onClick={(e) => e.preventDefault()} className="font-body text-truncate-2-line">
                       {" "}
-                      <span className="fw-semibold text-dark">Malanie Hanvey</span> We should talk about that at lunch!
+                      <span className="fw-semibold text-dark">Malanie Hanvey</span> {t('header.notif1')}
                     </a>
                     <div className="d-flex justify-content-between align-items-center">
-                      <div className="notifications-date text-muted border-bottom border-bottom-dashed">2 minutes ago</div>
+                      <div className="notifications-date text-muted border-bottom border-bottom-dashed">{t('header.minutesAgo2')}</div>
                       <div className="d-flex align-items-center float-end gap-2">
-                        <a href="#" onClick={(e) => e.preventDefault()} className="d-block wd-8 ht-8 rounded-circle bg-gray-300" data-bs-toggle="tooltip" title="Make as Read"></a>
-                        <a href="#" onClick={(e) => e.preventDefault()} className="text-danger" data-bs-toggle="tooltip" title="Remove">
+                        <a href="#" onClick={(e) => e.preventDefault()} className="d-block wd-8 ht-8 rounded-circle bg-gray-300" data-bs-toggle="tooltip" title={t('header.markAsRead')}></a>
+                        <a href="#" onClick={(e) => e.preventDefault()} className="text-danger" data-bs-toggle="tooltip" title={t('header.remove')}>
                           <i className="feather-x fs-12"></i>
                         </a>
                       </div>
@@ -177,13 +185,13 @@ export default function Header() {
                   <div className="notifications-desc">
                     <a href="#" onClick={(e) => e.preventDefault()} className="font-body text-truncate-2-line">
                       {" "}
-                      <span className="fw-semibold text-dark">Valentine Maton</span> You can download the latest invoices now.
+                      <span className="fw-semibold text-dark">Valentine Maton</span> {t('header.notif2')}
                     </a>
                     <div className="d-flex justify-content-between align-items-center">
-                      <div className="notifications-date text-muted border-bottom border-bottom-dashed">36 minutes ago</div>
+                      <div className="notifications-date text-muted border-bottom border-bottom-dashed">{t('header.minutesAgo36')}</div>
                       <div className="d-flex align-items-center float-end gap-2">
-                        <a href="#" onClick={(e) => e.preventDefault()} className="d-block wd-8 ht-8 rounded-circle bg-gray-300" data-bs-toggle="tooltip" title="Make as Read"></a>
-                        <a href="#" onClick={(e) => e.preventDefault()} className="text-danger" data-bs-toggle="tooltip" title="Remove">
+                        <a href="#" onClick={(e) => e.preventDefault()} className="d-block wd-8 ht-8 rounded-circle bg-gray-300" data-bs-toggle="tooltip" title={t('header.markAsRead')}></a>
+                        <a href="#" onClick={(e) => e.preventDefault()} className="text-danger" data-bs-toggle="tooltip" title={t('header.remove')}>
                           <i className="feather-x fs-12"></i>
                         </a>
                       </div>
@@ -195,13 +203,13 @@ export default function Header() {
                   <div className="notifications-desc">
                     <a href="#" onClick={(e) => e.preventDefault()} className="font-body text-truncate-2-line">
                       {" "}
-                      <span className="fw-semibold text-dark">Archie Cantones</span> Don't forget to pickup Jeremy after school!
+                      <span className="fw-semibold text-dark">Archie Cantones</span> {t('header.notif3')}
                     </a>
                     <div className="d-flex justify-content-between align-items-center">
-                      <div className="notifications-date text-muted border-bottom border-bottom-dashed">53 minutes ago</div>
+                      <div className="notifications-date text-muted border-bottom border-bottom-dashed">{t('header.minutesAgo53')}</div>
                       <div className="d-flex align-items-center float-end gap-2">
-                        <a href="#" onClick={(e) => e.preventDefault()} className="d-block wd-8 ht-8 rounded-circle bg-gray-300" data-bs-toggle="tooltip" title="Make as Read"></a>
-                        <a href="#" onClick={(e) => e.preventDefault()} className="text-danger" data-bs-toggle="tooltip" title="Remove">
+                        <a href="#" onClick={(e) => e.preventDefault()} className="d-block wd-8 ht-8 rounded-circle bg-gray-300" data-bs-toggle="tooltip" title={t('header.markAsRead')}></a>
+                        <a href="#" onClick={(e) => e.preventDefault()} className="text-danger" data-bs-toggle="tooltip" title={t('header.remove')}>
                           <i className="feather-x fs-12"></i>
                         </a>
                       </div>
@@ -209,7 +217,7 @@ export default function Header() {
                   </div>
                 </div>
                 <div className="text-center notifications-footer">
-                  <a href="#" onClick={(e) => e.preventDefault()} className="fs-13 fw-semibold text-dark">All Notifications</a>
+                  <a href="#" onClick={(e) => e.preventDefault()} className="fs-13 fw-semibold text-dark">{t('header.allNotifications')}</a>
                 </div>
               </div>
             </div>
@@ -223,7 +231,7 @@ export default function Header() {
                   <div className="d-flex align-items-center">
                     <img src="/assets/images/avatar/1.png" alt="user-image" className="img-fluid user-avtar" />
                     <div>
-                      <h6 className="text-dark mb-0">{user?.email || 'User'} <span className="badge bg-soft-success text-success ms-1">PRO</span></h6>
+                      <h6 className="text-dark mb-0">{user?.email || t('header.fallbackUser')} <span className="badge bg-soft-success text-success ms-1">PRO</span></h6>
                       <span className="fs-12 fw-medium text-muted">{user?.email || 'user@example.com'}</span>
                     </div>
                   </div>
@@ -232,7 +240,7 @@ export default function Header() {
                   <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item" data-bs-toggle="dropdown">
                     <span className="hstack">
                       <i className="wd-10 ht-10 border border-2 border-gray-1 bg-success rounded-circle me-2"></i>
-                      <span>Active</span>
+                      <span>{t('header.active')}</span>
                     </span>
                     <i className="feather-chevron-right ms-auto me-0"></i>
                   </a>
@@ -242,7 +250,7 @@ export default function Header() {
                   <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item" data-bs-toggle="dropdown">
                     <span className="hstack">
                       <i className="feather-dollar-sign me-2"></i>
-                      <span>Subscriptions</span>
+                      <span>{t('header.subscriptions')}</span>
                     </span>
                     <i className="feather-chevron-right ms-auto me-0"></i>
                   </a>
@@ -250,32 +258,32 @@ export default function Header() {
                 <div className="dropdown-divider"></div>
                 <Link to="/profile" className="dropdown-item">
                   <i className="feather-user"></i>
-                  <span>Profile Details</span>
+                  <span>{t('header.profileDetails')}</span>
                 </Link>
                 <Link to="/cv" className="dropdown-item">
                   <i className="feather-file-text"></i>
-                  <span>Mon CV</span>
+                  <span>{t('header.myCv')}</span>
                 </Link>
                 <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
                   <i className="feather-activity"></i>
-                  <span>Activity Feed</span>
+                  <span>{t('header.activityFeed')}</span>
                 </a>
                 <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
                   <i className="feather-dollar-sign"></i>
-                  <span>Billing Details</span>
+                  <span>{t('header.billingDetails')}</span>
                 </a>
                 <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
                   <i className="feather-bell"></i>
-                  <span>Notifications</span>
+                  <span>{t('header.notifications')}</span>
                 </a>
                 <Link to="/settings" className="dropdown-item">
                   <i className="feather-settings"></i>
-                  <span>Account Settings</span>
+                  <span>{t('header.accountSettings')}</span>
                 </Link>
                 <div className="dropdown-divider"></div>
                 <a href="#" className="dropdown-item" onClick={(e) => { e.preventDefault(); handleLogout(); }}>
                   <i className="feather-log-out"></i>
-                  <span>Logout</span>
+                  <span>{t('header.logout')}</span>
                 </a>
               </div>
             </div>

@@ -46,7 +46,7 @@ export default function ProjectReport() {
                 </div>
                 <div className="fs-12 text-muted text-uppercase mb-1">En Cours</div>
                 <div className="hstack gap-2">
-                  <span className="badge badge-soft-warning">Active</span>
+                  <span className="badge badge-soft-warning">Actif</span>
                 </div>
               </div>
             </div>

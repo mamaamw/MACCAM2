@@ -283,7 +283,7 @@ export default function Storage() {
               <i className="feather-folder-plus me-1"></i> Dossier
             </button>
             <button className="btn btn-sm btn-primary" onClick={() => setShowUploadModal(true)}>
-              <i className="feather-upload me-1"></i> Upload
+              <i className="feather-upload me-1"></i> Importer
             </button>
           </div>
         </div>
@@ -451,7 +451,7 @@ export default function Storage() {
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
-                <h5 className="modal-title"><i className="feather-upload me-2"></i>Uploader</h5>
+                <h5 className="modal-title"><i className="feather-upload me-2"></i>Importer</h5>
                 <button className="btn-close" onClick={() => setShowUploadModal(false)}></button>
               </div>
               <div className="modal-body">

@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '../stores/authStore'
 import userService from '../services/userService'
+import { useI18n } from '../i18n/I18nContext'
 
 export default function Profile() {
   const { user, updateUser: updateAuthUser } = useAuthStore()
+  const { t, language } = useI18n()
   const [activeTab, setActiveTab] = useState('profile')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState('')
@@ -108,12 +110,12 @@ export default function Profile() {
       const response = await userService.updateProfile(formData)
       if (response.success) {
         updateAuthUser(response.data)
-        setSuccess('Profil mis à jour avec succès!')
+        setSuccess(t('profile.successProfileUpdated'))
         setTimeout(() => setSuccess(''), 3000)
         loadActivities() // Recharger les activités
       }
     } catch (err) {
-      setError(err.message || 'Erreur lors de la mise à jour')
+      setError(err.message || t('profile.errorUpdating'))
       setTimeout(() => setError(''), 5000)
     } finally {
       setLoading(false)
@@ -141,7 +143,7 @@ export default function Profile() {
     setSuccess('')
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      setError('Les mots de passe ne correspondent pas')
+      setError(t('profile.errorPwdMismatch'))
       setLoading(false)
       setTimeout(() => setError(''), 5000)
       return
@@ -153,13 +155,13 @@ export default function Profile() {
         newPassword: passwordData.newPassword
       })
       if (response.success) {
-        setSuccess('Mot de passe modifié avec succès!')
+        setSuccess(t('profile.successPwdChanged'))
         setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
         setTimeout(() => setSuccess(''), 3000)
         loadActivities() // Recharger les activités
       }
     } catch (err) {
-      setError(err.message || 'Erreur lors du changement de mot de passe')
+      setError(err.message || t('profile.errorPwdChange'))
       setTimeout(() => setError(''), 5000)
     } finally {
       setLoading(false)
@@ -178,7 +180,7 @@ export default function Profile() {
     } catch (err) {
       // Revenir à l'état précédent en cas d'erreur
       setNotificationSettings(notificationSettings)
-      setError('Erreur lors de la mise à jour des notifications')
+      setError(t('profile.errorNotifUpdate'))
       setTimeout(() => setError(''), 5000)
     }
   }
@@ -189,7 +191,7 @@ export default function Profile() {
       const response = await userService.toggle2FA(newValue)
       if (response.success) {
         setTwoFactorEnabled(newValue)
-        setSuccess(`Authentification à deux facteurs ${newValue ? 'activée' : 'désactivée'}`)
+        setSuccess(newValue ? t('profile.twoFAEnabled') : t('profile.twoFADisabled'))
         setTimeout(() => setSuccess(''), 3000)
         loadActivities() // Recharger les activités
       }
@@ -206,11 +208,19 @@ export default function Profile() {
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
-    if (hours < 1) return 'Il y a quelques minutes'
-    if (hours < 24) return `Il y a ${hours} heure${hours > 1 ? 's' : ''}`
-    if (days === 1) return 'Hier'
-    if (days < 7) return `Il y a ${days} jours`
-    return date.toLocaleDateString('fr-FR')
+    const localeByLanguage = {
+      fr: 'fr-FR',
+      en: 'en-US',
+      nl: 'nl-NL',
+      de: 'de-DE',
+      es: 'es-ES',
+    }
+
+    if (hours < 1) return t('profile.fewMinutesAgo')
+    if (hours < 24) return t('profile.hoursAgo', { count: hours })
+    if (days === 1) return t('profile.yesterday')
+    if (days < 7) return t('profile.daysAgo', { count: days })
+    return date.toLocaleDateString(localeByLanguage[language] || 'fr-FR')
   }
 
   const getActivityIcon = (type) => {
@@ -237,11 +247,11 @@ export default function Profile() {
       <div className="page-header">
         <div className="page-header-left d-flex align-items-center">
           <div className="page-header-title">
-            <h5 className="m-b-10">Mon Profil</h5>
+            <h5 className="m-b-10">{t('profile.pageTitle')}</h5>
           </div>
           <ul className="breadcrumb">
-            <li className="breadcrumb-item"><a href="/">Accueil</a></li>
-            <li className="breadcrumb-item">Profil</li>
+            <li className="breadcrumb-item"><a href="/">{t('profile.breadcrumbHome')}</a></li>
+            <li className="breadcrumb-item">{t('profile.breadcrumbProfile')}</li>
           </ul>
         </div>
       </div>
@@ -289,57 +299,57 @@ export default function Profile() {
                     <div className="dropdown-menu dropdown-menu-end">
                       <a className="dropdown-item" href="javascript:void(0);">
                         <i className="feather-edit-3 me-3"></i>
-                        <span>Modifier la photo</span>
+                        <span>{t('profile.editPhoto')}</span>
                       </a>
                       <a className="dropdown-item" href="javascript:void(0);">
                         <i className="feather-trash-2 me-3"></i>
-                        <span>Supprimer la photo</span>
+                        <span>{t('profile.deletePhoto')}</span>
                       </a>
                     </div>
                   </div>
                 </div>
                 <div className="mb-4">
-                  <label className="fw-bold mb-2 text-dark">À propos</label>
-                  <p className="fs-12 fw-normal text-muted">{formData.bio || 'Aucune biographie renseignée.'}</p>
+                  <label className="fw-bold mb-2 text-dark">{t('profile.about')}</label>
+                  <p className="fs-12 fw-normal text-muted">{formData.bio || t('profile.noBio')}</p>
                 </div>
                 <ul className="list-unstyled mb-4">
                   <li className="d-flex align-items-center justify-content-between mb-3">
                     <span className="fw-semibold text-dark">
                       <i className="feather-mail me-2"></i>
-                      Email:
+                      {t('profile.email')}:
                     </span>
                     <span className="fs-12 text-muted">{user?.email}</span>
                   </li>
                   <li className="d-flex align-items-center justify-content-between mb-3">
                     <span className="fw-semibold text-dark">
                       <i className="feather-phone me-2"></i>
-                      Téléphone:
+                      {t('profile.phone')}:
                     </span>
-                    <span className="fs-12 text-muted">{formData.phone || 'Non renseigné'}</span>
+                    <span className="fs-12 text-muted">{formData.phone || t('profile.notProvided')}</span>
                   </li>
                   <li className="d-flex align-items-center justify-content-between mb-3">
                     <span className="fw-semibold text-dark">
                       <i className="feather-briefcase me-2"></i>
-                      Entreprise:
+                      {t('profile.company')}:
                     </span>
-                    <span className="fs-12 text-muted">{formData.company || 'Non renseigné'}</span>
+                    <span className="fs-12 text-muted">{formData.company || t('profile.notProvided')}</span>
                   </li>
                   <li className="d-flex align-items-center justify-content-between">
                     <span className="fw-semibold text-dark">
                       <i className="feather-map-pin me-2"></i>
-                      Localisation:
+                      {t('profile.location')}:
                     </span>
-                    <span className="fs-12 text-muted">{formData.city || 'Non renseigné'}</span>
+                    <span className="fs-12 text-muted">{formData.city || t('profile.notProvided')}</span>
                   </li>
                 </ul>
                 <div className="d-flex gap-2">
                   <a href="javascript:void(0);" className="btn btn-light-brand w-100" onClick={() => setActiveTab('profile')}>
                     <i className="feather-edit me-2"></i>
-                    Modifier
+                    {t('profile.edit')}
                   </a>
                   <a href="javascript:void(0);" className="btn btn-light w-100" onClick={() => setActiveTab('security')}>
                     <i className="feather-settings me-2"></i>
-                    Paramètres
+                    {t('profile.settings')}
                   </a>
                 </div>
               </div>
@@ -348,20 +358,20 @@ export default function Profile() {
             {/* Status Card */}
             <div className="card stretch stretch-full">
               <div className="card-header">
-                <h5 className="card-title">Statut</h5>
+                <h5 className="card-title">{t('profile.status')}</h5>
               </div>
               <div className="card-body">
                 <div className="d-flex align-items-center justify-content-between mb-3">
                   <span className="fw-semibold text-dark">
                     <i className="wd-10 ht-10 border border-2 border-gray-1 bg-success rounded-circle me-2"></i>
-                    Actif
+                    {t('profile.active')}
                   </span>
                   <div className="custom-control custom-switch">
                     <input type="checkbox" className="custom-control-input" id="statusSwitch" defaultChecked />
                     <label className="custom-control-label" htmlFor="statusSwitch"></label>
                   </div>
                 </div>
-                <p className="fs-12 text-muted mb-0">Vous apparaissez en ligne pour les autres utilisateurs</p>
+                <p className="fs-12 text-muted mb-0">{t('profile.onlineVisibility')}</p>
               </div>
             </div>
           </div>
@@ -379,7 +389,7 @@ export default function Profile() {
                       href="javascript:void(0);"
                     >
                       <i className="feather-user me-2"></i>
-                      Informations
+                      {t('profile.tabInfo')}
                     </a>
                   </li>
                   <li className="nav-item" role="presentation">
@@ -390,7 +400,7 @@ export default function Profile() {
                       href="javascript:void(0);"
                     >
                       <i className="feather-shield me-2"></i>
-                      Sécurité
+                      {t('profile.tabSecurity')}
                     </a>
                   </li>
                   <li className="nav-item" role="presentation">
@@ -401,7 +411,7 @@ export default function Profile() {
                       href="javascript:void(0);"
                     >
                       <i className="feather-activity me-2"></i>
-                      Activité
+                      {t('profile.tabActivity')}
                     </a>
                   </li>
                   <li className="nav-item" role="presentation">
@@ -412,7 +422,7 @@ export default function Profile() {
                       href="javascript:void(0);"
                     >
                       <i className="feather-bell me-2"></i>
-                      Notifications
+                      {t('profile.tabNotifications')}
                     </a>
                   </li>
                 </ul>
@@ -426,31 +436,31 @@ export default function Profile() {
                       <form onSubmit={handleSubmit}>
                         <div className="row">
                           <div className="col-md-6 mb-4">
-                            <label className="form-label">Prénom <span className="text-danger">*</span></label>
+                            <label className="form-label">{t('profile.firstName')} <span className="text-danger">*</span></label>
                             <input 
                               type="text" 
                               className="form-control" 
                               name="firstName"
                               value={formData.firstName}
                               onChange={handleChange}
-                              placeholder="Votre prénom"
+                              placeholder={t('profile.yourFirstName')}
                               required
                             />
                           </div>
                           <div className="col-md-6 mb-4">
-                            <label className="form-label">Nom <span className="text-danger">*</span></label>
+                            <label className="form-label">{t('profile.lastName')} <span className="text-danger">*</span></label>
                             <input 
                               type="text" 
                               className="form-control" 
                               name="lastName"
                               value={formData.lastName}
                               onChange={handleChange}
-                              placeholder="Votre nom"
+                              placeholder={t('profile.yourLastName')}
                               required
                             />
                           </div>
                           <div className="col-md-6 mb-4">
-                            <label className="form-label">Email <span className="text-danger">*</span></label>
+                            <label className="form-label">{t('profile.email')} <span className="text-danger">*</span></label>
                             <input 
                               type="email" 
                               className="form-control" 
@@ -462,7 +472,7 @@ export default function Profile() {
                             />
                           </div>
                           <div className="col-md-6 mb-4">
-                            <label className="form-label">Nom d'utilisateur <span className="text-danger">*</span></label>
+                            <label className="form-label">{t('profile.username')} <span className="text-danger">*</span></label>
                             <input 
                               type="text" 
                               className="form-control" 
@@ -471,14 +481,14 @@ export default function Profile() {
                               onChange={handleChange}
                               placeholder="johndoe"
                               pattern="[a-zA-Z0-9_]+"
-                              title="Uniquement des lettres, chiffres et underscores"
+                              title={t('profile.usernameHelp')}
                               minLength="3"
                               required
                             />
-                            <small className="text-muted">Au moins 3 caractères (lettres, chiffres et underscore uniquement)</small>
+                            <small className="text-muted">{t('profile.usernameHelp')}</small>
                           </div>
                           <div className="col-md-6 mb-4">
-                            <label className="form-label">Téléphone</label>
+                            <label className="form-label">{t('profile.phone')}</label>
                             <input 
                               type="tel" 
                               className="form-control" 
@@ -489,18 +499,18 @@ export default function Profile() {
                             />
                           </div>
                           <div className="col-md-6 mb-4">
-                            <label className="form-label">Entreprise</label>
+                            <label className="form-label">{t('profile.company')}</label>
                             <input 
                               type="text" 
                               className="form-control" 
                               name="company"
                               value={formData.company}
                               onChange={handleChange}
-                              placeholder="Nom de votre entreprise"
+                              placeholder={t('profile.yourCompany')}
                             />
                           </div>
                           <div className="col-md-6 mb-4">
-                            <label className="form-label">Adresse</label>
+                            <label className="form-label">{t('profile.address')}</label>
                             <input 
                               type="text" 
                               className="form-control" 
@@ -511,7 +521,7 @@ export default function Profile() {
                             />
                           </div>
                           <div className="col-md-4 mb-4">
-                            <label className="form-label">Ville</label>
+                            <label className="form-label">{t('profile.city')}</label>
                             <input 
                               type="text" 
                               className="form-control" 
@@ -522,7 +532,7 @@ export default function Profile() {
                             />
                           </div>
                           <div className="col-md-4 mb-4">
-                            <label className="form-label">Code Postal</label>
+                            <label className="form-label">{t('profile.postalCode')}</label>
                             <input 
                               type="text" 
                               className="form-control" 
@@ -533,44 +543,44 @@ export default function Profile() {
                             />
                           </div>
                           <div className="col-md-4 mb-4">
-                            <label className="form-label">Pays</label>
+                            <label className="form-label">{t('profile.country')}</label>
                             <select 
                               className="form-control" 
                               name="country"
                               value={formData.country}
                               onChange={handleChange}
                             >
-                              <option value="">Sélectionner...</option>
-                              <option value="FR">France</option>
-                              <option value="BE">Belgique</option>
-                              <option value="CH">Suisse</option>
-                              <option value="CA">Canada</option>
+                              <option value="">{t('profile.selectCountry')}</option>
+                              <option value="FR">{t('profile.countryFrance')}</option>
+                              <option value="BE">{t('profile.countryBelgium')}</option>
+                              <option value="CH">{t('profile.countrySwitzerland')}</option>
+                              <option value="CA">{t('profile.countryCanada')}</option>
                             </select>
                           </div>
                           <div className="col-12 mb-4">
-                            <label className="form-label">Biographie</label>
+                            <label className="form-label">{t('profile.biography')}</label>
                             <textarea 
                               className="form-control" 
                               name="bio"
                               value={formData.bio}
                               onChange={handleChange}
                               rows="4"
-                              placeholder="Parlez-nous de vous..."
+                              placeholder={t('profile.tellAboutYou')}
                             ></textarea>
                           </div>
                           <div className="col-12">
                             <div className="d-flex gap-2 justify-content-end">
-                              <button type="button" className="btn btn-light" onClick={loadProfile}>Annuler</button>
+                              <button type="button" className="btn btn-light" onClick={loadProfile}>{t('profile.cancel')}</button>
                               <button type="submit" className="btn btn-primary" disabled={loading}>
                                 {loading ? (
                                   <>
                                     <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                    Enregistrement...
+                                    {t('profile.saving')}
                                   </>
                                 ) : (
                                   <>
                                     <i className="feather-save me-2"></i>
-                                    Enregistrer les modifications
+                                    {t('profile.saveChanges')}
                                   </>
                                 )}
                               </button>
@@ -584,11 +594,11 @@ export default function Profile() {
                   {/* Security Tab */}
                   {activeTab === 'security' && (
                     <div className="tab-pane fade show active">
-                      <h6 className="fw-bold mb-4">Modifier le mot de passe</h6>
+                      <h6 className="fw-bold mb-4">{t('profile.changePassword')}</h6>
                       <form onSubmit={handlePasswordSubmit}>
                         <div className="row">
                           <div className="col-12 mb-4">
-                            <label className="form-label">Mot de passe actuel</label>
+                            <label className="form-label">{t('profile.currentPassword')}</label>
                             <input 
                               type="password" 
                               className="form-control" 
@@ -600,7 +610,7 @@ export default function Profile() {
                             />
                           </div>
                           <div className="col-md-6 mb-4">
-                            <label className="form-label">Nouveau mot de passe</label>
+                            <label className="form-label">{t('profile.newPassword')}</label>
                             <input 
                               type="password" 
                               className="form-control" 
@@ -612,7 +622,7 @@ export default function Profile() {
                             />
                           </div>
                           <div className="col-md-6 mb-4">
-                            <label className="form-label">Confirmer le mot de passe</label>
+                            <label className="form-label">{t('profile.confirmPassword')}</label>
                             <input 
                               type="password" 
                               className="form-control" 
@@ -628,12 +638,12 @@ export default function Profile() {
                               {loading ? (
                                 <>
                                   <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                  Mise à jour...
+                                  {t('profile.updating')}
                                 </>
                               ) : (
                                 <>
                                   <i className="feather-lock me-2"></i>
-                                  Mettre à jour le mot de passe
+                                  {t('profile.updatePassword')}
                                 </>
                               )}
                             </button>
@@ -643,11 +653,11 @@ export default function Profile() {
 
                       <hr className="my-5" />
 
-                      <h6 className="fw-bold mb-4">Authentification à deux facteurs</h6>
+                      <h6 className="fw-bold mb-4">{t('profile.twoFactor')}</h6>
                       <div className="d-flex align-items-center justify-content-between">
                         <div>
-                          <p className="fw-semibold mb-1">Sécurité renforcée</p>
-                          <p className="fs-12 text-muted mb-0">Activez l'authentification à deux facteurs pour plus de sécurité</p>
+                          <p className="fw-semibold mb-1">{t('profile.twoFactorTitle')}</p>
+                          <p className="fs-12 text-muted mb-0">{t('profile.twoFactorDesc')}</p>
                         </div>
                         <div className="custom-control custom-switch">
                           <input 
@@ -666,9 +676,9 @@ export default function Profile() {
                   {/* Activity Tab */}
                   {activeTab === 'activity' && (
                     <div className="tab-pane fade show active">
-                      <h6 className="fw-bold mb-4">Activités récentes</h6>
+                      <h6 className="fw-bold mb-4">{t('profile.recentActivity')}</h6>
                       {activities.length === 0 ? (
-                        <p className="text-muted">Aucune activité récente</p>
+                        <p className="text-muted">{t('profile.noRecentActivity')}</p>
                       ) : (
                         <div className="timeline-wrapper">
                           {activities.map((activity) => (
@@ -693,12 +703,12 @@ export default function Profile() {
                   {/* Notifications Tab */}
                   {activeTab === 'notifications' && (
                     <div className="tab-pane fade show active">
-                      <h6 className="fw-bold mb-4">Préférences de notifications</h6>
+                      <h6 className="fw-bold mb-4">{t('profile.notificationPreferences')}</h6>
                       <div className="list-group list-group-flush">
                         <div className="list-group-item d-flex align-items-center justify-content-between">
                           <div>
-                            <h6 className="fw-semibold mb-1">Notifications par email</h6>
-                            <p className="fs-12 text-muted mb-0">Recevoir des notifications par email</p>
+                            <h6 className="fw-semibold mb-1">{t('profile.emailNotifications')}</h6>
+                            <p className="fs-12 text-muted mb-0">{t('profile.emailNotifDesc')}</p>
                           </div>
                           <div className="custom-control custom-switch">
                             <input 
@@ -713,8 +723,8 @@ export default function Profile() {
                         </div>
                         <div className="list-group-item d-flex align-items-center justify-content-between">
                           <div>
-                            <h6 className="fw-semibold mb-1">Nouvelles tâches</h6>
-                            <p className="fs-12 text-muted mb-0">Être notifié quand une tâche vous est assignée</p>
+                            <h6 className="fw-semibold mb-1">{t('profile.newTasks')}</h6>
+                            <p className="fs-12 text-muted mb-0">{t('profile.newTasksDesc')}</p>
                           </div>
                           <div className="custom-control custom-switch">
                             <input 
@@ -729,8 +739,8 @@ export default function Profile() {
                         </div>
                         <div className="list-group-item d-flex align-items-center justify-content-between">
                           <div>
-                            <h6 className="fw-semibold mb-1">Nouveaux leads</h6>
-                            <p className="fs-12 text-muted mb-0">Être notifié des nouveaux leads</p>
+                            <h6 className="fw-semibold mb-1">{t('profile.newLeads')}</h6>
+                            <p className="fs-12 text-muted mb-0">{t('profile.newLeadsDesc')}</p>
                           </div>
                           <div className="custom-control custom-switch">
                             <input 
@@ -745,8 +755,8 @@ export default function Profile() {
                         </div>
                         <div className="list-group-item d-flex align-items-center justify-content-between">
                           <div>
-                            <h6 className="fw-semibold mb-1">Mises à jour de projets</h6>
-                            <p className="fs-12 text-muted mb-0">Recevoir des mises à jour sur vos projets</p>
+                            <h6 className="fw-semibold mb-1">{t('profile.projectUpdates')}</h6>
+                            <p className="fs-12 text-muted mb-0">{t('profile.projectUpdatesDesc')}</p>
                           </div>
                           <div className="custom-control custom-switch">
                             <input 
@@ -761,8 +771,8 @@ export default function Profile() {
                         </div>
                         <div className="list-group-item d-flex align-items-center justify-content-between">
                           <div>
-                            <h6 className="fw-semibold mb-1">Newsletter</h6>
-                            <p className="fs-12 text-muted mb-0">Recevoir la newsletter mensuelle</p>
+                            <h6 className="fw-semibold mb-1">{t('profile.newsletter')}</h6>
+                            <p className="fs-12 text-muted mb-0">{t('profile.newsletterDesc')}</p>
                           </div>
                           <div className="custom-control custom-switch">
                             <input 

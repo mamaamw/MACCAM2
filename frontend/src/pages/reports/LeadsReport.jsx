@@ -7,7 +7,7 @@ export default function LeadsReport() {
           {/* Page Header */}
           <div className="col-lg-12">
             <div className="page-header-title">
-              <h4 className="m-b-10">Rapport des Leads</h4>
+              <h4 className="m-b-10">Rapport des prospects</h4>
               <p className="m-b-0 text-muted">
                 Analyse et suivi de vos prospects et opportunités
               </p>
@@ -26,7 +26,7 @@ export default function LeadsReport() {
                     <i className="feather-users"></i>
                   </div>
                 </div>
-                <div className="fs-12 text-muted text-uppercase mb-1">Total Leads</div>
+                <div className="fs-12 text-muted text-uppercase mb-1">Total prospects</div>
                 <div className="hstack gap-2">
                   <span className="badge badge-soft-success">+22.5%</span>
                   <span className="fs-11 text-muted">vs mois dernier</span>
@@ -95,7 +95,7 @@ export default function LeadsReport() {
           <div className="col-lg-6">
             <div className="card stretch stretch-full">
               <div className="card-header">
-                <h5 className="card-title">Leads par Source</h5>
+                <h5 className="card-title">Prospects par source</h5>
               </div>
               <div className="card-body">
                 <ul className="list-unstyled mb-0">
@@ -152,7 +152,7 @@ export default function LeadsReport() {
           <div className="col-lg-6">
             <div className="card stretch stretch-full">
               <div className="card-header">
-                <h5 className="card-title">Leads par Statut</h5>
+                <h5 className="card-title">Prospects par statut</h5>
               </div>
               <div className="card-body">
                 <ul className="list-unstyled mb-0">
@@ -203,7 +203,7 @@ export default function LeadsReport() {
           <div className="col-lg-12">
             <div className="card stretch stretch-full">
               <div className="card-header">
-                <h5 className="card-title">Leads Récents</h5>
+                <h5 className="card-title">Prospects récents</h5>
                 <div className="card-header-action">
                   <button className="btn btn-sm btn-light-brand">
                     <i className="feather-download me-2"></i>
@@ -216,7 +216,7 @@ export default function LeadsReport() {
                   <table className="table table-hover mb-0">
                     <thead>
                       <tr>
-                        <th>Lead</th>
+                        <th>Prospect</th>
                         <th>Entreprise</th>
                         <th>Email</th>
                         <th>Téléphone</th>

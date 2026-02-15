@@ -187,8 +187,8 @@ export default function ContactDetail() {
                   contact.role === 'ADMIN' ? 'bg-danger' : 
                   contact.role === 'MANAGER' ? 'bg-info' : 'bg-primary'
                 }`}>
-                  {contact.role === 'ADMIN' ? 'Admin' : 
-                   contact.role === 'MANAGER' ? 'Manager' : 'User'}
+                  {contact.role === 'ADMIN' ? 'Administrateur' : 
+                   contact.role === 'MANAGER' ? 'Gestionnaire' : 'Utilisateur'}
                 </span>
                 {contact.isActive ? (
                   <span className="badge bg-success">Actif</span>

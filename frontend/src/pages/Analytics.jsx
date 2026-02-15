@@ -250,7 +250,7 @@ export default function Analytics() {
                         </div>
                         <div>
                           <h6 className="mb-0">Alexandra Della</h6>
-                          <p className="fs-12 text-muted mb-0">Sales Manager</p>
+                          <p className="fs-12 text-muted mb-0">Responsable commercial</p>
                         </div>
                       </div>
                       <span className="badge bg-soft-success text-success">98%</span>
@@ -267,7 +267,7 @@ export default function Analytics() {
                         </div>
                         <div>
                           <h6 className="mb-0">Green Cute</h6>
-                          <p className="fs-12 text-muted mb-0">Project Manager</p>
+                          <p className="fs-12 text-muted mb-0">Chef de projet</p>
                         </div>
                       </div>
                       <span className="badge bg-soft-primary text-primary">92%</span>
@@ -284,7 +284,7 @@ export default function Analytics() {
                         </div>
                         <div>
                           <h6 className="mb-0">Malanie Hanvey</h6>
-                          <p className="fs-12 text-muted mb-0">Support Lead</p>
+                          <p className="fs-12 text-muted mb-0">Responsable support</p>
                         </div>
                       </div>
                       <span className="badge bg-soft-warning text-warning">87%</span>

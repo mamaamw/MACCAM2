@@ -225,7 +225,7 @@ export default function SalesReport() {
                         <td><span className="fw-bold">#SL-2024-005</span></td>
                         <td>08 Fév 2026</td>
                         <td>SmartSoft Inc</td>
-                        <td>Support Premium</td>
+                        <td>Support premium</td>
                         <td>3</td>
                         <td><span className="fw-bold text-dark">2,400 €</span></td>
                         <td><span className="badge bg-soft-danger text-danger">Annulé</span></td>

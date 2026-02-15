@@ -1,6 +1,8 @@
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { useAuthStore } from './stores/authStore'
+import { useI18n } from './i18n/I18nContext'
+import useDomTranslator from './i18n/useDomTranslator'
 import ProtectedRoute from './components/ProtectedRoute'
 import PublicRoute from './components/PublicRoute'
 import cleanBackdrop from './utils/cleanBackdrop'
@@ -75,6 +77,9 @@ import Documentations from './pages/docs/Documentations'
 function App() {
   const { token } = useAuthStore()
   const location = useLocation()
+  const { language } = useI18n()
+
+  useDomTranslator(language)
 
   useEffect(() => {
     // Nettoyer les backdrops de modals Bootstrap à chaque changement de route

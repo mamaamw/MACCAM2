@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from 'react-query'
 import { Toaster } from 'react-hot-toast'
 import App from './App.jsx'
+import { I18nProvider } from './i18n/I18nContext'
 import './index.css'
 import './fix-blur.css' // Fix pour supprimer le flou
 
@@ -70,8 +71,10 @@ if (rootElement) {
     <React.StrictMode>
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
-          <App />
-          <Toaster position="top-right" />
+          <I18nProvider>
+            <App />
+            <Toaster position="top-right" />
+          </I18nProvider>
         </QueryClientProvider>
       </BrowserRouter>
     </React.StrictMode>,

@@ -8,7 +8,7 @@ export default function Dashboard() {
   }, []);
 
   if (!loaded) {
-    return <div>Chargement du Dashboard...</div>;
+    return <div>Chargement du tableau de bord...</div>;
   }
 
   return (
@@ -25,7 +25,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <div className="fs-4 fw-bold text-dark"><span className="counter">45</span>/<span className="counter">76</span></div>
-                    <h3 className="fs-13 fw-semibold text-truncate-1-line">Invoices Awaiting Payment</h3>
+                    <h3 className="fs-13 fw-semibold text-truncate-1-line">Factures en attente de paiement</h3>
                   </div>
                 </div>
                 <a href="#" className="">
@@ -34,7 +34,7 @@ export default function Dashboard() {
               </div>
               <div className="pt-4">
                 <div className="d-flex align-items-center justify-content-between">
-                  <a href="#" className="fs-12 fw-medium text-muted text-truncate-1-line">Invoices Awaiting </a>
+                  <a href="#" className="fs-12 fw-medium text-muted text-truncate-1-line">Factures en attente </a>
                   <div className="w-100 text-end">
                     <span className="fs-12 text-dark">$5,569</span>
                     <span className="fs-11 text-muted">(56%)</span>
@@ -60,7 +60,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <div className="fs-4 fw-bold text-dark"><span className="counter">48</span>/<span className="counter">86</span></div>
-                    <h3 className="fs-13 fw-semibold text-truncate-1-line">Converted Leads</h3>
+                    <h3 className="fs-13 fw-semibold text-truncate-1-line">Prospects convertis</h3>
                   </div>
                 </div>
                 <a href="#" className="">
@@ -69,9 +69,9 @@ export default function Dashboard() {
               </div>
               <div className="pt-4">
                 <div className="d-flex align-items-center justify-content-between">
-                  <a href="#" className="fs-12 fw-medium text-muted text-truncate-1-line">Converted Leads </a>
+                  <a href="#" className="fs-12 fw-medium text-muted text-truncate-1-line">Prospects convertis </a>
                   <div className="w-100 text-end">
-                    <span className="fs-12 text-dark">52 Completed</span>
+                    <span className="fs-12 text-dark">52 terminés</span>
                     <span className="fs-11 text-muted">(63%)</span>
                   </div>
                 </div>
@@ -95,7 +95,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <div className="fs-4 fw-bold text-dark"><span className="counter">16</span>/<span className="counter">20</span></div>
-                    <h3 className="fs-13 fw-semibold text-truncate-1-line">Projects In Progress</h3>
+                    <h3 className="fs-13 fw-semibold text-truncate-1-line">Projets en cours</h3>
                   </div>
                 </div>
                 <a href="#" className="">
@@ -104,9 +104,9 @@ export default function Dashboard() {
               </div>
               <div className="pt-4">
                 <div className="d-flex align-items-center justify-content-between">
-                  <a href="#" className="fs-12 fw-medium text-muted text-truncate-1-line">Projects In Progress </a>
+                  <a href="#" className="fs-12 fw-medium text-muted text-truncate-1-line">Projets en cours </a>
                   <div className="w-100 text-end">
-                    <span className="fs-12 text-dark">16 Completed</span>
+                    <span className="fs-12 text-dark">16 terminés</span>
                     <span className="fs-11 text-muted">(78%)</span>
                   </div>
                 </div>
@@ -130,7 +130,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <div className="fs-4 fw-bold text-dark"><span className="counter">46.59</span>%</div>
-                    <h3 className="fs-13 fw-semibold text-truncate-1-line">Conversion Rate</h3>
+                    <h3 className="fs-13 fw-semibold text-truncate-1-line">Taux de conversion</h3>
                   </div>
                 </div>
                 <a href="#" className="">
@@ -139,7 +139,7 @@ export default function Dashboard() {
               </div>
               <div className="pt-4">
                 <div className="d-flex align-items-center justify-content-between">
-                  <a href="#" className="fs-12 fw-medium text-muted text-truncate-1-line"> Conversion Rate </a>
+                  <a href="#" className="fs-12 fw-medium text-muted text-truncate-1-line"> Taux de conversion </a>
                   <div className="w-100 text-end">
                     <span className="fs-12 text-dark">$2,254</span>
                     <span className="fs-11 text-muted">(46%)</span>
@@ -158,16 +158,16 @@ export default function Dashboard() {
         <div className="col-xxl-8">
           <div className="card stretch stretch-full">
             <div className="card-header">
-              <h5 className="card-title">Payment Record</h5>
+              <h5 className="card-title">Historique de paiement</h5>
               <div className="card-header-action">
                 <div className="card-header-btn">
-                  <div data-bs-toggle="tooltip" title="Delete">
+                  <div data-bs-toggle="tooltip" title="Supprimer">
                     <a href="#" className="avatar-text avatar-xs bg-danger" data-bs-toggle="remove"> </a>
                   </div>
-                  <div data-bs-toggle="tooltip" title="Refresh">
+                  <div data-bs-toggle="tooltip" title="Actualiser">
                     <a href="#" className="avatar-text avatar-xs bg-warning" data-bs-toggle="refresh"> </a>
                   </div>
-                  <div data-bs-toggle="tooltip" title="Maximize/Minimize">
+                  <div data-bs-toggle="tooltip" title="Agrandir/Réduire">
                     <a href="#" className="avatar-text avatar-xs bg-success" data-bs-toggle="expand"> </a>
                   </div>
                 </div>
@@ -178,13 +178,13 @@ export default function Dashboard() {
                     </div>
                   </a>
                   <div className="dropdown-menu dropdown-menu-end">
-                    <a href="#" className="dropdown-item"><i className="feather-at-sign"></i>New</a>
-                    <a href="#" className="dropdown-item"><i className="feather-calendar"></i>Event</a>
-                    <a href="#" className="dropdown-item"><i className="feather-bell"></i>Snoozed</a>
-                    <a href="#" className="dropdown-item"><i className="feather-trash-2"></i>Deleted</a>
+                    <a href="#" className="dropdown-item"><i className="feather-at-sign"></i>Nouveau</a>
+                    <a href="#" className="dropdown-item"><i className="feather-calendar"></i>Événement</a>
+                    <a href="#" className="dropdown-item"><i className="feather-bell"></i>Différé</a>
+                    <a href="#" className="dropdown-item"><i className="feather-trash-2"></i>Supprimé</a>
                     <div className="dropdown-divider"></div>
-                    <a href="#" className="dropdown-item"><i className="feather-settings"></i>Settings</a>
-                    <a href="#" className="dropdown-item"><i className="feather-life-buoy"></i>Tips & Tricks</a>
+                    <a href="#" className="dropdown-item"><i className="feather-settings"></i>Paramètres</a>
+                    <a href="#" className="dropdown-item"><i className="feather-life-buoy"></i>Astuces</a>
                   </div>
                 </div>
               </div>
@@ -196,7 +196,7 @@ export default function Dashboard() {
               <div className="row g-4">
                 <div className="col-lg-3">
                   <div className="p-3 border border-dashed rounded">
-                    <div className="fs-12 text-muted mb-1">Awaiting</div>
+                    <div className="fs-12 text-muted mb-1">En attente</div>
                     <h6 className="fw-bold text-dark">$5,486</h6>
                     <div className="progress mt-2 ht-3">
                       <div className="progress-bar bg-primary" role="progressbar" style={{width: '81%'}}></div>
@@ -205,7 +205,7 @@ export default function Dashboard() {
                 </div>
                 <div className="col-lg-3">
                   <div className="p-3 border border-dashed rounded">
-                    <div className="fs-12 text-muted mb-1">Completed</div>
+                    <div className="fs-12 text-muted mb-1">Terminé</div>
                     <h6 className="fw-bold text-dark">$9,275</h6>
                     <div className="progress mt-2 ht-3">
                       <div className="progress-bar bg-success" role="progressbar" style={{width: '82%'}}></div>
@@ -214,7 +214,7 @@ export default function Dashboard() {
                 </div>
                 <div className="col-lg-3">
                   <div className="p-3 border border-dashed rounded">
-                    <div className="fs-12 text-muted mb-1">Rejected</div>
+                    <div className="fs-12 text-muted mb-1">Rejeté</div>
                     <h6 className="fw-bold text-dark">$3,868</h6>
                     <div className="progress mt-2 ht-3">
                       <div className="progress-bar bg-danger" role="progressbar" style={{width: '68%'}}></div>
@@ -223,7 +223,7 @@ export default function Dashboard() {
                 </div>
                 <div className="col-lg-3">
                   <div className="p-3 border border-dashed rounded">
-                    <div className="fs-12 text-muted mb-1">Revenue</div>
+                    <div className="fs-12 text-muted mb-1">Revenu</div>
                     <h6 className="fw-bold text-dark">$50,668</h6>
                     <div className="progress mt-2 ht-3">
                       <div className="progress-bar bg-dark" role="progressbar" style={{width: '75%'}}></div>
@@ -244,7 +244,7 @@ export default function Dashboard() {
                 <span className="badge bg-light text-primary text-dark float-end">12%</span>
                 <div className="text-start">
                   <h4 className="text-reset">30,569</h4>
-                  <p className="text-reset m-0">Total Sales</p>
+                  <p className="text-reset m-0">Ventes totales</p>
                 </div>
               </div>
               <div id="total-sales-color-graph"></div>
@@ -257,12 +257,12 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <a href="#" className="d-block">Shopify eCommerce Store</a>
-                    <span className="fs-12 text-muted">Development</span>
+                    <span className="fs-12 text-muted">Développement</span>
                   </div>
                 </div>
                 <div>
                   <div className="fw-bold text-dark">$1200</div>
-                  <div className="fs-12 text-end">6 Projects</div>
+                  <div className="fs-12 text-end">6 Projets</div>
                 </div>
               </div>
               <hr className="border-dashed my-3" />
@@ -272,13 +272,13 @@ export default function Dashboard() {
                     <img className="img-fluid" src="/assets/images/brand/app-store.png" alt="" />
                   </div>
                   <div>
-                    <a href="#" className="d-block">iOS Apps Development</a>
-                    <span className="fs-12 text-muted">Development</span>
+                    <a href="#" className="d-block">Développement d'apps iOS</a>
+                    <span className="fs-12 text-muted">Développement</span>
                   </div>
                 </div>
                 <div>
                   <div className="fw-bold text-dark">$1450</div>
-                  <div className="fs-12 text-end">3 Projects</div>
+                  <div className="fs-12 text-end">3 Projets</div>
                 </div>
               </div>
               <hr className="border-dashed my-3" />
@@ -288,17 +288,17 @@ export default function Dashboard() {
                     <img className="img-fluid" src="/assets/images/brand/figma.png" alt="" />
                   </div>
                   <div>
-                    <a href="#" className="d-block">Figma Dashboard Design</a>
-                    <span className="fs-12 text-muted">UI/UX Design</span>
+                    <a href="#" className="d-block">Design de tableau de bord Figma</a>
+                    <span className="fs-12 text-muted">Design UI/UX</span>
                   </div>
                 </div>
                 <div>
                   <div className="fw-bold text-dark">$1250</div>
-                  <div className="fs-12 text-end">5 Projects</div>
+                  <div className="fs-12 text-end">5 Projets</div>
                 </div>
               </div>
             </div>
-            <a href="#" className="card-footer fs-11 fw-bold text-uppercase text-center py-4">Full Details</a>
+            <a href="#" className="card-footer fs-11 fw-bold text-uppercase text-center py-4">Détails complets</a>
           </div>
         </div>
         {/* [Total Sales] end */}
@@ -312,8 +312,8 @@ export default function Dashboard() {
                   <i className="feather feather-star"></i>
                 </div>
                 <div>
-                  <div className="fw-semibold text-dark">Tasks Completed</div>
-                  <div className="fs-12 text-muted">22/35 completed</div>
+                  <div className="fw-semibold text-dark">Tâches terminées</div>
+                  <div className="fs-12 text-muted">22/35 terminées</div>
                 </div>
               </div>
               <div className="fs-4 fw-bold text-dark">22/35</div>
@@ -321,8 +321,8 @@ export default function Dashboard() {
             <div className="card-body d-flex align-items-center justify-content-between gap-4">
               <div id="task-completed-area-chart"></div>
               <div className="fs-12 text-muted text-nowrap">
-                <span className="fw-semibold text-primary">28% more</span><br />
-                <span>from last week</span>
+                <span className="fw-semibold text-primary">28% de plus</span><br />
+                <span>depuis la semaine dernière</span>
               </div>
             </div>
           </div>
@@ -335,8 +335,8 @@ export default function Dashboard() {
                   <i className="feather feather-file-text"></i>
                 </div>
                 <div>
-                  <div className="fw-semibold text-dark">New Tasks</div>
-                  <div className="fs-12 text-muted">0/20 tasks</div>
+                  <div className="fw-semibold text-dark">Nouvelles tâches</div>
+                  <div className="fs-12 text-muted">0/20 tâches</div>
                 </div>
               </div>
               <div className="fs-4 fw-bold text-dark">5/20</div>
@@ -344,8 +344,8 @@ export default function Dashboard() {
             <div className="card-body d-flex align-items-center justify-content-between gap-4">
               <div id="new-tasks-area-chart"></div>
               <div className="fs-12 text-muted text-nowrap">
-                <span className="fw-semibold text-success">34% more</span><br />
-                <span>from last week</span>
+                <span className="fw-semibold text-success">34% de plus</span><br />
+                <span>depuis la semaine dernière</span>
               </div>
             </div>
           </div>
@@ -358,8 +358,8 @@ export default function Dashboard() {
                   <i className="feather feather-airplay"></i>
                 </div>
                 <div>
-                  <div className="fw-semibold text-dark">Project Done</div>
-                  <div className="fs-12 text-muted">20/30 project</div>
+                  <div className="fw-semibold text-dark">Projet terminé</div>
+                  <div className="fs-12 text-muted">20/30 projets</div>
                 </div>
               </div>
               <div className="fs-4 fw-bold text-dark">20/30</div>
@@ -367,8 +367,8 @@ export default function Dashboard() {
             <div className="card-body d-flex align-items-center justify-content-between gap-4">
               <div id="project-done-area-chart"></div>
               <div className="fs-12 text-muted text-nowrap">
-                <span className="fw-semibold text-danger">42% more</span><br />
-                <span>from last week</span>
+                <span className="fw-semibold text-danger">42% de plus</span><br />
+                <span>depuis la semaine dernière</span>
               </div>
             </div>
           </div>
@@ -379,16 +379,16 @@ export default function Dashboard() {
         <div className="col-xxl-4">
           <div className="card stretch stretch-full">
             <div className="card-header">
-              <h5 className="card-title">Leads Overview</h5>
+              <h5 className="card-title">Aperçu des prospects</h5>
               <div className="card-header-action">
                 <div className="card-header-btn">
-                  <div data-bs-toggle="tooltip" title="Delete">
+                  <div data-bs-toggle="tooltip" title="Supprimer">
                     <a href="#" className="avatar-text avatar-xs bg-danger" data-bs-toggle="remove"> </a>
                   </div>
-                  <div data-bs-toggle="tooltip" title="Refresh">
+                  <div data-bs-toggle="tooltip" title="Actualiser">
                     <a href="#" className="avatar-text avatar-xs bg-warning" data-bs-toggle="refresh"> </a>
                   </div>
-                  <div data-bs-toggle="tooltip" title="Maximize/Minimize">
+                  <div data-bs-toggle="tooltip" title="Agrandir/Réduire">
                     <a href="#" className="avatar-text avatar-xs bg-success" data-bs-toggle="expand"> </a>
                   </div>
                 </div>
@@ -399,13 +399,13 @@ export default function Dashboard() {
                     </div>
                   </a>
                   <div className="dropdown-menu dropdown-menu-end">
-                    <a href="#" className="dropdown-item"><i className="feather-at-sign"></i>New</a>
-                    <a href="#" className="dropdown-item"><i className="feather-calendar"></i>Event</a>
-                    <a href="#" className="dropdown-item"><i className="feather-bell"></i>Snoozed</a>
-                    <a href="#" className="dropdown-item"><i className="feather-trash-2"></i>Deleted</a>
+                    <a href="#" className="dropdown-item"><i className="feather-at-sign"></i>Nouveau</a>
+                    <a href="#" className="dropdown-item"><i className="feather-calendar"></i>Événement</a>
+                    <a href="#" className="dropdown-item"><i className="feather-bell"></i>Différé</a>
+                    <a href="#" className="dropdown-item"><i className="feather-trash-2"></i>Supprimé</a>
                     <div className="dropdown-divider"></div>
-                    <a href="#" className="dropdown-item"><i className="feather-settings"></i>Settings</a>
-                    <a href="#" className="dropdown-item"><i className="feather-life-buoy"></i>Tips & Tricks</a>
+                    <a href="#" className="dropdown-item"><i className="feather-settings"></i>Paramètres</a>
+                    <a href="#" className="dropdown-item"><i className="feather-life-buoy"></i>Astuces</a>
                   </div>
                 </div>
               </div>
@@ -416,55 +416,55 @@ export default function Dashboard() {
                 <div className="col-4">
                   <a href="#" className="p-2 hstack gap-2 rounded border border-dashed border-gray-5">
                     <span className="wd-7 ht-7 rounded-circle d-inline-block" style={{backgroundColor: '#3454d1'}}></span>
-                    <span>New<span className="fs-10 text-muted ms-1">(20K)</span></span>
+                    <span>Nouveau<span className="fs-10 text-muted ms-1">(20K)</span></span>
                   </a>
                 </div>
                 <div className="col-4">
                   <a href="#" className="p-2 hstack gap-2 rounded border border-dashed border-gray-5">
                     <span className="wd-7 ht-7 rounded-circle d-inline-block" style={{backgroundColor: '#0d519e'}}></span>
-                    <span>Contacted<span className="fs-10 text-muted ms-1">(15K)</span></span>
+                    <span>Contacté<span className="fs-10 text-muted ms-1">(15K)</span></span>
                   </a>
                 </div>
                 <div className="col-4">
                   <a href="#" className="p-2 hstack gap-2 rounded border border-dashed border-gray-5">
                     <span className="wd-7 ht-7 rounded-circle d-inline-block" style={{backgroundColor: '#1976d2'}}></span>
-                    <span>Qualified<span className="fs-10 text-muted ms-1">(10K)</span></span>
+                    <span>Qualifié<span className="fs-10 text-muted ms-1">(10K)</span></span>
                   </a>
                 </div>
                 <div className="col-4">
                   <a href="#" className="p-2 hstack gap-2 rounded border border-dashed border-gray-5">
                     <span className="wd-7 ht-7 rounded-circle d-inline-block" style={{backgroundColor: '#1e88e5'}}></span>
-                    <span>Working<span className="fs-10 text-muted ms-1">(18K)</span></span>
+                    <span>En traitement<span className="fs-10 text-muted ms-1">(18K)</span></span>
                   </a>
                 </div>
                 <div className="col-4">
                   <a href="#" className="p-2 hstack gap-2 rounded border border-dashed border-gray-5">
                     <span className="wd-7 ht-7 rounded-circle d-inline-block" style={{backgroundColor: '#2196f3'}}></span>
-                    <span>Customer<span className="fs-10 text-muted ms-1">(10K)</span></span>
+                    <span>Client<span className="fs-10 text-muted ms-1">(10K)</span></span>
                   </a>
                 </div>
                 <div className="col-4">
                   <a href="#" className="p-2 hstack gap-2 rounded border border-dashed border-gray-5">
                     <span className="wd-7 ht-7 rounded-circle d-inline-block" style={{backgroundColor: '#42a5f5'}}></span>
-                    <span>Proposal<span className="fs-10 text-muted ms-1">(15K)</span></span>
+                    <span>Proposition<span className="fs-10 text-muted ms-1">(15K)</span></span>
                   </a>
                 </div>
                 <div className="col-4">
                   <a href="#" className="p-2 hstack gap-2 rounded border border-dashed border-gray-5">
                     <span className="wd-7 ht-7 rounded-circle d-inline-block" style={{backgroundColor: '#64b5f6'}}></span>
-                    <span>Leads<span className="fs-10 text-muted ms-1">(16K)</span></span>
+                    <span>Prospects<span className="fs-10 text-muted ms-1">(16K)</span></span>
                   </a>
                 </div>
                 <div className="col-4">
                   <a href="#" className="p-2 hstack gap-2 rounded border border-dashed border-gray-5">
                     <span className="wd-7 ht-7 rounded-circle d-inline-block" style={{backgroundColor: '#90caf9'}}></span>
-                    <span>Progress<span className="fs-10 text-muted ms-1">(14K)</span></span>
+                    <span>Progression<span className="fs-10 text-muted ms-1">(14K)</span></span>
                   </a>
                 </div>
                 <div className="col-4">
                   <a href="#" className="p-2 hstack gap-2 rounded border border-dashed border-gray-5">
                     <span className="wd-7 ht-7 rounded-circle d-inline-block" style={{backgroundColor: '#aad6fa'}}></span>
-                    <span>Others<span className="fs-10 text-muted ms-1">(10K)</span></span>
+                    <span>Autres<span className="fs-10 text-muted ms-1">(10K)</span></span>
                   </a>
                 </div>
               </div>
@@ -477,16 +477,16 @@ export default function Dashboard() {
         <div className="col-xxl-8">
           <div className="card stretch stretch-full">
             <div className="card-header">
-              <h5 className="card-title">Latest Leads</h5>
+              <h5 className="card-title">Derniers prospects</h5>
               <div className="card-header-action">
                 <div className="card-header-btn">
-                  <div data-bs-toggle="tooltip" title="Delete">
+                  <div data-bs-toggle="tooltip" title="Supprimer">
                     <a href="#" className="avatar-text avatar-xs bg-danger" data-bs-toggle="remove"> </a>
                   </div>
-                  <div data-bs-toggle="tooltip" title="Refresh">
+                  <div data-bs-toggle="tooltip" title="Actualiser">
                     <a href="#" className="avatar-text avatar-xs bg-warning" data-bs-toggle="refresh"> </a>
                   </div>
-                  <div data-bs-toggle="tooltip" title="Maximize/Minimize">
+                  <div data-bs-toggle="tooltip" title="Agrandir/Réduire">
                     <a href="#" className="avatar-text avatar-xs bg-success" data-bs-toggle="expand"> </a>
                   </div>
                 </div>
@@ -497,13 +497,13 @@ export default function Dashboard() {
                     </div>
                   </a>
                   <div className="dropdown-menu dropdown-menu-end">
-                    <a href="#" className="dropdown-item"><i className="feather-at-sign"></i>New</a>
-                    <a href="#" className="dropdown-item"><i className="feather-calendar"></i>Event</a>
-                    <a href="#" className="dropdown-item"><i className="feather-bell"></i>Snoozed</a>
-                    <a href="#" className="dropdown-item"><i className="feather-trash-2"></i>Deleted</a>
+                    <a href="#" className="dropdown-item"><i className="feather-at-sign"></i>Nouveau</a>
+                    <a href="#" className="dropdown-item"><i className="feather-calendar"></i>Événement</a>
+                    <a href="#" className="dropdown-item"><i className="feather-bell"></i>Différé</a>
+                    <a href="#" className="dropdown-item"><i className="feather-trash-2"></i>Supprimé</a>
                     <div className="dropdown-divider"></div>
-                    <a href="#" className="dropdown-item"><i className="feather-settings"></i>Settings</a>
-                    <a href="#" className="dropdown-item"><i className="feather-life-buoy"></i>Tips & Tricks</a>
+                    <a href="#" className="dropdown-item"><i className="feather-settings"></i>Paramètres</a>
+                    <a href="#" className="dropdown-item"><i className="feather-life-buoy"></i>Astuces</a>
                   </div>
                 </div>
               </div>
@@ -513,10 +513,10 @@ export default function Dashboard() {
                 <table className="table table-hover mb-0">
                   <thead>
                     <tr className="border-b">
-                      <th scope="row">Users</th>
-                      <th>Proposal</th>
+                      <th scope="row">Utilisateurs</th>
+                      <th>Proposition</th>
                       <th>Date</th>
-                      <th>Status</th>
+                      <th>Statut</th>
                       <th className="text-end">Actions</th>
                     </tr>
                   </thead>
@@ -534,11 +534,11 @@ export default function Dashboard() {
                         </div>
                       </td>
                       <td>
-                        <span className="badge bg-gray-200 text-dark">Sent</span>
+                        <span className="badge bg-gray-200 text-dark">Envoyé</span>
                       </td>
                       <td>11/06/2023 10:53</td>
                       <td>
-                        <span className="badge bg-soft-success text-success">Completed</span>
+                        <span className="badge bg-soft-success text-success">Terminé</span>
                       </td>
                       <td className="text-end">
                         <a href="#"><i className="feather-more-vertical"></i></a>
@@ -557,11 +557,11 @@ export default function Dashboard() {
                         </div>
                       </td>
                       <td>
-                        <span className="badge bg-gray-200 text-dark">New</span>
+                        <span className="badge bg-gray-200 text-dark">Nouveau</span>
                       </td>
                       <td>11/06/2023 10:53</td>
                       <td>
-                        <span className="badge bg-soft-primary text-primary">In Progress </span>
+                        <span className="badge bg-soft-primary text-primary">En cours </span>
                       </td>
                       <td className="text-end">
                         <a href="#"><i className="feather-more-vertical"></i></a>
@@ -580,11 +580,11 @@ export default function Dashboard() {
                         </div>
                       </td>
                       <td>
-                        <span className="badge bg-gray-200 text-dark">Sent</span>
+                        <span className="badge bg-gray-200 text-dark">Envoyé</span>
                       </td>
                       <td>11/06/2023 10:53</td>
                       <td>
-                        <span className="badge bg-soft-success text-success">Completed</span>
+                        <span className="badge bg-soft-success text-success">Terminé</span>
                       </td>
                       <td className="text-end">
                         <a href="#"><i className="feather-more-vertical"></i></a>
@@ -603,11 +603,11 @@ export default function Dashboard() {
                         </div>
                       </td>
                       <td>
-                        <span className="badge bg-gray-200 text-dark">Returning</span>
+                        <span className="badge bg-gray-200 text-dark">Récurrent</span>
                       </td>
                       <td>11/06/2023 10:53</td>
                       <td>
-                        <span className="badge bg-soft-warning text-warning">Not Interested</span>
+                        <span className="badge bg-soft-warning text-warning">Pas intéressé</span>
                       </td>
                       <td className="text-end">
                         <a href="#"><i className="feather-more-vertical"></i></a>
@@ -626,11 +626,11 @@ export default function Dashboard() {
                         </div>
                       </td>
                       <td>
-                        <span className="badge bg-gray-200 text-dark">Sent</span>
+                        <span className="badge bg-gray-200 text-dark">Envoyé</span>
                       </td>
                       <td>11/06/2023 10:53</td>
                       <td>
-                        <span className="badge bg-soft-success text-success">Completed</span>
+                        <span className="badge bg-soft-success text-success">Terminé</span>
                       </td>
                       <td className="text-end">
                         <a href="#"><i className="feather-more-vertical"></i></a>
@@ -665,16 +665,16 @@ export default function Dashboard() {
         <div className="col-xxl-4">
           <div className="card stretch stretch-full">
             <div className="card-header">
-              <h5 className="card-title">Upcoming Schedule</h5>
+              <h5 className="card-title">Planning à venir</h5>
               <div className="card-header-action">
                 <div className="card-header-btn">
-                  <div data-bs-toggle="tooltip" title="Delete">
+                  <div data-bs-toggle="tooltip" title="Supprimer">
                     <a href="#" className="avatar-text avatar-xs bg-danger" data-bs-toggle="remove"> </a>
                   </div>
-                  <div data-bs-toggle="tooltip" title="Refresh">
+                  <div data-bs-toggle="tooltip" title="Actualiser">
                     <a href="#" className="avatar-text avatar-xs bg-warning" data-bs-toggle="refresh"> </a>
                   </div>
-                  <div data-bs-toggle="tooltip" title="Maximize/Minimize">
+                  <div data-bs-toggle="tooltip" title="Agrandir/Réduire">
                     <a href="#" className="avatar-text avatar-xs bg-success" data-bs-toggle="expand"> </a>
                   </div>
                 </div>
@@ -685,13 +685,13 @@ export default function Dashboard() {
                     </div>
                   </a>
                   <div className="dropdown-menu dropdown-menu-end">
-                    <a href="#" className="dropdown-item"><i className="feather-at-sign"></i>New</a>
-                    <a href="#" className="dropdown-item"><i className="feather-calendar"></i>Event</a>
-                    <a href="#" className="dropdown-item"><i className="feather-bell"></i>Snoozed</a>
-                    <a href="#" className="dropdown-item"><i className="feather-trash-2"></i>Deleted</a>
+                    <a href="#" className="dropdown-item"><i className="feather-at-sign"></i>Nouveau</a>
+                    <a href="#" className="dropdown-item"><i className="feather-calendar"></i>Événement</a>
+                    <a href="#" className="dropdown-item"><i className="feather-bell"></i>Différé</a>
+                    <a href="#" className="dropdown-item"><i className="feather-trash-2"></i>Supprimé</a>
                     <div className="dropdown-divider"></div>
-                    <a href="#" className="dropdown-item"><i className="feather-settings"></i>Settings</a>
-                    <a href="#" className="dropdown-item"><i className="feather-life-buoy"></i>Tips & Tricks</a>
+                    <a href="#" className="dropdown-item"><i className="feather-settings"></i>Paramètres</a>
+                    <a href="#" className="dropdown-item"><i className="feather-life-buoy"></i>Astuces</a>
                   </div>
                 </div>
               </div>
@@ -702,10 +702,10 @@ export default function Dashboard() {
                   <div className="d-flex align-items-center gap-3">
                     <div className="wd-50 ht-50 bg-soft-primary text-primary lh-1 d-flex align-items-center justify-content-center flex-column rounded-2 schedule-date">
                       <span className="fs-18 fw-bold mb-1 d-block">20</span>
-                      <span className="fs-10 fw-semibold text-uppercase d-block">Dec</span>
+                      <span className="fs-10 fw-semibold text-uppercase d-block">Déc</span>
                     </div>
                     <div className="text-dark">
-                      <a href="#" className="fw-bold mb-2 text-truncate-1-line">React Dashboard Design</a>
+                      <a href="#" className="fw-bold mb-2 text-truncate-1-line">Design de tableau de bord React</a>
                       <span className="fs-11 fw-normal text-muted text-truncate-1-line">11:30am - 12:30pm</span>
                     </div>
                   </div>
@@ -722,7 +722,7 @@ export default function Dashboard() {
                     <a href="#" className="avatar-image avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Marianne Audrey">
                       <img src="/assets/images/avatar/6.png" className="img-fluid" alt="image" />
                     </a>
-                    <a href="#" className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Explorer More">
+                    <a href="#" className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Explorer plus">
                       <i className="feather-more-horizontal"></i>
                     </a>
                   </div>
@@ -733,10 +733,10 @@ export default function Dashboard() {
                   <div className="d-flex align-items-center gap-3">
                     <div className="wd-50 ht-50 bg-soft-warning text-warning lh-1 d-flex align-items-center justify-content-center flex-column rounded-2 schedule-date">
                       <span className="fs-18 fw-bold mb-1 d-block">30</span>
-                      <span className="fs-10 fw-semibold text-uppercase d-block">Dec</span>
+                      <span className="fs-10 fw-semibold text-uppercase d-block">Déc</span>
                     </div>
                     <div className="text-dark">
-                      <a href="#" className="fw-bold mb-2 text-truncate-1-line">Admin Design Concept</a>
+                      <a href="#" className="fw-bold mb-2 text-truncate-1-line">Concept design admin</a>
                       <span className="fs-11 fw-normal text-muted text-truncate-1-line">10:00am - 12:00pm</span>
                     </div>
                   </div>
@@ -753,7 +753,7 @@ export default function Dashboard() {
                     <a href="#" className="avatar-image avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Marianne Audrey">
                       <img src="/assets/images/avatar/6.png" className="img-fluid" alt="image" />
                     </a>
-                    <a href="#" className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Explorer More">
+                    <a href="#" className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Explorer plus">
                       <i className="feather-more-horizontal"></i>
                     </a>
                   </div>
@@ -764,10 +764,10 @@ export default function Dashboard() {
                   <div className="d-flex align-items-center gap-3">
                     <div className="wd-50 ht-50 bg-soft-success text-success lh-1 d-flex align-items-center justify-content-center flex-column rounded-2 schedule-date">
                       <span className="fs-18 fw-bold mb-1 d-block">17</span>
-                      <span className="fs-10 fw-semibold text-uppercase d-block">Dec</span>
+                      <span className="fs-10 fw-semibold text-uppercase d-block">Déc</span>
                     </div>
                     <div className="text-dark">
-                      <a href="#" className="fw-bold mb-2 text-truncate-1-line">Standup Team Meeting</a>
+                      <a href="#" className="fw-bold mb-2 text-truncate-1-line">Réunion d'équipe quotidienne</a>
                       <span className="fs-11 fw-normal text-muted text-truncate-1-line">8:00am - 9:00am</span>
                     </div>
                   </div>
@@ -784,7 +784,7 @@ export default function Dashboard() {
                     <a href="#" className="avatar-image avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Marianne Audrey">
                       <img src="/assets/images/avatar/5.png" className="img-fluid" alt="image" />
                     </a>
-                    <a href="#" className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Explorer More">
+                    <a href="#" className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Explorer plus">
                       <i className="feather-more-horizontal"></i>
                     </a>
                   </div>
@@ -795,10 +795,10 @@ export default function Dashboard() {
                   <div className="d-flex align-items-center gap-3">
                     <div className="wd-50 ht-50 bg-soft-danger text-danger lh-1 d-flex align-items-center justify-content-center flex-column rounded-2 schedule-date">
                       <span className="fs-18 fw-bold mb-1 d-block">25</span>
-                      <span className="fs-10 fw-semibold text-uppercase d-block">Dec</span>
+                      <span className="fs-10 fw-semibold text-uppercase d-block">Déc</span>
                     </div>
                     <div className="text-dark">
-                      <a href="#" className="fw-bold mb-2 text-truncate-1-line">Zoom Team Meeting</a>
+                      <a href="#" className="fw-bold mb-2 text-truncate-1-line">Réunion Zoom d'équipe</a>
                       <span className="fs-11 fw-normal text-muted text-truncate-1-line">03:30pm - 05:30pm</span>
                     </div>
                   </div>
@@ -815,14 +815,14 @@ export default function Dashboard() {
                     <a href="#" className="avatar-image avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Marianne Audrey">
                       <img src="/assets/images/avatar/6.png" className="img-fluid" alt="image" />
                     </a>
-                    <a href="#" className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Explorer More">
+                    <a href="#" className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Explorer plus">
                       <i className="feather-more-horizontal"></i>
                     </a>
                   </div>
                 </div>
               </div>
             </div>
-            <a href="#" className="card-footer fs-11 fw-bold text-uppercase text-center py-4">Upcomming Schedule</a>
+            <a href="#" className="card-footer fs-11 fw-bold text-uppercase text-center py-4">Planning à venir</a>
           </div>
         </div>
         {/* [Upcoming Schedule] end */}
@@ -831,16 +831,16 @@ export default function Dashboard() {
         <div className="col-xxl-4">
           <div className="card stretch stretch-full">
             <div className="card-header">
-              <h5 className="card-title">Project Status</h5>
+              <h5 className="card-title">Statut du projet</h5>
               <div className="card-header-action">
                 <div className="card-header-btn">
-                  <div data-bs-toggle="tooltip" title="Delete">
+                  <div data-bs-toggle="tooltip" title="Supprimer">
                     <a href="#" className="avatar-text avatar-xs bg-danger" data-bs-toggle="remove"> </a>
                   </div>
-                  <div data-bs-toggle="tooltip" title="Refresh">
+                  <div data-bs-toggle="tooltip" title="Actualiser">
                     <a href="#" className="avatar-text avatar-xs bg-warning" data-bs-toggle="refresh"> </a>
                   </div>
-                  <div data-bs-toggle="tooltip" title="Maximize/Minimize">
+                  <div data-bs-toggle="tooltip" title="Agrandir/Réduire">
                     <a href="#" className="avatar-text avatar-xs bg-success" data-bs-toggle="expand"> </a>
                   </div>
                 </div>
@@ -851,13 +851,13 @@ export default function Dashboard() {
                     </div>
                   </a>
                   <div className="dropdown-menu dropdown-menu-end">
-                    <a href="#" className="dropdown-item"><i className="feather-at-sign"></i>New</a>
-                    <a href="#" className="dropdown-item"><i className="feather-calendar"></i>Event</a>
-                    <a href="#" className="dropdown-item"><i className="feather-bell"></i>Snoozed</a>
-                    <a href="#" className="dropdown-item"><i className="feather-trash-2"></i>Deleted</a>
+                    <a href="#" className="dropdown-item"><i className="feather-at-sign"></i>Nouveau</a>
+                    <a href="#" className="dropdown-item"><i className="feather-calendar"></i>Événement</a>
+                    <a href="#" className="dropdown-item"><i className="feather-bell"></i>Différé</a>
+                    <a href="#" className="dropdown-item"><i className="feather-trash-2"></i>Supprimé</a>
                     <div className="dropdown-divider"></div>
-                    <a href="#" className="dropdown-item"><i className="feather-settings"></i>Settings</a>
-                    <a href="#" className="dropdown-item"><i className="feather-life-buoy"></i>Tips & Tricks</a>
+                    <a href="#" className="dropdown-item"><i className="feather-settings"></i>Paramètres</a>
+                    <a href="#" className="dropdown-item"><i className="feather-life-buoy"></i>Astuces</a>
                   </div>
                 </div>
               </div>
@@ -868,7 +868,7 @@ export default function Dashboard() {
                   <div className="d-flex w-50 align-items-center me-3">
                     <img src="/assets/images/brand/app-store.png" alt="laravel-logo" className="me-3" width="35" />
                     <div>
-                      <a href="#" className="text-truncate-1-line">Apps Development</a>
+                      <a href="#" className="text-truncate-1-line">Développement d'applications</a>
                       <div className="fs-11 text-muted">Applications</div>
                     </div>
                   </div>
@@ -884,8 +884,8 @@ export default function Dashboard() {
                   <div className="d-flex w-50 align-items-center me-3">
                     <img src="/assets/images/brand/figma.png" alt="figma-logo" className="me-3" width="35" />
                     <div>
-                      <a href="#" className="text-truncate-1-line">Dashboard Design</a>
-                      <div className="fs-11 text-muted">App UI Kit</div>
+                      <a href="#" className="text-truncate-1-line">Design du tableau de bord</a>
+                      <div className="fs-11 text-muted">Kit UI</div>
                     </div>
                   </div>
                   <div className="d-flex flex-grow-1 align-items-center">
@@ -900,7 +900,7 @@ export default function Dashboard() {
                   <div className="d-flex w-50 align-items-center me-3">
                     <img src="/assets/images/brand/facebook.png" alt="vue-logo" className="me-3" width="35" />
                     <div>
-                      <a href="#" className="text-truncate-1-line">Facebook Marketing</a>
+                      <a href="#" className="text-truncate-1-line">Marketing Facebook</a>
                       <div className="fs-11 text-muted">Marketing</div>
                     </div>
                   </div>
@@ -916,8 +916,8 @@ export default function Dashboard() {
                   <div className="d-flex w-50 align-items-center me-3">
                     <img src="/assets/images/brand/github.png" alt="react-logo" className="me-3" width="35" />
                     <div>
-                      <a href="#" className="text-truncate-1-line">React Dashboard Github</a>
-                      <div className="fs-11 text-muted">Dashboard</div>
+                      <a href="#" className="text-truncate-1-line">Tableau de bord React Github</a>
+                      <div className="fs-11 text-muted">Tableau de bord</div>
                     </div>
                   </div>
                   <div className="d-flex flex-grow-1 align-items-center">
@@ -932,8 +932,8 @@ export default function Dashboard() {
                   <div className="d-flex w-50 align-items-center me-3">
                     <img src="/assets/images/brand/paypal.png" alt="sketch-logo" className="me-3" width="35" />
                     <div>
-                      <a href="#" className="text-truncate-1-line">Paypal Payment Gateway</a>
-                      <div className="fs-11 text-muted">Payment</div>
+                      <a href="#" className="text-truncate-1-line">Passerelle de paiement Paypal</a>
+                      <div className="fs-11 text-muted">Paiement</div>
                     </div>
                   </div>
                   <div className="d-flex flex-grow-1 align-items-center">
@@ -945,7 +945,7 @@ export default function Dashboard() {
                 </div>
               </div>
             </div>
-            <a href="#" className="card-footer fs-11 fw-bold text-uppercase text-center">Upcomming Projects</a>
+            <a href="#" className="card-footer fs-11 fw-bold text-uppercase text-center">Projets à venir</a>
           </div>
         </div>
         {/* [Project Status] end */}
@@ -954,16 +954,16 @@ export default function Dashboard() {
         <div className="col-xxl-4">
           <div className="card stretch stretch-full">
             <div className="card-header">
-              <h5 className="card-title">Team Progress</h5>
+              <h5 className="card-title">Progression de l'équipe</h5>
               <div className="card-header-action">
                 <div className="card-header-btn">
-                  <div data-bs-toggle="tooltip" title="Delete">
+                  <div data-bs-toggle="tooltip" title="Supprimer">
                     <a href="#" className="avatar-text avatar-xs bg-danger" data-bs-toggle="remove"> </a>
                   </div>
-                  <div data-bs-toggle="tooltip" title="Refresh">
+                  <div data-bs-toggle="tooltip" title="Actualiser">
                     <a href="#" className="avatar-text avatar-xs bg-warning" data-bs-toggle="refresh"> </a>
                   </div>
-                  <div data-bs-toggle="tooltip" title="Maximize/Minimize">
+                  <div data-bs-toggle="tooltip" title="Agrandir/Réduire">
                     <a href="#" className="avatar-text avatar-xs bg-success" data-bs-toggle="expand"> </a>
                   </div>
                 </div>
@@ -974,13 +974,13 @@ export default function Dashboard() {
                     </div>
                   </a>
                   <div className="dropdown-menu dropdown-menu-end">
-                    <a href="#" className="dropdown-item"><i className="feather-at-sign"></i>New</a>
-                    <a href="#" className="dropdown-item"><i className="feather-calendar"></i>Event</a>
-                    <a href="#" className="dropdown-item"><i className="feather-bell"></i>Snoozed</a>
-                    <a href="#" className="dropdown-item"><i className="feather-trash-2"></i>Deleted</a>
+                    <a href="#" className="dropdown-item"><i className="feather-at-sign"></i>Nouveau</a>
+                    <a href="#" className="dropdown-item"><i className="feather-calendar"></i>Événement</a>
+                    <a href="#" className="dropdown-item"><i className="feather-bell"></i>Différé</a>
+                    <a href="#" className="dropdown-item"><i className="feather-trash-2"></i>Supprimé</a>
                     <div className="dropdown-divider"></div>
-                    <a href="#" className="dropdown-item"><i className="feather-settings"></i>Settings</a>
-                    <a href="#" className="dropdown-item"><i className="feather-life-buoy"></i>Tips & Tricks</a>
+                    <a href="#" className="dropdown-item"><i className="feather-settings"></i>Paramètres</a>
+                    <a href="#" className="dropdown-item"><i className="feather-life-buoy"></i>Astuces</a>
                   </div>
                 </div>
               </div>
@@ -993,7 +993,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <a href="#">Alexandra Della</a>
-                    <div className="fs-11 text-muted">Frontend Developer</div>
+                    <div className="fs-11 text-muted">Développeur frontend</div>
                   </div>
                 </div>
                 <div className="team-progress-1"></div>
@@ -1005,7 +1005,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <a href="#">Archie Cantones</a>
-                    <div className="fs-11 text-muted">UI/UX Designer</div>
+                    <div className="fs-11 text-muted">Designer UI/UX</div>
                   </div>
                 </div>
                 <div className="team-progress-2"></div>
@@ -1017,7 +1017,7 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <a href="#">Malanie Hanvey</a>
-                    <div className="fs-11 text-muted">Backend Developer</div>
+                    <div className="fs-11 text-muted">Développeur backend</div>
                   </div>
                 </div>
                 <div className="team-progress-3"></div>
@@ -1029,13 +1029,13 @@ export default function Dashboard() {
                   </div>
                   <div>
                     <a href="#">Kenneth Hune</a>
-                    <div className="fs-11 text-muted">Digital Marketer</div>
+                    <div className="fs-11 text-muted">Marketeur digital</div>
                   </div>
                 </div>
                 <div className="team-progress-4"></div>
               </div>
             </div>
-            <a href="#" className="card-footer fs-11 fw-bold text-uppercase text-center">Update 30 Min Ago</a>
+            <a href="#" className="card-footer fs-11 fw-bold text-uppercase text-center">Mis à jour il y a 30 min</a>
           </div>
         </div>
         {/* [Team Progress] end */}

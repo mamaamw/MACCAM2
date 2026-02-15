@@ -1,7 +1,9 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useI18n } from '../../i18n/I18nContext'
 
 export default function Sidebar() {
   const location = useLocation()
+  const { t } = useI18n()
   
   const isActive = (path) => {
     return location.pathname === path ? 'active' : ''
@@ -19,34 +21,34 @@ export default function Sidebar() {
         <div className="navbar-content">
           <ul className="nxl-navbar">
             <li className="nxl-item nxl-caption">
-              <label>Navigation</label>
+              <label>{t('sidebar.navigation')}</label>
             </li>
             
-            {/* Dashboards */}
+            {/* Tableaux de bord */}
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-airplay"></i></span>
-                <span className="nxl-mtext">Dashboards</span>
+                <span className="nxl-mtext">{t('sidebar.dashboards')}</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
               </a>
               <ul className="nxl-submenu">
-                <li className="nxl-item"><Link className={`nxl-link ${isActive('/')}`} to="/">CRM</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/analytics">Analytics</Link></li>
+                <li className="nxl-item"><Link className={`nxl-link ${isActive('/')}`} to="/">{t('sidebar.crm')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/analytics">{t('sidebar.analytics')}</Link></li>
               </ul>
             </li>
             
-            {/* Reports */}
+            {/* Rapports */}
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-cast"></i></span>
-                <span className="nxl-mtext">Reports</span>
+                <span className="nxl-mtext">{t('sidebar.reports')}</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
               </a>
               <ul className="nxl-submenu">
-                <li className="nxl-item"><Link className="nxl-link" to="/reports/sales">Sales Report</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/reports/leads">Leads Report</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/reports/project">Project Report</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/reports/timesheets">Timesheets Report</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/reports/sales">{t('sidebar.salesReport')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/reports/leads">{t('sidebar.leadsReport')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/reports/project">{t('sidebar.projectsReport')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/reports/timesheets">{t('sidebar.timesheetsReport')}</Link></li>
               </ul>
             </li>
             
@@ -54,15 +56,15 @@ export default function Sidebar() {
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-send"></i></span>
-                <span className="nxl-mtext">Applications</span>
+                <span className="nxl-mtext">{t('sidebar.apps')}</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
               </a>
               <ul className="nxl-submenu">
-                <li className="nxl-item"><Link className="nxl-link" to="/apps/chat">Chat</Link></li>
-                <li className="nxl-item"><Link className={`nxl-link ${isActive('/tasks')}`} to="/tasks">Tasks</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/apps/notes">Notes</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/apps/storage">Storage</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/apps/calendar">Calendar</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/apps/chat">{t('sidebar.chat')}</Link></li>
+                <li className="nxl-item"><Link className={`nxl-link ${isActive('/tasks')}`} to="/tasks">{t('sidebar.tasks')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/apps/notes">{t('sidebar.notes')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/apps/storage">{t('sidebar.storage')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/apps/calendar">{t('sidebar.calendar')}</Link></li>
               </ul>
             </li>
             
@@ -70,14 +72,14 @@ export default function Sidebar() {
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-at-sign"></i></span>
-                <span className="nxl-mtext">Proposal</span>
+                <span className="nxl-mtext">{t('sidebar.proposal')}</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
               </a>
               <ul className="nxl-submenu">
-                <li className="nxl-item"><Link className="nxl-link" to="/proposal">Proposal</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/proposal/view">Proposal View</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/proposal/edit">Proposal Edit</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/proposal/create">Proposal Create</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/proposal">{t('sidebar.proposal')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/proposal/view">{t('sidebar.viewProposal')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/proposal/edit">{t('sidebar.editProposal')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/proposal/create">{t('sidebar.createProposal')}</Link></li>
               </ul>
             </li>
             
@@ -85,13 +87,13 @@ export default function Sidebar() {
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-dollar-sign"></i></span>
-                <span className="nxl-mtext">Payment</span>
+                <span className="nxl-mtext">{t('sidebar.payment')}</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
               </a>
               <ul className="nxl-submenu">
-                <li className="nxl-item"><Link className="nxl-link" to="/payment">Payment</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/invoice/view">Invoice View</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/invoice/create">Invoice Create</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/payment">{t('sidebar.payment')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/invoice/view">{t('sidebar.viewInvoice')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/invoice/create">{t('sidebar.createInvoice')}</Link></li>
               </ul>
             </li>
             
@@ -99,13 +101,13 @@ export default function Sidebar() {
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-users"></i></span>
-                <span className="nxl-mtext">Customers</span>
+                <span className="nxl-mtext">{t('sidebar.customers')}</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
               </a>
               <ul className="nxl-submenu">
-                <li className="nxl-item"><Link className={`nxl-link ${isActive('/customers')}`} to="/customers">Customers</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/customers/view">Customers View</Link></li>
-                <li className="nxl-item"><Link className={`nxl-link ${isActive('/customers/create')}`} to="/customers/create">Customers Create</Link></li>
+                <li className="nxl-item"><Link className={`nxl-link ${isActive('/customers')}`} to="/customers">{t('sidebar.customers')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/customers/view">{t('sidebar.viewCustomers')}</Link></li>
+                <li className="nxl-item"><Link className={`nxl-link ${isActive('/customers/create')}`} to="/customers/create">{t('sidebar.createCustomer')}</Link></li>
               </ul>
             </li>
             
@@ -113,13 +115,13 @@ export default function Sidebar() {
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-alert-circle"></i></span>
-                <span className="nxl-mtext">Leads</span>
+                <span className="nxl-mtext">{t('sidebar.leads')}</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
               </a>
               <ul className="nxl-submenu">
-                <li className="nxl-item"><Link className={`nxl-link ${isActive('/leads')}`} to="/leads">Leads</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/leads/view">Leads View</Link></li>
-                <li className="nxl-item"><Link className={`nxl-link ${isActive('/leads/create')}`} to="/leads/create">Leads Create</Link></li>
+                <li className="nxl-item"><Link className={`nxl-link ${isActive('/leads')}`} to="/leads">{t('sidebar.leads')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/leads/view">{t('sidebar.viewLeads')}</Link></li>
+                <li className="nxl-item"><Link className={`nxl-link ${isActive('/leads/create')}`} to="/leads/create">{t('sidebar.createLead')}</Link></li>
               </ul>
             </li>
             
@@ -127,13 +129,13 @@ export default function Sidebar() {
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-briefcase"></i></span>
-                <span className="nxl-mtext">Projects</span>
+                <span className="nxl-mtext">{t('sidebar.projects')}</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
               </a>
               <ul className="nxl-submenu">
-                <li className="nxl-item"><Link className={`nxl-link ${isActive('/projects')}`} to="/projects">Projects</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/projects/view">Projects View</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/projects/create">Projects Create</Link></li>
+                <li className="nxl-item"><Link className={`nxl-link ${isActive('/projects')}`} to="/projects">{t('sidebar.projects')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/projects/view">{t('sidebar.viewProjects')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/projects/create">{t('sidebar.createProject')}</Link></li>
               </ul>
             </li>
             
@@ -141,15 +143,15 @@ export default function Sidebar() {
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-layout"></i></span>
-                <span className="nxl-mtext">Widgets</span>
+                <span className="nxl-mtext">{t('sidebar.widgets')}</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
               </a>
               <ul className="nxl-submenu">
-                <li className="nxl-item"><Link className="nxl-link" to="/widgets/lists">Lists</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/widgets/tables">Tables</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/widgets/charts">Charts</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/widgets/statistics">Statistics</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/widgets/miscellaneous">Miscellaneous</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/widgets/lists">{t('sidebar.lists')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/widgets/tables">{t('sidebar.tables')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/widgets/charts">{t('sidebar.charts')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/widgets/statistics">{t('sidebar.statistics')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/widgets/miscellaneous">{t('sidebar.miscellaneous')}</Link></li>
               </ul>
             </li>
             
@@ -157,23 +159,23 @@ export default function Sidebar() {
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-settings"></i></span>
-                <span className="nxl-mtext">Settings</span>
+                <span className="nxl-mtext">{t('sidebar.settings')}</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
               </a>
               <ul className="nxl-submenu">
-                <li className="nxl-item"><Link className={`nxl-link ${isActive('/settings')}`} to="/settings">General</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/settings/seo">SEO</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/settings/tags">Tags</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/settings/email">Email</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/settings/tasks">Tasks</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/settings/leads">Leads</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/settings/support">Support</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/settings/finance">Finance</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/settings/gateways">Gateways</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/settings/customers">Customers</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/settings/localization">Localization</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/settings/recaptcha">reCAPTCHA</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/settings/miscellaneous">Miscellaneous</Link></li>
+                <li className="nxl-item"><Link className={`nxl-link ${isActive('/settings')}`} to="/settings">{t('sidebar.general')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/settings/seo">{t('sidebar.seo')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/settings/tags">{t('sidebar.tags')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/settings/email">{t('sidebar.email')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/settings/tasks">{t('sidebar.tasks')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/settings/leads">{t('sidebar.leads')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/settings/support">{t('sidebar.support')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/settings/finance">{t('sidebar.finance')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/settings/gateways">{t('sidebar.gateways')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/settings/customers">{t('sidebar.customers')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/settings/localization">{t('sidebar.localization')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/settings/recaptcha">{t('sidebar.recaptcha')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/settings/miscellaneous">{t('sidebar.miscellaneous')}</Link></li>
               </ul>
             </li>
             
@@ -181,7 +183,7 @@ export default function Sidebar() {
             <li className="nxl-item">
               <Link to="/users" className={`nxl-link ${isActive('/users')}`}>
                 <span className="nxl-micon"><i className="feather-user-check"></i></span>
-                <span className="nxl-mtext">Utilisateurs</span>
+                <span className="nxl-mtext">{t('sidebar.users')}</span>
               </Link>
             </li>
             
@@ -189,44 +191,44 @@ export default function Sidebar() {
             <li className="nxl-item">
               <Link to="/contacts" className={`nxl-link ${isActive('/contacts')}`}>
                 <span className="nxl-micon"><i className="feather-user-plus"></i></span>
-                <span className="nxl-mtext">Contacts</span>
+                <span className="nxl-mtext">{t('sidebar.contacts')}</span>
               </Link>
             </li>
             
             {/* Espace perso */}
             <li className="nxl-item nxl-caption">
-              <label>Espace perso</label>
+              <label>{t('sidebar.personalSpace')}</label>
             </li>
             
             <li className="nxl-item">
               <Link to="/cv" className={`nxl-link ${isActive('/cv')}`}>
                 <span className="nxl-micon"><i className="feather-file-text"></i></span>
-                <span className="nxl-mtext">Mon CV</span>
+                <span className="nxl-mtext">{t('sidebar.myCv')}</span>
               </Link>
             </li>
             
-            {/* Help Center */}
+            {/* Centre d'aide */}
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
                 <span className="nxl-micon"><i className="feather-life-buoy"></i></span>
-                <span className="nxl-mtext">Help Center</span>
+                <span className="nxl-mtext">{t('sidebar.helpCenter')}</span>
                 <span className="nxl-arrow"><i className="feather-chevron-right"></i></span>
               </a>
               <ul className="nxl-submenu">
-                <li className="nxl-item"><a className="nxl-link" href="#">Support</a></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/help/knowledgebase">KnowledgeBase</Link></li>
-                <li className="nxl-item"><Link className="nxl-link" to="/docs/documentations">Documentations</Link></li>
+                <li className="nxl-item"><a className="nxl-link" href="#">{t('sidebar.support')}</a></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/help/knowledgebase">{t('sidebar.knowledgebase')}</Link></li>
+                <li className="nxl-item"><Link className="nxl-link" to="/docs/documentations">{t('sidebar.documentation')}</Link></li>
               </ul>
             </li>
           </ul>
           
-          {/* Download Card */}
+          {/* Carte de téléchargement */}
           <div className="card text-center">
             <div className="card-body">
               <i className="feather-sunrise fs-4 text-dark"></i>
-              <h6 className="mt-4 text-dark fw-bolder">Downloading Center</h6>
-              <p className="fs-11 my-3 text-dark">MACCAM is a production ready CRM to get started up and running easily.</p>
-              <a href="https://www.maccam.com" target="_blank" rel="noopener noreferrer" className="btn btn-primary text-dark w-100">En savoir plus</a>
+              <h6 className="mt-4 text-dark fw-bolder">{t('sidebar.downloadCenter')}</h6>
+              <p className="fs-11 my-3 text-dark">{t('sidebar.downloadDesc')}</p>
+              <a href="https://www.maccam.com" target="_blank" rel="noopener noreferrer" className="btn btn-primary text-dark w-100">{t('sidebar.learnMore')}</a>
             </div>
           </div>
         </div>

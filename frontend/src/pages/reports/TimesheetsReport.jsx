@@ -165,7 +165,7 @@ export default function TimesheetsReport() {
                             </div>
                             <div>
                               <span className="d-block fw-bold">Alexandra Della</span>
-                              <span className="fs-12 text-muted">Sales Manager</span>
+                              <span className="fs-12 text-muted">Responsable commercial</span>
                             </div>
                           </div>
                         </td>
@@ -190,7 +190,7 @@ export default function TimesheetsReport() {
                             </div>
                             <div>
                               <span className="d-block fw-bold">Green Cute</span>
-                              <span className="fs-12 text-muted">Project Manager</span>
+                              <span className="fs-12 text-muted">Chef de projet</span>
                             </div>
                           </div>
                         </td>
@@ -215,7 +215,7 @@ export default function TimesheetsReport() {
                             </div>
                             <div>
                               <span className="d-block fw-bold">Malanie Hanvey</span>
-                              <span className="fs-12 text-muted">Support Lead</span>
+                              <span className="fs-12 text-muted">Responsable support</span>
                             </div>
                           </div>
                         </td>
@@ -240,7 +240,7 @@ export default function TimesheetsReport() {
                             </div>
                             <div>
                               <span className="d-block fw-bold">Kenneth Hune</span>
-                              <span className="fs-12 text-muted">Developer</span>
+                              <span className="fs-12 text-muted">Développeur</span>
                             </div>
                           </div>
                         </td>
