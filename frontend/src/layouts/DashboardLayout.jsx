@@ -4,7 +4,7 @@ import Header from '../components/layout/Header'
 
 export default function DashboardLayout({ children }) {
   const location = useLocation()
-  const isAppLikePage = location.pathname === '/apps/chat' || location.pathname === '/tasks'
+  const isAppLikePage = location.pathname === '/apps/chat' || location.pathname === '/tasks' || location.pathname === '/apps/notion'
 
   return (
     <>

@@ -65,6 +65,9 @@ export default function Sidebar() {
                 <li className="nxl-item"><Link className="nxl-link" to="/apps/notes">{t('sidebar.notes')}</Link></li>
                 <li className="nxl-item"><Link className="nxl-link" to="/apps/storage">{t('sidebar.storage')}</Link></li>
                 <li className="nxl-item"><Link className="nxl-link" to="/apps/calendar">{t('sidebar.calendar')}</Link></li>
+                <li className="nxl-item"><Link className={`nxl-link ${isActive('/apps/qr-code')}`} to="/apps/qr-code">QR Code Generator</Link></li>
+                <li className="nxl-item"><Link className={`nxl-link ${isActive('/apps/pdf-tools')}`} to="/apps/pdf-tools">PDF Tools</Link></li>
+                <li className="nxl-item"><Link className={`nxl-link ${isActive('/apps/notion')}`} to="/apps/notion">Notion Page</Link></li>
               </ul>
             </li>
             

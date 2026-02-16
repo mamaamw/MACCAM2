@@ -43,6 +43,10 @@ import Chat from './pages/apps/Chat'
 import Notes from './pages/apps/Notes'
 import Storage from './pages/apps/Storage'
 import Calendar from './pages/apps/Calendar'
+import QRCodeGenerator from './pages/apps/QRCodeGenerator'
+import PDFTools from './pages/apps/PDFTools'
+import PDFToolDetail from './pages/apps/PDFToolDetail'
+import NotionLike from './pages/apps/NotionLike'
 
 // Analytics & Reports
 import Analytics from './pages/Analytics'
@@ -336,6 +340,38 @@ function App() {
         <ProtectedRoute>
           <DashboardLayout>
             <Calendar />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/apps/qr-code" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <QRCodeGenerator />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/apps/pdf-tools" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <PDFTools />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/apps/pdf-tools/:slug" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <PDFToolDetail />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/apps/notion" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <NotionLike />
           </DashboardLayout>
         </ProtectedRoute>
       } />
