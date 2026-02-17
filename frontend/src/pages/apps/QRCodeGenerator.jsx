@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import QRCodeStyling from 'qr-code-styling'
 import api from '../../lib/axios'
 
@@ -11,6 +12,7 @@ const QR_TYPES = [
   { key: 'vcard', label: 'V-card', icon: 'feather-credit-card' },
   { key: 'whatsapp', label: 'WhatsApp', icon: 'feather-message-square' },
   { key: 'wifi', label: 'WI-FI', icon: 'feather-wifi' },
+  { key: 'payment', label: 'Payment', icon: 'feather-dollar-sign' },
   { key: 'pdf', label: 'PDF', icon: 'feather-file-text' },
   { key: 'app', label: 'App', icon: 'feather-smartphone' },
   { key: 'images', label: 'Images', icon: 'feather-image' },
@@ -36,7 +38,8 @@ const PHRASE_FONTS = ['Sans-Serif', 'Serif', 'Monospace', 'Poppins', 'Inter']
 
 const LOGO_PRESETS = [
   { key: 'none', label: 'No logo', value: '' },
-  { key: 'brand', label: 'Brand', value: '/assets/images/logo/logo-abbr.png' },
+  { key: 'brand', label: 'Brand', value: '/assets/images/logo-abbr.png' },
+  { key: 'full', label: 'Full Logo', value: '/assets/images/logo-full.png' },
   { key: 'mail', label: 'Mail', value: '/assets/images/general/2.png' },
   { key: 'support', label: 'Support', value: '/assets/images/general/3.png' },
   { key: 'app', label: 'App', value: '/assets/images/general/4.png' }
@@ -60,6 +63,16 @@ const DEFAULT_FORM = {
   wifiSsid: '',
   wifiPassword: '',
   wifiSecurity: 'WPA',
+  paymentType: 'paypal',
+  paymentAmount: '',
+  paymentCurrency: 'USD',
+  paymentRecipient: '',
+  paymentNote: '',
+  paymentBtcAddress: '',
+  paymentUpiId: '',
+  paymentIban: '',
+  paymentBic: '',
+  paymentBeneficiary: '',
   pdfUrl: '',
   appUrl: '',
   imageUrl: '',
@@ -75,84 +88,159 @@ const DEFAULT_FORM = {
 function buildPayload(type, form) {
   switch (type) {
     case 'link':
-      return form.link.trim()
+      return (form.link || '').trim()
     case 'text':
-      return form.text.trim()
+      return (form.text || '').trim()
     case 'email': {
-      const email = form.email.trim()
+      const email = (form.email || '').trim()
       if (!email) return ''
       const params = new URLSearchParams()
-      if (form.subject.trim()) params.set('subject', form.subject.trim())
-      if (form.body.trim()) params.set('body', form.body.trim())
+      if ((form.subject || '').trim()) params.set('subject', form.subject.trim())
+      if ((form.body || '').trim()) params.set('body', form.body.trim())
       const query = params.toString()
       return `mailto:${email}${query ? `?${query}` : ''}`
     }
     case 'call':
-      return form.phone.trim() ? `tel:${form.phone.trim()}` : ''
+      return (form.phone || '').trim() ? `tel:${form.phone.trim()}` : ''
     case 'sms': {
-      const phone = form.phone.trim()
+      const phone = (form.phone || '').trim()
       if (!phone) return ''
-      const body = form.smsBody.trim()
+      const body = (form.smsBody || '').trim()
       return body ? `sms:${phone}?body=${encodeURIComponent(body)}` : `sms:${phone}`
     }
     case 'vcard': {
-      if (!form.vName.trim()) return ''
+      if (!(form.vName || '').trim()) return ''
       return [
         'BEGIN:VCARD',
         'VERSION:3.0',
         `FN:${form.vName.trim()}`,
-        form.vCompany.trim() ? `ORG:${form.vCompany.trim()}` : '',
-        form.vPhone.trim() ? `TEL:${form.vPhone.trim()}` : '',
-        form.vEmail.trim() ? `EMAIL:${form.vEmail.trim()}` : '',
-        form.vWebsite.trim() ? `URL:${form.vWebsite.trim()}` : '',
+        (form.vCompany || '').trim() ? `ORG:${form.vCompany.trim()}` : '',
+        (form.vPhone || '').trim() ? `TEL:${form.vPhone.trim()}` : '',
+        (form.vEmail || '').trim() ? `EMAIL:${form.vEmail.trim()}` : '',
+        (form.vWebsite || '').trim() ? `URL:${form.vWebsite.trim()}` : '',
         'END:VCARD'
       ].filter(Boolean).join('\n')
     }
     case 'whatsapp': {
-      const phone = form.waPhone.trim().replace(/[^\d]/g, '')
+      const phone = (form.waPhone || '').trim().replace(/[^\d]/g, '')
       if (!phone) return ''
-      const msg = form.waMessage.trim()
+      const msg = (form.waMessage || '').trim()
       return `https://wa.me/${phone}${msg ? `?text=${encodeURIComponent(msg)}` : ''}`
     }
     case 'wifi': {
-      const ssid = form.wifiSsid.trim()
+      const ssid = (form.wifiSsid || '').trim()
       if (!ssid) return ''
-      return `WIFI:T:${form.wifiSecurity};S:${ssid};P:${form.wifiPassword.trim()};;`
+      return `WIFI:T:${form.wifiSecurity || 'WPA'};S:${ssid};P:${(form.wifiPassword || '').trim()};;`
+    }
+    case 'payment': {
+      const paymentType = form.paymentType || 'paypal'
+      const amount = (form.paymentAmount || '').trim()
+      const currency = (form.paymentCurrency || 'USD').trim()
+      const recipient = (form.paymentRecipient || '').trim()
+      const note = (form.paymentNote || '').trim()
+      
+      if (paymentType === 'paypal') {
+        if (!recipient) return ''
+        const params = new URLSearchParams()
+        params.set('cmd', '_xclick')
+        params.set('business', recipient)
+        if (amount) params.set('amount', amount)
+        if (currency) params.set('currency_code', currency)
+        if (note) params.set('item_name', note)
+        return `https://www.paypal.com/cgi-bin/webscr?${params.toString()}`
+      }
+      
+      if (paymentType === 'bitcoin') {
+        const btcAddress = (form.paymentBtcAddress || '').trim()
+        if (!btcAddress) return ''
+        let btcUrl = `bitcoin:${btcAddress}`
+        const params = []
+        if (amount) params.push(`amount=${amount}`)
+        if (note) params.push(`label=${encodeURIComponent(note)}`)
+        if (params.length > 0) btcUrl += `?${params.join('&')}`
+        return btcUrl
+      }
+      
+      if (paymentType === 'upi') {
+        const upiId = (form.paymentUpiId || '').trim()
+        if (!upiId) return ''
+        const params = new URLSearchParams()
+        params.set('pa', upiId)
+        if (amount) params.set('am', amount)
+        if (currency) params.set('cu', currency)
+        if (note) params.set('tn', note)
+        return `upi://pay?${params.toString()}`
+      }
+      
+      if (paymentType === 'sepa') {
+        const iban = (form.paymentIban || '').trim().replace(/\s/g, '')
+        const beneficiary = (form.paymentBeneficiary || '').trim()
+        if (!iban || !beneficiary) return ''
+        
+        const bic = (form.paymentBic || '').trim()
+        const amountStr = amount ? `EUR${amount}` : 'EUR'
+        
+        // Format EPC QR Code (European Payments Council)
+        return [
+          'BCD',           // Service Tag
+          '002',           // Version
+          '1',             // Character set (UTF-8)
+          'SCT',           // Identification (SEPA Credit Transfer)
+          bic,             // BIC (can be empty)
+          beneficiary,     // Beneficiary Name
+          iban,            // Beneficiary Account (IBAN)
+          amountStr,       // Amount (EUR + value)
+          '',              // Purpose (empty)
+          note,            // Remittance Information (Reference)
+          ''               // Beneficiary to Originator Information
+        ].join('\n')
+      }
+      
+      if (paymentType === 'generic') {
+        return recipient
+      }
+      
+      return ''
     }
     case 'pdf':
-      return form.pdfUrl.trim()
+      return (form.pdfUrl || '').trim()
     case 'app':
-      return form.appUrl.trim()
+      return (form.appUrl || '').trim()
     case 'images':
-      return form.imageUrl.trim()
+      return (form.imageUrl || '').trim()
     case 'video':
-      return form.videoUrl.trim()
+      return (form.videoUrl || '').trim()
     case 'social':
-      return form.socialUrl.trim()
+      return (form.socialUrl || '').trim()
     case 'event': {
-      if (!form.eventTitle.trim()) return ''
+      if (!(form.eventTitle || '').trim()) return ''
       return [
         'BEGIN:VEVENT',
         `SUMMARY:${form.eventTitle.trim()}`,
-        form.eventLocation.trim() ? `LOCATION:${form.eventLocation.trim()}` : '',
+        (form.eventLocation || '').trim() ? `LOCATION:${form.eventLocation.trim()}` : '',
         form.eventStart ? `DTSTART:${form.eventStart.replace(/[-:]/g, '').slice(0, 15)}00` : '',
         form.eventEnd ? `DTEND:${form.eventEnd.replace(/[-:]/g, '').slice(0, 15)}00` : '',
         'END:VEVENT'
       ].filter(Boolean).join('\n')
     }
     case 'barcode2d':
-      return form.barcodeValue.trim()
+      return (form.barcodeValue || '').trim()
     default:
       return ''
   }
 }
 
 export default function QRCodeGenerator() {
+  const location = useLocation()
   const qrRef = useRef(null)
   const qrInstance = useRef(null)
+  const previewSize = 280
 
   const [type, setType] = useState('link')
   const [form, setForm] = useState(DEFAULT_FORM)
+  const [qrName, setQrName] = useState('')
+  const [currentQrId, setCurrentQrId] = useState(null)
+  const [showSaveModal, setShowSaveModal] = useState(false)
 
   const [designTab, setDesignTab] = useState('Frame')
   const [framePreset, setFramePreset] = useState('scan')
@@ -172,38 +260,28 @@ export default function QRCodeGenerator() {
 
   const [logoPreset, setLogoPreset] = useState('none')
   const [logoUpload, setLogoUpload] = useState('')
+  const [logoSize, setLogoSize] = useState(24)
+  const [exportResolution, setExportResolution] = useState(2048)
   const [mediaUploadState, setMediaUploadState] = useState({
     images: { uploading: false, fileName: '', error: '' },
-    video: { uploading: false, fileName: '', error: '' }
+    video: { uploading: false, fileName: '', error: '' },
+    pdf: { uploading: false, fileName: '', error: '' },
+    app: { uploading: false, fileName: '', error: '' }
   })
 
   const payload = useMemo(() => buildPayload(type, form), [type, form])
 
-  useEffect(() => {
-    if (!qrInstance.current) {
-      qrInstance.current = new QRCodeStyling({
-        width: 280,
-        height: 280,
-        type: 'canvas',
-        margin: 1,
-        data: ' ',
-        dotsOptions: { type: 'rounded', color: '#000000' },
-        backgroundOptions: { color: '#FFFFFF' }
-      })
-    }
-
-    if (qrRef.current && qrRef.current.childNodes.length === 0) {
-      qrInstance.current.append(qrRef.current)
-    }
-  }, [])
-
-  useEffect(() => {
-    if (!qrInstance.current) return
-
+  const buildQrOptions = (size, dataValue = null) => {
+    // Always ensure we have valid data for QR code
+    const finalData = dataValue || payload || ' '
     const selectedLogo = logoUpload || LOGO_PRESETS.find(item => item.key === logoPreset)?.value || ''
 
-    qrInstance.current.update({
-      data: payload || ' ',
+    const options = {
+      width: size,
+      height: size,
+      type: 'canvas',
+      margin: 1,
+      data: finalData,
       backgroundOptions: {
         color: transparentBackground ? 'transparent' : backgroundColor
       },
@@ -228,15 +306,96 @@ export default function QRCodeGenerator() {
       cornersDotOptions: {
         type: centerStyle,
         color: centerColor
-      },
-      image: selectedLogo || undefined,
-      imageOptions: {
+      }
+    }
+
+    // Only add image if we have one
+    if (selectedLogo) {
+      options.image = selectedLogo
+      options.imageOptions = {
         crossOrigin: 'anonymous',
         margin: 4,
-        imageSize: 0.24
+        imageSize: logoSize / 100
       }
-    })
-  }, [payload, dotStyle, cornerStyle, centerStyle, backgroundColor, shapeColor, borderColor, centerColor, transparentBackground, gradientEnabled, logoPreset, logoUpload])
+    }
+
+    return options
+  }
+
+  useEffect(() => {
+    try {
+      if (!qrInstance.current) {
+        qrInstance.current = new QRCodeStyling(buildQrOptions(previewSize, ' '))
+      }
+
+      if (qrRef.current && qrRef.current.childNodes.length === 0) {
+        qrInstance.current.append(qrRef.current)
+      }
+    } catch (error) {
+      console.error('Error initializing QR code:', error)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!qrInstance.current) return
+
+    try {
+      const selectedLogo = logoUpload || LOGO_PRESETS.find(item => item.key === logoPreset)?.value || ''
+      const finalData = payload || ' '
+      
+      console.log('🔄 Updating QR code with logo:', { logoPreset, logoUpload: logoUpload ? 'base64...' : 'empty', selectedLogo })
+      
+      const options = {
+        width: previewSize,
+        height: previewSize,
+        type: 'canvas',
+        margin: 1,
+        data: finalData,
+        backgroundOptions: {
+          color: transparentBackground ? 'transparent' : backgroundColor
+        },
+        dotsOptions: {
+          type: dotStyle,
+          color: gradientEnabled ? undefined : shapeColor,
+          gradient: gradientEnabled
+            ? {
+                type: 'linear',
+                rotation: 0,
+                colorStops: [
+                  { offset: 0, color: shapeColor },
+                  { offset: 1, color: borderColor }
+                ]
+              }
+            : undefined
+        },
+        cornersSquareOptions: {
+          type: cornerStyle,
+          color: borderColor
+        },
+        cornersDotOptions: {
+          type: centerStyle,
+          color: centerColor
+        }
+      }
+      
+      // Only add image if we have one
+      if (selectedLogo) {
+        console.log('✅ Adding logo to QR:', selectedLogo.substring(0, 50))
+        options.image = selectedLogo
+        options.imageOptions = {
+          crossOrigin: 'anonymous',
+          margin: 4,
+          imageSize: logoSize / 100
+        }
+      } else {
+        console.log('⚠️ No logo selected')
+      }
+      
+      qrInstance.current.update(options)
+    } catch (error) {
+      console.error('Error updating QR code:', error)
+    }
+  }, [payload, dotStyle, cornerStyle, centerStyle, backgroundColor, shapeColor, borderColor, centerColor, transparentBackground, gradientEnabled, logoPreset, logoUpload, logoSize])
 
   useEffect(() => {
     const preset = FRAME_PRESETS.find(item => item.key === framePreset)
@@ -290,6 +449,14 @@ export default function QRCodeGenerator() {
         setValue('videoUrl', fileUrl)
       }
 
+      if (mediaType === 'pdf') {
+        setValue('pdfUrl', fileUrl)
+      }
+
+      if (mediaType === 'app') {
+        setValue('appUrl', fileUrl)
+      }
+
       setMediaUploadState(prev => ({
         ...prev,
         [mediaType]: { uploading: false, fileName: file.name, error: '' }
@@ -306,15 +473,77 @@ export default function QRCodeGenerator() {
   }
 
   const downloadQr = async () => {
-    if (!payload || !qrInstance.current) return
-    const blob = await qrInstance.current.getRawData('png')
+    if (!payload) return
+
+    const exportQr = new QRCodeStyling(buildQrOptions(exportResolution))
+    const blob = await exportQr.getRawData('png')
     if (!blob) return
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = `qr-${type}.png`
+    anchor.download = `qr-${type}-${exportResolution}px.png`
     anchor.click()
     URL.revokeObjectURL(url)
+  }
+
+  const saveQrSettings = async () => {
+    if (!qrName.trim()) {
+      setShowSaveModal(true)
+      return
+    }
+
+    const settings = {
+      form,
+      design: {
+        framePreset,
+        framePhrase,
+        phraseFont,
+        frameColor,
+        dotStyle,
+        cornerStyle,
+        centerStyle,
+        backgroundColor,
+        shapeColor,
+        borderColor,
+        centerColor,
+        transparentBackground,
+        gradientEnabled,
+        logoPreset,
+        logoUpload,
+        logoSize,
+        exportResolution
+      }
+    }
+    
+    try {
+      if (currentQrId) {
+        await api.put(`/qr-codes/${currentQrId}`, {
+          name: qrName,
+          type,
+          settings: JSON.stringify(settings)
+        })
+        alert('QR mis à jour avec succès !')
+      } else {
+        const response = await api.post('/qr-codes', {
+          name: qrName,
+          type,
+          settings: JSON.stringify(settings)
+        })
+        setCurrentQrId(response.data.qrCode.id)
+        alert('QR sauvegardé avec succès !')
+      }
+    } catch (error) {
+      alert('Erreur lors de la sauvegarde.')
+    }
+  }
+
+  const handleSaveWithName = async () => {
+    if (!qrName.trim()) {
+      alert('Veuillez entrer un nom')
+      return
+    }
+    setShowSaveModal(false)
+    await saveQrSettings()
   }
 
   const renderTypeFields = () => {
@@ -383,9 +612,257 @@ export default function QRCodeGenerator() {
     if (type === 'wifi') {
       return (
         <div className="row g-2">
-          <div className="col-md-4"><label className="form-label">Security</label><select className="form-select" value={form.wifiSecurity} onChange={(event) => setValue('wifiSecurity', event.target.value)}><option value="WPA">WPA</option><option value="WEP">WEP</option><option value="nopass">Open</option></select></div>
-          <div className="col-md-4"><label className="form-label">SSID</label><input className="form-control" value={form.wifiSsid} onChange={(event) => setValue('wifiSsid', event.target.value)} /></div>
-          <div className="col-md-4"><label className="form-label">Password</label><input className="form-control" value={form.wifiPassword} onChange={(event) => setValue('wifiPassword', event.target.value)} /></div>
+          <div className="col-md-4">
+            <label className="form-label">Security</label>
+            <select 
+              className="form-select" 
+              value={form.wifiSecurity} 
+              onChange={(event) => setValue('wifiSecurity', event.target.value)}
+            >
+              <option value="WPA">WPA</option>
+              <option value="WEP">WEP</option>
+              <option value="nopass">Open</option>
+            </select>
+          </div>
+          <div className="col-md-4">
+            <label className="form-label">SSID</label>
+            <input 
+              className="form-control" 
+              placeholder="Nom du réseau"
+              value={form.wifiSsid} 
+              onChange={(event) => setValue('wifiSsid', event.target.value)} 
+            />
+          </div>
+          <div className="col-md-4">
+            <label className="form-label">Password</label>
+            <input 
+              type="text"
+              className="form-control" 
+              placeholder="Mot de passe"
+              value={form.wifiPassword} 
+              onChange={(event) => setValue('wifiPassword', event.target.value)} 
+            />
+          </div>
+        </div>
+      )
+    }
+
+    if (type === 'payment') {
+      return (
+        <div className="row g-2">
+          <div className="col-md-4">
+            <label className="form-label">Payment Method</label>
+            <select 
+              className="form-select" 
+              value={form.paymentType} 
+              onChange={(event) => setValue('paymentType', event.target.value)}
+            >
+              <option value="paypal">PayPal</option>
+              <option value="sepa">SEPA Transfer (EUR)</option>
+              <option value="bitcoin">Bitcoin</option>
+              <option value="upi">UPI (India)</option>
+              <option value="generic">Other/URL</option>
+            </select>
+          </div>
+          
+          {form.paymentType === 'paypal' && (
+            <>
+              <div className="col-md-8">
+                <label className="form-label">PayPal Email/ID</label>
+                <input 
+                  className="form-control" 
+                  placeholder="your-email@example.com"
+                  value={form.paymentRecipient} 
+                  onChange={(event) => setValue('paymentRecipient', event.target.value)} 
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Amount (optional)</label>
+                <input 
+                  type="number"
+                  step="0.01"
+                  className="form-control" 
+                  placeholder="10.00"
+                  value={form.paymentAmount} 
+                  onChange={(event) => setValue('paymentAmount', event.target.value)} 
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Currency</label>
+                <select 
+                  className="form-select" 
+                  value={form.paymentCurrency} 
+                  onChange={(event) => setValue('paymentCurrency', event.target.value)}
+                >
+                  <option value="USD">USD</option>
+                  <option value="EUR">EUR</option>
+                  <option value="GBP">GBP</option>
+                  <option value="CAD">CAD</option>
+                  <option value="AUD">AUD</option>
+                </select>
+              </div>
+              <div className="col-12">
+                <label className="form-label">Description (optional)</label>
+                <input 
+                  className="form-control" 
+                  placeholder="Payment for..."
+                  value={form.paymentNote} 
+                  onChange={(event) => setValue('paymentNote', event.target.value)} 
+                />
+              </div>
+            </>
+          )}
+
+          {form.paymentType === 'bitcoin' && (
+            <>
+              <div className="col-md-8">
+                <label className="form-label">Bitcoin Address</label>
+                <input 
+                  className="form-control" 
+                  placeholder="1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"
+                  value={form.paymentBtcAddress} 
+                  onChange={(event) => setValue('paymentBtcAddress', event.target.value)} 
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Amount in BTC (optional)</label>
+                <input 
+                  type="number"
+                  step="0.00000001"
+                  className="form-control" 
+                  placeholder="0.001"
+                  value={form.paymentAmount} 
+                  onChange={(event) => setValue('paymentAmount', event.target.value)} 
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Label (optional)</label>
+                <input 
+                  className="form-control" 
+                  placeholder="Payment label"
+                  value={form.paymentNote} 
+                  onChange={(event) => setValue('paymentNote', event.target.value)} 
+                />
+              </div>
+            </>
+          )}
+
+          {form.paymentType === 'upi' && (
+            <>
+              <div className="col-md-8">
+                <label className="form-label">UPI ID</label>
+                <input 
+                  className="form-control" 
+                  placeholder="username@upi"
+                  value={form.paymentUpiId} 
+                  onChange={(event) => setValue('paymentUpiId', event.target.value)} 
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Amount (optional)</label>
+                <input 
+                  type="number"
+                  step="0.01"
+                  className="form-control" 
+                  placeholder="100.00"
+                  value={form.paymentAmount} 
+                  onChange={(event) => setValue('paymentAmount', event.target.value)} 
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Currency</label>
+                <select 
+                  className="form-select" 
+                  value={form.paymentCurrency} 
+                  onChange={(event) => setValue('paymentCurrency', event.target.value)}
+                >
+                  <option value="INR">INR</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+              <div className="col-12">
+                <label className="form-label">Transaction Note (optional)</label>
+                <input 
+                  className="form-control" 
+                  placeholder="Payment for..."
+                  value={form.paymentNote} 
+                  onChange={(event) => setValue('paymentNote', event.target.value)} 
+                />
+              </div>
+            </>
+          )}
+
+          {form.paymentType === 'sepa' && (
+            <>
+              <div className="col-md-12">
+                <label className="form-label">IBAN</label>
+                <input 
+                  className="form-control" 
+                  placeholder="FR76 1234 5678 9012 3456 7890 123"
+                  value={form.paymentIban} 
+                  onChange={(event) => setValue('paymentIban', event.target.value)} 
+                />
+                <small className="text-muted">Format: 2 lettres pays + 2 chiffres clé + max 30 caractères</small>
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Bénéficiaire</label>
+                <input 
+                  className="form-control" 
+                  placeholder="Nom du bénéficiaire"
+                  value={form.paymentBeneficiary} 
+                  onChange={(event) => setValue('paymentBeneficiary', event.target.value)} 
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">BIC/SWIFT (optionnel)</label>
+                <input 
+                  className="form-control" 
+                  placeholder="BNPAFRPPXXX"
+                  value={form.paymentBic} 
+                  onChange={(event) => setValue('paymentBic', event.target.value)} 
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Montant en EUR (optionnel)</label>
+                <input 
+                  type="number"
+                  step="0.01"
+                  className="form-control" 
+                  placeholder="100.00"
+                  value={form.paymentAmount} 
+                  onChange={(event) => setValue('paymentAmount', event.target.value)} 
+                />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Référence (optionnel)</label>
+                <input 
+                  className="form-control" 
+                  placeholder="Facture #123"
+                  value={form.paymentNote} 
+                  onChange={(event) => setValue('paymentNote', event.target.value)} 
+                />
+              </div>
+              <div className="col-12">
+                <div className="alert alert-info mb-0">
+                  <i className="feather-info me-2"></i>
+                  Ce QR code génère un virement SEPA conforme au standard EPC (European Payments Council)
+                </div>
+              </div>
+            </>
+          )}
+
+          {form.paymentType === 'generic' && (
+            <div className="col-12">
+              <label className="form-label">Payment URL</label>
+              <input 
+                className="form-control" 
+                placeholder="https://..."
+                value={form.paymentRecipient} 
+                onChange={(event) => setValue('paymentRecipient', event.target.value)} 
+              />
+              <small className="text-muted">Enter any payment link (Stripe, Square, custom, etc.)</small>
+            </div>
+          )}
         </div>
       )
     }
@@ -439,9 +916,45 @@ export default function QRCodeGenerator() {
       )
     }
 
+    if (type === 'pdf') {
+      return (
+        <div className="row g-2">
+          <div className="col-12">
+            <label className="form-label">PDF URL</label>
+            <input className="form-control" placeholder="https://example.com/file.pdf" value={form.pdfUrl} onChange={(event) => setValue('pdfUrl', event.target.value)} />
+          </div>
+          <div className="col-12">
+            <label className="form-label">Ou charger un PDF depuis votre ordinateur</label>
+            <input type="file" className="form-control" accept=".pdf,application/pdf" onChange={(event) => onUploadContentMedia(event, 'pdf')} />
+            <small className="text-muted d-block mt-1">
+              {mediaUploadState.pdf.uploading ? 'Upload en cours...' : mediaUploadState.pdf.fileName ? `Fichier: ${mediaUploadState.pdf.fileName}` : 'PDF uniquement'}
+            </small>
+            {mediaUploadState.pdf.error && <small className="text-danger d-block">{mediaUploadState.pdf.error}</small>}
+          </div>
+        </div>
+      )
+    }
+
+    if (type === 'app') {
+      return (
+        <div className="row g-2">
+          <div className="col-12">
+            <label className="form-label">App URL</label>
+            <input className="form-control" placeholder="https://apps.apple.com/..." value={form.appUrl} onChange={(event) => setValue('appUrl', event.target.value)} />
+          </div>
+          <div className="col-12">
+            <label className="form-label">Ou charger un fichier APK/IPA depuis votre ordinateur</label>
+            <input type="file" className="form-control" accept=".apk,.ipa,application/vnd.android.package-archive" onChange={(event) => onUploadContentMedia(event, 'app')} />
+            <small className="text-muted d-block mt-1">
+              {mediaUploadState.app.uploading ? 'Upload en cours...' : mediaUploadState.app.fileName ? `Fichier: ${mediaUploadState.app.fileName}` : 'APK, IPA, etc.'}
+            </small>
+            {mediaUploadState.app.error && <small className="text-danger d-block">{mediaUploadState.app.error}</small>}
+          </div>
+        </div>
+      )
+    }
+
     const map = {
-      pdf: ['PDF URL', 'pdfUrl', 'https://example.com/file.pdf'],
-      app: ['App URL', 'appUrl', 'https://apps.apple.com/...'],
       social: ['Social URL', 'socialUrl', 'https://instagram.com/...'],
       barcode2d: ['Barcode value', 'barcodeValue', '1234567890']
     }
@@ -455,6 +968,155 @@ export default function QRCodeGenerator() {
       </>
     )
   }
+
+  // Charger un QR code au démarrage (depuis galerie ou dernier sauvegardé)
+  useEffect(() => {
+    const loadQr = async () => {
+      try {
+        console.log('🚀 useEffect loadQr starting...')
+        // Vérifier si on doit charger un QR spécifique depuis la galerie
+        const qrIdToLoad = localStorage.getItem('qr-to-load')
+        console.log('🔍 qr-to-load from localStorage:', qrIdToLoad)
+        
+        if (qrIdToLoad) {
+          localStorage.removeItem('qr-to-load')
+          console.log('📡 Fetching QR code from API:', qrIdToLoad)
+          const response = await api.get(`/qr-codes/${qrIdToLoad}`)
+          console.log('📦 API response:', response.data)
+          const qr = response.data.qrCode
+          if (qr) {
+            const settings = JSON.parse(qr.settings)
+            console.log('📥 Loading QR code:', { 
+              qrId: qr.id, 
+              name: qr.name, 
+              type: qr.type,
+              form: settings.form,
+              logoPreset: settings.design?.logoPreset, 
+              hasLogoUpload: !!settings.design?.logoUpload 
+            })
+            
+            setQrName(qr.name)
+            setCurrentQrId(qr.id)
+            setType(qr.type)
+            setForm({ ...DEFAULT_FORM, ...settings.form })
+            
+            console.log('✅ Form data merged:', { ...DEFAULT_FORM, ...settings.form })
+            
+            if (settings.design) {
+              console.log('🎨 Applying design settings...')
+              setFramePreset(settings.design.framePreset || 'scan')
+              setFramePhrase(settings.design.framePhrase || 'SCAN ME')
+              setPhraseFont(settings.design.phraseFont || 'Sans-Serif')
+              setFrameColor(settings.design.frameColor || '#000000')
+              setDotStyle(settings.design.dotStyle || 'rounded')
+              setCornerStyle(settings.design.cornerStyle || 'square')
+              setCenterStyle(settings.design.centerStyle || 'square')
+              setBackgroundColor(settings.design.backgroundColor || '#FFFFFF')
+              setShapeColor(settings.design.shapeColor || '#000000')
+              setBorderColor(settings.design.borderColor || '#000000')
+              setCenterColor(settings.design.centerColor || '#000000')
+              setTransparentBackground(settings.design.transparentBackground || false)
+              setGradientEnabled(settings.design.gradientEnabled || false)
+              setLogoPreset(settings.design.logoPreset || 'none')
+              setLogoUpload(settings.design.logoUpload || '')
+              setLogoSize(settings.design.logoSize || 24)
+              setExportResolution(settings.design.exportResolution || 2048)
+              console.log('✅ Design settings applied')
+            }
+            console.log('✅ QR code loaded successfully')
+            return
+          }
+        }
+        
+        console.log('ℹ️ No QR to load from gallery, checking old settings...')
+        // Sinon, charger les derniers paramètres sauvegardés (ancienne méthode)
+        const response = await api.get('/qr-settings/load')
+        const settings = response?.data?.settings
+        if (settings) {
+          console.log('📥 Loading old settings:', settings)
+          setType(settings.type || 'link')
+          setForm({ ...DEFAULT_FORM, ...settings.form })
+          if (settings.design) {
+            setFramePreset(settings.design.framePreset || 'scan')
+            setFramePhrase(settings.design.framePhrase || 'SCAN ME')
+            setPhraseFont(settings.design.phraseFont || 'Sans-Serif')
+            setFrameColor(settings.design.frameColor || '#000000')
+            setDotStyle(settings.design.dotStyle || 'rounded')
+            setCornerStyle(settings.design.cornerStyle || 'square')
+            setCenterStyle(settings.design.centerStyle || 'square')
+            setBackgroundColor(settings.design.backgroundColor || '#FFFFFF')
+            setShapeColor(settings.design.shapeColor || '#000000')
+            setBorderColor(settings.design.borderColor || '#000000')
+            setCenterColor(settings.design.centerColor || '#000000')
+            setTransparentBackground(settings.design.transparentBackground || false)
+            setGradientEnabled(settings.design.gradientEnabled || false)
+            setLogoPreset(settings.design.logoPreset || 'none')
+            setLogoUpload(settings.design.logoUpload || '')
+            setLogoSize(settings.design.logoSize || 24)
+            setExportResolution(settings.design.exportResolution || 2048)
+          }
+        }
+      } catch (error) {
+        console.error('❌ Error loading QR code:', error)
+      }
+    }
+    loadQr()
+  }, [])
+
+  // Effet supplémentaire : vérifier s'il y a un QR à charger quand la location change
+  // Ceci est nécessaire car si l'utilisateur est déjà sur /apps/qr-code,
+  // le composant ne se remonte pas et le useEffect ci-dessus ne se déclenche pas
+  useEffect(() => {
+    const checkForQrToLoad = async () => {
+      const qrIdToLoad = localStorage.getItem('qr-to-load')
+      if (qrIdToLoad) {
+        console.log('🔄 Location changed, found qr-to-load:', qrIdToLoad)
+        localStorage.removeItem('qr-to-load')
+        try {
+          const response = await api.get(`/qr-codes/${qrIdToLoad}`)
+          const qr = response.data.qrCode
+          if (qr) {
+            const settings = JSON.parse(qr.settings)
+            console.log('📥 Loading QR from location change:', { 
+              qrId: qr.id, 
+              name: qr.name, 
+              type: qr.type,
+              form: settings.form
+            })
+            
+            setQrName(qr.name)
+            setCurrentQrId(qr.id)
+            setType(qr.type)
+            setForm({ ...DEFAULT_FORM, ...settings.form })
+            
+            if (settings.design) {
+              setFramePreset(settings.design.framePreset || 'scan')
+              setFramePhrase(settings.design.framePhrase || 'SCAN ME')
+              setPhraseFont(settings.design.phraseFont || 'Sans-Serif')
+              setFrameColor(settings.design.frameColor || '#000000')
+              setDotStyle(settings.design.dotStyle || 'rounded')
+              setCornerStyle(settings.design.cornerStyle || 'square')
+              setCenterStyle(settings.design.centerStyle || 'square')
+              setBackgroundColor(settings.design.backgroundColor || '#FFFFFF')
+              setShapeColor(settings.design.shapeColor || '#000000')
+              setBorderColor(settings.design.borderColor || '#000000')
+              setCenterColor(settings.design.centerColor || '#000000')
+              setTransparentBackground(settings.design.transparentBackground || false)
+              setGradientEnabled(settings.design.gradientEnabled || false)
+              setLogoPreset(settings.design.logoPreset || 'none')
+              setLogoUpload(settings.design.logoUpload || '')
+              setLogoSize(settings.design.logoSize || 24)
+              setExportResolution(settings.design.exportResolution || 2048)
+            }
+            console.log('✅ QR code loaded from location change')
+          }
+        } catch (error) {
+          console.error('❌ Error loading QR from location change:', error)
+        }
+      }
+    }
+    checkForQrToLoad()
+  }, [location])
 
   return (
     <div className="container-fluid px-4 py-4" style={{ backgroundColor: '#f4f6fb', minHeight: 'calc(100vh - 78px)' }}>
@@ -611,6 +1273,19 @@ export default function QRCodeGenerator() {
                         </button>
                       ))}
                     </div>
+
+                    <div className="mt-3">
+                      <label className="form-label">Logo size: {logoSize}%</label>
+                      <input
+                        type="range"
+                        className="form-range"
+                        min="10"
+                        max="45"
+                        step="1"
+                        value={logoSize}
+                        onChange={(event) => setLogoSize(Number(event.target.value))}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
@@ -639,10 +1314,78 @@ export default function QRCodeGenerator() {
                 <i className="feather-download me-2"></i>
                 Download QR Code
               </button>
+
+              <div className="mt-3">
+                <label className="form-label mb-1">Nom du QR Code</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  placeholder="Ex: Menu Restaurant"
+                  value={qrName}
+                  onChange={(e) => setQrName(e.target.value)}
+                />
+              </div>
+
+              <button type="button" className="btn btn-primary mt-2" onClick={saveQrSettings}>
+                <i className="feather-save me-2"></i>
+                {currentQrId ? 'Mettre à jour' : 'Sauvegarder sur le site'}
+              </button>
+
+              <Link to="/apps/my-qr-codes" className="btn btn-light mt-2">
+                <i className="feather-grid me-2"></i>
+                Mes QR Codes
+              </Link>
+
+              <div className="mt-3">
+                <label className="form-label mb-1">Final resolution</label>
+                <select className="form-select" value={exportResolution} onChange={(event) => setExportResolution(Number(event.target.value))}>
+                  <option value={1024}>1024 x 1024</option>
+                  <option value={2048}>2048 x 2048</option>
+                  <option value={3072}>3072 x 3072</option>
+                  <option value={4096}>4096 x 4096</option>
+                </select>
+                <small className="text-muted">Higher resolution = larger file size.</small>
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Modal de sauvegarde (demander un nom) */}
+      {showSaveModal && (
+        <>
+          <div className="modal d-block" tabIndex="-1" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+            <div className="modal-dialog modal-dialog-centered">
+              <div className="modal-content">
+                <div className="modal-header">
+                  <h5 className="modal-title">Sauvegarder le QR Code</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowSaveModal(false)}></button>
+                </div>
+                <div className="modal-body">
+                  <label className="form-label">Nom du QR Code</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Ex: Menu Restaurant"
+                    value={qrName}
+                    onChange={(e) => setQrName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSaveWithName()}
+                    autoFocus
+                  />
+                </div>
+                <div className="modal-footer">
+                  <button type="button" className="btn btn-secondary" onClick={() => setShowSaveModal(false)}>
+                    Annuler
+                  </button>
+                  <button type="button" className="btn btn-primary" onClick={handleSaveWithName}>
+                    Sauvegarder
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }

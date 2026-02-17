@@ -1,0 +1,27 @@
+{
+  "type": "link",
+  "form": {
+    "email": "",
+    "link": "https://example.com",
+    "text": ""
+  },
+  "design": {
+    "framePreset": "scan",
+    "framePhrase": "SCAN ME",
+    "phraseFont": "Sans-Serif",
+    "frameColor": "#3d3333",
+    "dotStyle": "rounded",
+    "cornerStyle": "square",
+    "centerStyle": "square",
+    "backgroundColor": "#FFFFFF",
+    "shapeColor": "#000000",
+    "borderColor": "#000000",
+    "centerColor": "#000000",
+    "transparentBackground": false,
+    "gradientEnabled": false,
+    "logoPreset": "none",
+    "logoUpload": "",
+    "logoSize": 24,
+    "exportResolution": 2048
+  }
+}

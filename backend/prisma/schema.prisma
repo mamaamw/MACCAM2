@@ -80,8 +80,27 @@ model User {
   
   // Relations pour le calendrier
   events          Event[]   @relation("UserEvents")
+  
+  // Relations pour QR Codes
+  qrCodes         QrCode[]
 
   @@map("users")
+}
+
+// Modèle pour stocker les QR Codes sauvegardés
+model QrCode {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name            String    // Nom du QR code (ex: "Menu Restaurant", "Contact Pro")
+  type            String    // Type: link, text, email, call, sms, vcard, whatsapp, wifi, pdf, app, images, video, social, event, barcode2d
+  settings        String    // JSON contenant form + design (complet)
+  thumbnail       String?   // URL miniature du QR (optionnel)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("qr_codes")
+  @@index([userId])
 }
 
 // Tables pour champs multiples des contacts

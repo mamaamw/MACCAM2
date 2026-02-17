@@ -40,6 +40,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
     const mediaType = req.body?.mediaType;
     const mime = req.file.mimetype || '';
+    const ext = path.extname(req.file.originalname || '').toLowerCase();
 
     if (mediaType === 'images' && !mime.startsWith('image/')) {
       return res.status(400).json({
@@ -52,6 +53,20 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Le fichier doit être une vidéo'
+      });
+    }
+
+    if (mediaType === 'pdf' && mime !== 'application/pdf') {
+      return res.status(400).json({
+        success: false,
+        message: 'Le fichier doit être un PDF'
+      });
+    }
+
+    if (mediaType === 'app' && !['application/vnd.android.package-archive', 'application/octet-stream'].includes(mime) && !['.apk', '.ipa'].includes(ext)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Le fichier doit être un APK ou IPA'
       });
     }
 

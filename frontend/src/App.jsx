@@ -44,6 +44,7 @@ import Notes from './pages/apps/Notes'
 import Storage from './pages/apps/Storage'
 import Calendar from './pages/apps/Calendar'
 import QRCodeGenerator from './pages/apps/QRCodeGenerator'
+import MyQrCodes from './pages/apps/MyQrCodes'
 import PDFTools from './pages/apps/PDFTools'
 import PDFToolDetail from './pages/apps/PDFToolDetail'
 import NotionLike from './pages/apps/NotionLike'
@@ -348,6 +349,14 @@ function App() {
         <ProtectedRoute>
           <DashboardLayout>
             <QRCodeGenerator />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/apps/my-qr-codes" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <MyQrCodes />
           </DashboardLayout>
         </ProtectedRoute>
       } />
