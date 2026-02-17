@@ -1807,51 +1807,50 @@ export default function Chat() {
               {selectedConversation ? (
                 <>
                   {/* Header */}
-                  <div className="content-area-header" style={{ flexShrink: 0, zIndex: 2, backgroundColor: '#fff' }}>
-                    <div className="page-header-left hstack gap-4">
+                  <div className="content-area-header border-bottom shadow-sm" style={{ flexShrink: 0, zIndex: 2, backgroundColor: '#fff', padding: '1rem 1.5rem' }}>
+                    <div className="page-header-left hstack gap-3">
                       <a href="#" onClick={(e) => { e.preventDefault(); toggleSidebar(); }} className="app-sidebar-open-trigger">
                         <i className="feather-align-left fs-20"></i>
                       </a>
-                      <div className="d-flex align-items-center justify-content-center gap-3">
-                        <div className="avatar-image">
+                      <div className="d-flex align-items-center gap-3">
+                        <div className="avatar-image avatar-lg">
                           <img
                             src={getConversationAvatar(selectedConversation)}
-                            className="img-fluid"
+                            className="img-fluid rounded-circle"
                             alt={getConversationTitle(selectedConversation)}
+                            style={{ width: '48px', height: '48px', objectFit: 'cover' }}
                           />
                         </div>
-                        <div className="d-none d-sm-block">
-                          <div className="fw-bold d-flex align-items-center">
+                        <div>
+                          <h5 className="mb-0 fw-bold">
                             {getConversationTitle(selectedConversation)}
-                          </div>
+                          </h5>
                           {selectedConversation?.type === 'GROUP' ? (
-                            <div className="fs-11 text-muted" title={selectedGroupMembersLabel}>
+                            <div className="fs-12 text-muted d-none d-sm-block" title={selectedGroupMembersLabel}>
                               <span>{selectedConversation.members?.length || 0} membres</span>
-                              <span className="d-block text-truncate" style={{ maxWidth: '320px' }}>
-                                {selectedGroupMembersLabel}
-                              </span>
                               {selectedTypingLabel && (
-                                <span className="d-block text-primary fw-semibold mt-1">
+                                <span className="d-block text-primary fw-semibold">
                                   {selectedTypingLabel}
                                 </span>
                               )}
                             </div>
                           ) : selectedConversation?.type === 'DIRECT' ? (
                             <>
-                              <div className="d-flex align-items-center mt-1">
-                                <span className={`wd-7 ht-7 rounded-circle opacity-75 me-2 ${selectedDirectPresence?.dotClass || 'bg-secondary'}`}></span>
-                                <span className={`fs-9 text-uppercase fw-bold ${selectedDirectPresence?.labelClass || 'text-muted'}`}>
-                                  {selectedDirectPresence?.isOnline ? 'EN LIGNE' : 'HORS LIGNE'}
-                                </span>
+                              <div className="d-flex align-items-center">
+                                {selectedDirectPresence?.isOnline ? (
+                                  <span className="badge bg-success-subtle text-success d-flex align-items-center gap-1" style={{ fontSize: '0.7rem' }}>
+                                    <span className="wd-6 ht-6 rounded-circle bg-success"></span>
+                                    En ligne
+                                  </span>
+                                ) : (
+                                  <span className="badge bg-secondary-subtle text-secondary" style={{ fontSize: '0.7rem' }}>
+                                    Hors ligne
+                                  </span>
+                                )}
                               </div>
                               {selectedTypingLabel && (
-                                <div className="fs-11 text-primary fw-semibold mt-1">
+                                <div className="fs-12 text-primary fw-semibold mt-1">
                                   {selectedTypingLabel}
-                                </div>
-                              )}
-                              {!selectedDirectPresence?.isOnline && selectedDirectPresence?.lastSeenAt && (
-                                <div className="fs-11 text-muted mt-1">
-                                  {selectedDirectPresence.fullLabel}
                                 </div>
                               )}
                             </>
@@ -1859,7 +1858,7 @@ export default function Chat() {
                         </div>
                       </div>
                     </div>
-                    <div className="page-header-right ms-auto">
+                    <div className="page-header-right ms-auto d-none d-md-block">
                       <div className="d-flex align-items-center justify-content-center gap-2">
                         <a href="#" onClick={(e) => { e.preventDefault(); handleFeatureNotAvailable('Les appels vocaux'); }} className="d-flex">
                           <div className="avatar-text avatar-md" data-bs-toggle="tooltip" data-bs-trigger="hover" title="Appel vocal">
@@ -2265,12 +2264,12 @@ export default function Chat() {
               ) : (
                 <>
                   {/* Header vide avec bouton menu */}
-                  <div className="content-area-header" style={{ flexShrink: 0, zIndex: 2, backgroundColor: '#fff' }}>
-                    <div className="page-header-left hstack gap-4">
+                  <div className="content-area-header border-bottom shadow-sm" style={{ flexShrink: 0, zIndex: 2, backgroundColor: '#fff', padding: '1rem 1.5rem' }}>
+                    <div className="page-header-left hstack gap-3">
                       <a href="#" onClick={(e) => { e.preventDefault(); toggleSidebar(); }} className="app-sidebar-open-trigger">
                         <i className="feather-align-left fs-20"></i>
                       </a>
-                      <h5 className="mb-0 text-muted">Messagerie</h5>
+                      <h5 className="mb-0 text-muted fw-bold">Messagerie</h5>
                     </div>
                   </div>
                   {/* Message vide */}
