@@ -54,6 +54,7 @@ export default function Chat() {
   const [loadingBlockedUsers, setLoadingBlockedUsers] = useState(false);
   const [unblockingUserId, setUnblockingUserId] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const messagesEndRef = useRef(null);
   const imageFileInputRef = useRef(null);
   const documentFileInputRef = useRef(null);
@@ -519,7 +520,9 @@ export default function Chat() {
         setMessages(loadedMessages);
       }
     } catch (error) {
-      toast.error('Erreur lors du chargement des messages');
+      console.error('Erreur loadMessages:', error);
+      const errorMessage = error?.response?.data?.message || error?.message || 'Erreur lors du chargement des messages';
+      toast.error(errorMessage);
     }
   };
 
@@ -716,6 +719,14 @@ export default function Chat() {
 
   const handleSelectConversation = (conversation) => {
     setSelectedConversation(conversation);
+    // Fermer la sidebar sur mobile après sélection
+    if (window.innerWidth < 1200) {
+      setIsSidebarOpen(false);
+    }
+  };
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(prev => !prev);
   };
 
   const loadUsers = async () => {
@@ -1516,12 +1527,12 @@ export default function Chat() {
     <>
       <main
         className="nxl-container apps-container apps-chat"
-        style={{ top: 0, minHeight: 'calc(100vh - 80px)' }}
+        style={{ top: 0, marginLeft: 0, minHeight: '100vh' }}
       >
-        <div className="nxl-content without-header nxl-full-content">
-          <div className="main-content d-flex" style={{ overflow: 'hidden' }}>
+        <div className="nxl-content without-header nxl-full-content" style={{ padding: 0, margin: 0 }}>
+          <div className="main-content d-flex" style={{ overflow: 'hidden', padding: 0, margin: 0, gap: 0, height: '100vh' }}>
             {/* Sidebar - Liste des conversations */}
-            <div className="content-sidebar content-sidebar-xl" data-scrollbar-target="#psScrollbarInit" style={{ height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column' }}>
+            <div className={`content-sidebar content-sidebar-xl ${isSidebarOpen ? 'app-sidebar-open' : ''}`} data-scrollbar-target="#psScrollbarInit" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
               <div className="content-sidebar-header bg-white hstack justify-content-between" style={{ flexShrink: 0 }}>
                 <h4 className="fw-bolder mb-0">Chat</h4>
                 <div className="hstack gap-2">
@@ -1591,7 +1602,7 @@ export default function Chat() {
                       </li>
                     </ul>
                   </div>
-                  <a href="#" onClick={(e) => e.preventDefault()} className="app-sidebar-close-trigger d-flex">
+                  <a href="#" onClick={(e) => { e.preventDefault(); setIsSidebarOpen(false); }} className="app-sidebar-close-trigger d-flex">
                     <i className="feather-x"></i>
                   </a>
                 </div>
@@ -1792,13 +1803,13 @@ export default function Chat() {
             </div>
 
             {/* Zone principale - Messages */}
-            <div className="content-area" data-scrollbar-target="#psScrollbarInit" style={{ flex: 1, height: 'calc(100vh - 80px)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div className="content-area" data-scrollbar-target="#psScrollbarInit" style={{ flex: 1, height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
               {selectedConversation ? (
                 <>
                   {/* Header */}
                   <div className="content-area-header" style={{ flexShrink: 0, zIndex: 2, backgroundColor: '#fff' }}>
                     <div className="page-header-left hstack gap-4">
-                      <a href="#" onClick={(e) => e.preventDefault()} className="app-sidebar-open-trigger">
+                      <a href="#" onClick={(e) => { e.preventDefault(); toggleSidebar(); }} className="app-sidebar-open-trigger">
                         <i className="feather-align-left fs-20"></i>
                       </a>
                       <div className="d-flex align-items-center justify-content-center gap-3">
@@ -2151,7 +2162,7 @@ export default function Chat() {
                       <textarea
                         ref={messageInputRef}
                         className="form-control border-0"
-                        placeholder={isSendingBlocked ? 'Débloquez cet utilisateur pour écrire...' : 'Écrivez votre message... (Entrée: envoyer, Ctrl+Entrée: nouvelle ligne)'}
+                        placeholder={isSendingBlocked ? 'Débloquez pour écrire' : 'Votre message...'}
                         value={newMessage}
                         onChange={(e) => handleMessageInputChange(e.target.value)}
                         onKeyDown={handleMessageKeyDown}
@@ -2252,13 +2263,25 @@ export default function Chat() {
                   </div>
                 </>
               ) : (
-                <div className="d-flex align-items-center justify-content-center h-100">
-                  <div className="text-center">
-                    <i className="feather-message-circle" style={{ fontSize: '5rem', opacity: 0.3 }}></i>
-                    <h4 className="mt-3 text-muted">Sélectionnez une conversation</h4>
-                    <p className="text-muted">Choisissez une conversation pour commencer à discuter</p>
+                <>
+                  {/* Header vide avec bouton menu */}
+                  <div className="content-area-header" style={{ flexShrink: 0, zIndex: 2, backgroundColor: '#fff' }}>
+                    <div className="page-header-left hstack gap-4">
+                      <a href="#" onClick={(e) => { e.preventDefault(); toggleSidebar(); }} className="app-sidebar-open-trigger">
+                        <i className="feather-align-left fs-20"></i>
+                      </a>
+                      <h5 className="mb-0 text-muted">Messagerie</h5>
+                    </div>
                   </div>
-                </div>
+                  {/* Message vide */}
+                  <div className="d-flex align-items-center justify-content-center" style={{ flex: 1 }}>
+                    <div className="text-center">
+                      <i className="feather-message-circle" style={{ fontSize: '5rem', opacity: 0.3 }}></i>
+                      <h4 className="mt-3 text-muted">Sélectionnez une conversation</h4>
+                      <p className="text-muted">Choisissez une conversation pour commencer à discuter</p>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </div>

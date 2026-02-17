@@ -25,6 +25,29 @@
     <!--! BEGIN: Custom CSS-->
     <link rel="stylesheet" type="text/css" href="assets/css/theme.min.css">
     <!--! END: Custom CSS-->
+    <style>
+        /* Remove all spacing in chat app */
+        .apps-chat .nxl-content {
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        .apps-chat .main-content {
+            padding: 0 !important;
+            margin: 0 !important;
+            gap: 0 !important;
+        }
+        .apps-chat .main-content .content-area {
+            flex: 1 !important;
+            max-width: 100% !important;
+        }
+        .apps-chat .main-content .content-sidebar {
+            flex-shrink: 0 !important;
+        }
+        /* Ensure no overflow issues */
+        .apps-chat {
+            overflow-x: hidden !important;
+        }
+    </style>
     <!--! HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries !-->
     <!--! WARNING: Respond.js doesn"t work if you view the page via file: !-->
     <!--[if lt IE 9]>
@@ -2259,11 +2282,11 @@
     <!--! [Start] Main Content !-->
     <!--! ================================================================ !-->
     <main class="nxl-container apps-container apps-chat">
-        <div class="nxl-content without-header nxl-full-content">
+        <div class="nxl-content without-header nxl-full-content" style="padding: 0 !important;">
             <!-- [ Main Content ] start -->
-            <div class="main-content d-flex">
+            <div class="main-content d-flex" style="padding: 0 !important; margin: 0 !important; gap: 0 !important;">
                 <!-- [ Content Sidebar ] start -->
-                <div class="content-sidebar content-sidebar-xl" data-scrollbar-target="#psScrollbarInit">
+                <div class="content-sidebar content-sidebar-md" data-scrollbar-target="#psScrollbarInit">
                     <div class="content-sidebar-header bg-white sticky-top hstack justify-content-between">
                         <h4 class="fw-bolder mb-0">Chat</h4>
                         <a href="javascript:void(0);" class="app-sidebar-close-trigger d-flex">
@@ -4922,6 +4945,40 @@
     <!--! BEGIN: Theme Customizer  !-->
     <script src="assets/js/theme-customizer-init.min.js"></script>
     <!--! END: Theme Customizer !-->
+    
+    <!--! BEGIN: Mobile Chat Navigation !-->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.querySelector('.content-sidebar');
+            const singleItems = document.querySelectorAll('.single-item.c-pointer');
+            const openTrigger = document.querySelector('.app-sidebar-open-trigger');
+            const closeTrigger = document.querySelector('.app-sidebar-close-trigger');
+            
+            // Quand on clique sur une conversation, fermer la sidebar sur mobile
+            singleItems.forEach(function(item) {
+                item.addEventListener('click', function() {
+                    if (window.innerWidth < 1200) {
+                        sidebar.classList.remove('app-sidebar-open');
+                    }
+                });
+            });
+            
+            // Bouton pour ouvrir la sidebar (retour à la liste)
+            if (openTrigger) {
+                openTrigger.addEventListener('click', function() {
+                    sidebar.classList.add('app-sidebar-open');
+                });
+            }
+            
+            // Bouton pour fermer la sidebar
+            if (closeTrigger) {
+                closeTrigger.addEventListener('click', function() {
+                    sidebar.classList.remove('app-sidebar-open');
+                });
+            }
+        });
+    </script>
+    <!--! END: Mobile Chat Navigation !-->
 </body>
 
 </html>

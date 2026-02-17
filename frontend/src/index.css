@@ -50,3 +50,64 @@
 .timeline-content {
   padding-left: 0;
 }
+
+/* Chat Sidebar Mobile Styles */
+.apps-chat {
+  top: 0 !important;
+  margin-left: 0 !important;
+  min-height: 100vh !important;
+}
+
+.apps-chat .nxl-content {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.apps-chat .main-content {
+  padding: 0 !important;
+  margin: 0 !important;
+  gap: 0 !important;
+  height: 100vh !important;
+}
+
+.apps-chat .content-sidebar,
+.apps-chat .content-area {
+  height: 100vh !important;
+}
+
+@media (max-width: 1199.98px) {
+  .apps-chat .content-sidebar {
+    position: absolute;
+    z-index: 1025;
+    left: 0;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateX(-100%);
+    transition: all 0.3s ease;
+    box-shadow: 0 10px 25px rgba(40, 60, 80, 0.15);
+  }
+  
+  .apps-chat .content-sidebar.app-sidebar-open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(0);
+  }
+  
+  .apps-chat .app-sidebar-open-trigger {
+    display: inline-flex !important;
+  }
+  
+  .apps-chat .app-sidebar-close-trigger {
+    display: flex !important;
+  }
+}
+
+@media (min-width: 1200px) {
+  .apps-chat .app-sidebar-open-trigger {
+    display: none !important;
+  }
+  
+  .apps-chat .app-sidebar-close-trigger {
+    display: none !important;
+  }
+}
