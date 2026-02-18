@@ -69,38 +69,6 @@ export default function PDFTools() {
           </div>
         )
       })}
-
-      {/* Workflow Card */}
-      <div className="card border-0 shadow-sm mt-3" style={{ background: 'linear-gradient(135deg, #fdeae3 0%, #ffe8dc 100%)' }}>
-        <div className="card-body p-3">
-          <div className="row align-items-center">
-            <div className="col-lg-8">
-              <div className="d-flex align-items-start">
-                <div className="avatar-text rounded-2 bg-white text-warning me-2" style={{ width: '40px', height: '40px' }}>
-                  <i className="feather-zap"></i>
-                </div>
-                <div>
-                  <span className="badge bg-soft-primary text-primary mb-1" style={{ fontSize: '10px' }}>Nouveau !</span>
-                  <h6 className="mb-1 fw-bold">Créer un flux de travail personnalisé</h6>
-                  <p className="text-muted mb-0" style={{ fontSize: '12px', lineHeight: '1.4' }}>
-                    Créez des flux de travail personnalisés avec vos outils préférés, automatisez le traitement de vos tâches et réutilisez ces flux quand bon vous semble.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="col-lg-4 text-lg-end mt-2 mt-lg-0">
-              <a 
-                href="#" 
-                className="btn btn-dark btn-sm"
-                onClick={(event) => event.preventDefault()}
-              >
-                Créer un flux de travail
-                <i className="feather-arrow-right ms-1"></i>
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }

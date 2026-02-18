@@ -60,7 +60,7 @@ const pdfMergeProjectService = {
    */
   getProjects: async () => {
     const response = await api.get('/pdf-merge-projects');
-    return response.data;
+    return response.data.projects || [];
   },
 
   /**
@@ -70,7 +70,7 @@ const pdfMergeProjectService = {
    */
   getProject: async (projectId) => {
     const response = await api.get(`/pdf-merge-projects/${projectId}`);
-    return response.data;
+    return response.data.project;
   },
 
   /**
@@ -80,7 +80,7 @@ const pdfMergeProjectService = {
    */
   getProjectFiles: async (projectId) => {
     const response = await api.get(`/pdf-merge-projects/${projectId}/files`);
-    return response.data;
+    return response.data.files || [];
   },
 
   /**
