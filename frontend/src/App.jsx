@@ -47,7 +47,6 @@ import QRCodeGenerator from './pages/apps/QRCodeGenerator'
 import MyQrCodes from './pages/apps/MyQrCodes'
 import PDFTools from './pages/apps/PDFTools'
 import PDFToolDetail from './pages/apps/PDFToolDetail'
-import MergePdf from './pages/apps/MergePdf'
 import SignPdf from './pages/apps/SignPdf'
 import UnlockPdf from './pages/apps/UnlockPdf'
 import EditPdf from './pages/apps/EditPdf'
@@ -377,11 +376,7 @@ function App() {
       } />
 
       <Route path="/apps/pdf-tools/merge-pdf" element={
-        <ProtectedRoute>
-          <DashboardLayout>
-            <MergePdf />
-          </DashboardLayout>
-        </ProtectedRoute>
+        <Navigate to="/apps/pdf-tools/organize-pdf" replace />
       } />
 
       <Route path="/apps/pdf-tools/sign-pdf" element={

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { toast } from 'react-hot-toast';
 import { PDFDocument } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -7,162 +7,213 @@ import * as pdfjsLib from 'pdfjs-dist';
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 const OrganizePdf = () => {
-  const [pdfFile, setPdfFile] = useState(null);
-  const [pages, setPages] = useState([]);
-  const [selectedPages, setSelectedPages] = useState([]);
+  const [pages, setPages] = useState([]); // Toutes les pages de tous les fichiers
+  const [sourceFiles, setSourceFiles] = useState({}); // Map des fichiers originaux par ID
   const [isProcessing, setIsProcessing] = useState(false);
+  const fileInputRef = useRef(null);
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileSelect = async (event) => {
+    const selectedFiles = Array.from(event.target.files || []);
+    if (selectedFiles.length === 0) return;
 
-    if (file.type !== 'application/pdf') {
-      toast.error('Veuillez sélectionner un fichier PDF');
-      return;
-    }
-
-    setPdfFile(file);
-    
-    try {
-      // Charger le PDF pour compter les pages
-      const arrayBuffer = await file.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(arrayBuffer);
-      const numPages = pdfDoc.getPageCount();
-      
-      // Charger avec pdf.js pour générer les miniatures
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-      const pdf = await loadingTask.promise;
-      
-      // Générer les miniatures pour chaque page
-      const pagesArray = [];
-      
-      for (let i = 1; i <= numPages; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 0.5 });
-        
-        // Créer un canvas pour la miniature
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-        
-        // Rendre la page sur le canvas
-        await page.render({
-          canvasContext: context,
-          viewport: viewport
-        }).promise;
-        
-        // Convertir en data URL
-        const thumbnail = canvas.toDataURL('image/jpeg', 0.7);
-        
-        pagesArray.push({
-          id: i,
-          number: i,
-          thumbnail: thumbnail
-        });
+    for (const file of selectedFiles) {
+      if (file.type !== 'application/pdf') {
+        toast.error(`${file.name} n'est pas un fichier PDF`);
+        continue;
       }
-      
-      setPages(pagesArray);
-      setSelectedPages([]);
-      toast.success(`PDF chargé avec succès (${numPages} pages)`);
-    } catch (error) {
-      console.error('Erreur lors du chargement du PDF:', error);
-      toast.error('Erreur lors du chargement du PDF');
-      setPdfFile(null);
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdfDoc = await PDFDocument.load(arrayBuffer);
+        const numPages = pdfDoc.getPageCount();
+
+        const fileId = `${file.name}-${Date.now()}-${Math.random()}`;
+
+        // Sauvegarder le fichier source
+        setSourceFiles(prev => ({
+          ...prev,
+          [fileId]: {
+            id: fileId,
+            file: file,
+            name: file.name
+          }
+        }));
+
+        // Charger avec pdf.js pour générer les miniatures
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdf = await loadingTask.promise;
+
+        const newPages = [];
+        for (let i = 1; i <= numPages; i++) {
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 0.3 });
+
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+
+          await page.render({
+            canvasContext: context,
+            viewport: viewport
+          }).promise;
+
+          const thumbnail = canvas.toDataURL('image/jpeg', 0.5);
+
+          newPages.push({
+            id: `${fileId}-page-${i}-${Date.now()}-${Math.random()}`,
+            sourceFileId: fileId,
+            sourceFileName: file.name,
+            sourcePageNumber: i,
+            thumbnail: thumbnail,
+            selected: false
+          });
+        }
+
+        setPages(prev => [...prev, ...newPages]);
+      } catch (error) {
+        console.error('Erreur lors du chargement:', error);
+        toast.error(`Erreur lors du chargement de ${file.name}`);
+      }
     }
+
+    toast.success(`${selectedFiles.length} fichier(s) ajouté(s)`);
   };
 
-  const handleRemoveFile = () => {
-    setPdfFile(null);
-    setPages([]);
-    setSelectedPages([]);
+  const removePage = (pageId) => {
+    setPages(prev => prev.filter(p => p.id !== pageId));
+  };
+
+  const movePage = (index, direction) => {
+    const newIndex = index + direction;
+    if (newIndex < 0 || newIndex >= pages.length) return;
+
+    setPages(prev => {
+      const newPages = [...prev];
+      [newPages[index], newPages[newIndex]] = [newPages[newIndex], newPages[index]];
+      return newPages;
+    });
   };
 
   const togglePageSelection = (pageId) => {
-    setSelectedPages(prev => 
-      prev.includes(pageId) 
-        ? prev.filter(id => id !== pageId)
-        : [...prev, pageId]
-    );
+    setPages(prev => prev.map(p =>
+      p.id === pageId ? { ...p, selected: !p.selected } : p
+    ));
   };
 
-  const handleProcess = async (action) => {
-    if (!pdfFile) {
-      toast.error('Veuillez charger un fichier PDF');
-      return;
-    }
+  const selectAllPages = () => {
+    setPages(prev => prev.map(p => ({ ...p, selected: true })));
+  };
 
-    if (action === 'extract' && selectedPages.length === 0) {
-      toast.error('Veuillez sélectionner au moins une page à extraire');
+  const deselectAllPages = () => {
+    setPages(prev => prev.map(p => ({ ...p, selected: false })));
+  };
+
+  const handleMerge = async () => {
+    if (pages.length === 0) {
+      toast.error('Veuillez ajouter au moins un fichier PDF');
       return;
     }
 
     setIsProcessing(true);
-    
-    try {
-      // Charger le PDF source
-      const arrayBuffer = await pdfFile.arrayBuffer();
-      const pdfDoc = await PDFDocument.load(arrayBuffer);
-      
-      // Créer un nouveau PDF
-      const newPdfDoc = await PDFDocument.create();
-      
-      let pagesToCopy = [];
-      let message = '';
-      let filename = '';
 
-      if (action === 'reorder') {
-        // Copier les pages dans le nouvel ordre
-        pagesToCopy = pages.map(p => p.number - 1);
-        message = 'Pages réorganisées avec succès !';
-        filename = `${pdfFile.name.replace('.pdf', '')}_reorganise.pdf`;
-      } else if (action === 'extract') {
-        // Copier seulement les pages sélectionnées
-        pagesToCopy = pages
-          .filter(p => selectedPages.includes(p.id))
-          .map(p => p.number - 1);
-        message = `${selectedPages.length} page(s) extraite(s) avec succès !`;
-        filename = `${pdfFile.name.replace('.pdf', '')}_extrait.pdf`;
+    try {
+      const mergedPdf = await PDFDocument.create();
+
+      // Grouper les pages par fichier source pour optimiser
+      const pagesByFile = {};
+      pages.forEach(page => {
+        if (!pagesByFile[page.sourceFileId]) {
+          pagesByFile[page.sourceFileId] = [];
+        }
+        pagesByFile[page.sourceFileId].push(page);
+      });
+
+      // Charger tous les PDFs sources
+      const loadedPdfs = {};
+      for (const fileId of Object.keys(pagesByFile)) {
+        const sourceFile = sourceFiles[fileId];
+        const arrayBuffer = await sourceFile.file.arrayBuffer();
+        loadedPdfs[fileId] = await PDFDocument.load(arrayBuffer);
       }
 
-      // Copier les pages sélectionnées
-      const copiedPages = await newPdfDoc.copyPages(pdfDoc, pagesToCopy);
-      copiedPages.forEach(page => newPdfDoc.addPage(page));
+      // Copier les pages dans l'ordre d'affichage
+      for (const page of pages) {
+        const sourcePdf = loadedPdfs[page.sourceFileId];
+        const [copiedPage] = await mergedPdf.copyPages(sourcePdf, [page.sourcePageNumber - 1]);
+        mergedPdf.addPage(copiedPage);
+      }
 
-      // Sauvegarder le nouveau PDF
-      const pdfBytes = await newPdfDoc.save();
-      
-      toast.success(message);
-      
-      // Télécharger le PDF
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const mergedPdfBytes = await mergedPdf.save();
+      const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = filename;
+      a.download = 'merged.pdf';
       a.click();
       URL.revokeObjectURL(url);
-      
+
+      toast.success('PDF fusionné avec succès !');
     } catch (error) {
       console.error('Erreur:', error);
-      toast.error('Une erreur est survenue lors du traitement');
+      toast.error('Erreur lors de la fusion des PDF');
     } finally {
       setIsProcessing(false);
     }
   };
 
-  const movePageUp = (index) => {
-    if (index === 0) return;
-    const newPages = [...pages];
-    [newPages[index - 1], newPages[index]] = [newPages[index], newPages[index - 1]];
-    setPages(newPages);
-  };
+  const handleExtract = async () => {
+    const selectedPages = pages.filter(p => p.selected);
+    if (selectedPages.length === 0) {
+      toast.error('Veuillez sélectionner au moins une page à extraire');
+      return;
+    }
 
-  const movePageDown = (index) => {
-    if (index === pages.length - 1) return;
-    const newPages = [...pages];
-    [newPages[index], newPages[index + 1]] = [newPages[index + 1], newPages[index]];
-    setPages(newPages);
+    setIsProcessing(true);
+
+    try {
+      const newPdf = await PDFDocument.create();
+
+      // Grouper les pages sélectionnées par fichier source
+      const pagesByFile = {};
+      selectedPages.forEach(page => {
+        if (!pagesByFile[page.sourceFileId]) {
+          pagesByFile[page.sourceFileId] = [];
+        }
+        pagesByFile[page.sourceFileId].push(page);
+      });
+
+      // Charger tous les PDFs sources
+      const loadedPdfs = {};
+      for (const fileId of Object.keys(pagesByFile)) {
+        const sourceFile = sourceFiles[fileId];
+        const arrayBuffer = await sourceFile.file.arrayBuffer();
+        loadedPdfs[fileId] = await PDFDocument.load(arrayBuffer);
+      }
+
+      // Copier les pages dans l'ordre de sélection
+      for (const page of selectedPages) {
+        const sourcePdf = loadedPdfs[page.sourceFileId];
+        const [copiedPage] = await newPdf.copyPages(sourcePdf, [page.sourcePageNumber - 1]);
+        newPdf.addPage(copiedPage);
+      }
+
+      const pdfBytes = await newPdf.save();
+      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'extracted.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast.success(`${selectedPages.length} page(s) extraite(s) avec succès !`);
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de l\'extraction');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -173,221 +224,234 @@ const OrganizePdf = () => {
             <div className="card-header">
               <h4 className="card-title mb-0">
                 <i className="feather-layers me-2"></i>
-                Organiser PDF
+                Fusionner & Organiser PDF
               </h4>
             </div>
             <div className="card-body">
               {/* File Upload */}
-              {!pdfFile ? (
+              {pages.length === 0 ? (
                 <div className="border-2 border-dashed rounded p-5 text-center">
                   <input
                     type="file"
-                    id="pdfUpload"
+                    ref={fileInputRef}
                     className="d-none"
                     accept=".pdf"
-                    onChange={handleFileUpload}
+                    multiple
+                    onChange={handleFileSelect}
                   />
-                  <label htmlFor="pdfUpload" className="cursor-pointer">
+                  <button
+                    className="btn"
+                    onClick={() => fileInputRef.current?.click()}
+                    style={{ background: 'none', border: 'none', width: '100%' }}
+                  >
                     <i className="feather-upload display-4 text-muted mb-3 d-block"></i>
-                    <h5>Cliquez pour sélectionner un PDF</h5>
-                    <p className="text-muted mb-0">ou glissez-déposez le fichier ici</p>
-                  </label>
+                    <h5>Cliquez pour sélectionner des PDFs</h5>
+                    <p className="text-muted mb-0">ou glissez-déposez les fichiers ici</p>
+                  </button>
                 </div>
               ) : (
                 <>
-                  {/* File Info */}
-                  <div className="alert alert-info d-flex align-items-center justify-content-between">
-                    <div className="d-flex align-items-center">
-                      <i className="feather-file-text fs-5 me-2"></i>
-                      <div>
-                        <strong>{pdfFile.name}</strong>
-                        <small className="d-block text-muted">
-                          {(pdfFile.size / 1024 / 1024).toFixed(2)} MB • {pages.length} pages
-                        </small>
-                      </div>
+                  {/* Header with actions */}
+                  <div className="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                      <h6 className="mb-1">
+                        <i className="feather-file-text me-2"></i>
+                        {pages.length} page(s) • {Object.keys(sourceFiles).length} fichier(s)
+                      </h6>
+                      <small className="text-muted">
+                        {pages.filter(p => p.selected).length > 0 && (
+                          <span className="badge bg-primary">
+                            {pages.filter(p => p.selected).length} sélectionnée(s)
+                          </span>
+                        )}
+                      </small>
                     </div>
-                    <button
-                      className="btn btn-sm btn-outline-secondary"
-                      onClick={handleRemoveFile}
-                    >
-                      <i className="feather-x"></i>
-                    </button>
-                  </div>
-
-                  {/* Instructions */}
-                  <div className="alert alert-light border mb-4">
-                    <div className="d-flex align-items-start">
-                      <i className="feather-info text-primary fs-5 me-2"></i>
-                      <div>
-                        <strong>Comment utiliser :</strong>
-                        <ul className="mb-0 mt-2" style={{ fontSize: '13px' }}>
-                          <li>Utilisez les flèches pour réorganiser l'ordre des pages</li>
-                          <li>Cliquez sur les pages pour les sélectionner (pour extraction)</li>
-                          <li>Téléchargez le PDF réorganisé ou extrayez seulement les pages sélectionnées</li>
-                        </ul>
-                      </div>
+                    <div className="btn-group">
+                      <button
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={selectAllPages}
+                      >
+                        Tout sélectionner
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-secondary"
+                        onClick={deselectAllPages}
+                      >
+                        Tout désélectionner
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-primary"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        <i className="feather-plus me-1"></i>
+                        Ajouter des fichiers
+                      </button>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        className="d-none"
+                        accept=".pdf"
+                        multiple
+                        onChange={handleFileSelect}
+                      />
                     </div>
                   </div>
 
                   {/* Pages Grid */}
-                  <div className="mb-4">
-                    <div className="d-flex justify-content-between align-items-center mb-3">
-                      <h6 className="mb-0">
-                        Pages du document
-                        {selectedPages.length > 0 && (
-                          <span className="badge bg-primary ms-2">
-                            {selectedPages.length} sélectionnée(s)
-                          </span>
-                        )}
-                      </h6>
-                      <div>
-                        <button
-                          className="btn btn-sm btn-outline-primary me-2"
-                          onClick={() => setSelectedPages(pages.map(p => p.id))}
+                  <div className="row g-2 mb-4">
+                    {pages.map((page, index) => (
+                      <div key={page.id} className="col-6 col-sm-4 col-md-3 col-lg-2">
+                        <div
+                          className={`card cursor-pointer ${
+                            page.selected ? 'border-primary border-2' : ''
+                          }`}
+                          onClick={() => togglePageSelection(page.id)}
+                          style={{
+                            transition: 'all 0.2s',
+                            boxShadow: page.selected ? '0 4px 8px rgba(13, 110, 253, 0.2)' : ''
+                          }}
                         >
-                          Tout sélectionner
-                        </button>
-                        <button
-                          className="btn btn-sm btn-outline-secondary"
-                          onClick={() => setSelectedPages([])}
-                        >
-                          Tout désélectionner
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="row g-3">
-                      {pages.map((page, index) => (
-                        <div key={page.id} className="col-md-3 col-sm-4 col-6">
-                          <div
-                            className={`card h-100 cursor-pointer ${
-                              selectedPages.includes(page.id) ? 'border-primary border-2' : ''
-                            }`}
-                            onClick={() => togglePageSelection(page.id)}
-                            style={{ 
-                              transition: 'all 0.2s',
-                              boxShadow: selectedPages.includes(page.id) ? '0 4px 8px rgba(13, 110, 253, 0.2)' : ''
-                            }}
-                          >
-                            <div className="card-body text-center p-3 position-relative">
-                              {selectedPages.includes(page.id) && (
-                                <div className="position-absolute top-0 end-0 m-2" style={{ zIndex: 10 }}>
-                                        <div className="bg-primary rounded-circle d-flex align-items-center justify-content-center" style={{ width: '24px', height: '24px' }}>
-                                          <i className="feather-check text-white" style={{ fontSize: '14px' }}></i>
-                                        </div>
-                                      </div>
-                                    )}
-                                    
-                                    {page.thumbnail ? (
-                                      <div className="mb-2">
-                                        <img 
-                                          src={page.thumbnail} 
-                                          alt={`Page ${page.number}`}
-                                          className="w-100 rounded"
-                                          style={{ 
-                                            maxHeight: '200px',
-                                            objectFit: 'contain',
-                                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                                          }}
-                                        />
-                                      </div>
-                                    ) : (
-                                      <div 
-                                        className="bg-white border rounded mb-2 d-flex flex-column align-items-center justify-content-center position-relative" 
-                                        style={{ 
-                                          height: '180px',
-                                          background: 'linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%)',
-                                          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                                        }}
-                                      >
-                                        {/* Simulate page content */}
-                                        <div className="w-75 mb-2" style={{ height: '8px', background: '#dee2e6', borderRadius: '2px' }}></div>
-                                        <div className="w-100 px-3">
-                                          <div className="mb-1" style={{ height: '4px', background: '#e9ecef', borderRadius: '2px' }}></div>
-                                          <div className="mb-1" style={{ height: '4px', background: '#e9ecef', borderRadius: '2px' }}></div>
-                                          <div className="mb-1" style={{ height: '4px', background: '#e9ecef', borderRadius: '2px', width: '80%' }}></div>
-                                          <div className="my-2"></div>
-                                          <div className="mb-1" style={{ height: '4px', background: '#e9ecef', borderRadius: '2px' }}></div>
-                                          <div className="mb-1" style={{ height: '4px', background: '#e9ecef', borderRadius: '2px', width: '90%' }}></div>
-                                        </div>
-                                        <div className="position-absolute bottom-0 end-0 m-2">
-                                          <i className="feather-file-text text-muted" style={{ fontSize: '20px', opacity: 0.3 }}></i>
-                                        </div>
-                                      </div>
-                                    )}
-                                    <div className="d-flex align-items-center justify-content-center">
-                                      <span className="badge bg-secondary">Page {page.number}</span>
-                                    </div>
-                                    
-                                    <div className="btn-group btn-group-sm mt-2 w-100">
-                                      <button
-                                        className="btn btn-outline-secondary"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          movePageUp(index);
-                                        }}
-                                        disabled={index === 0}
-                                      >
-                                        <i className="feather-arrow-up"></i>
-                                      </button>
-                                      <button
-                                        className="btn btn-outline-secondary"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          movePageDown(index);
-                                        }}
-                                        disabled={index === pages.length - 1}
-                                      >
-                                        <i className="feather-arrow-down"></i>
-                                      </button>
-                                    </div>
-                                  </div>
+                          <div className="card-body p-2 position-relative">
+                            {/* Selection indicator */}
+                            {page.selected && (
+                              <div
+                                className="position-absolute top-0 end-0 m-1"
+                                style={{ zIndex: 10 }}
+                              >
+                                <div
+                                  className="bg-primary rounded-circle d-flex align-items-center justify-content-center"
+                                  style={{ width: '20px', height: '20px' }}
+                                >
+                                  <i className="feather-check text-white" style={{ fontSize: '12px' }}></i>
                                 </div>
                               </div>
-                            ))}
+                            )}
+                            
+                            {/* Delete button */}
+                            <button
+                              className="btn btn-sm btn-danger position-absolute top-0 start-0 m-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removePage(page.id);
+                              }}
+                              style={{ 
+                                zIndex: 10, 
+                                padding: '2px 6px',
+                                fontSize: '10px',
+                                lineHeight: 1
+                              }}
+                              title="Supprimer cette page"
+                            >
+                              <i className="feather-x"></i>
+                            </button>
+
+                            {/* Page thumbnail */}
+                            <img
+                              src={page.thumbnail}
+                              alt={`Page ${page.sourcePageNumber}`}
+                              className="w-100 rounded mb-1"
+                              style={{ maxHeight: '150px', objectFit: 'contain' }}
+                            />
+                            
+                            {/* Page info */}
+                            <div className="text-center mb-1">
+                              <div className="badge bg-secondary" style={{ fontSize: '10px' }}>
+                                Page {page.sourcePageNumber}
+                              </div>
+                              <div 
+                                className="text-muted text-truncate" 
+                                style={{ fontSize: '9px' }} 
+                                title={page.sourceFileName}
+                              >
+                                {page.sourceFileName}
+                              </div>
+                            </div>
+                            
+                            {/* Move buttons */}
+                            <div className="btn-group btn-group-sm w-100">
+                              <button
+                                className="btn btn-outline-secondary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  movePage(index, -1);
+                                }}
+                                disabled={index === 0}
+                                style={{ fontSize: '10px', padding: '2px' }}
+                                title="Déplacer vers la gauche"
+                              >
+                                <i className="feather-arrow-left"></i>
+                              </button>
+                              <button
+                                className="btn btn-outline-secondary"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  movePage(index, 1);
+                                }}
+                                disabled={index === pages.length - 1}
+                                style={{ fontSize: '10px', padding: '2px' }}
+                                title="Déplacer vers la droite"
+                              >
+                                <i className="feather-arrow-right"></i>
+                              </button>
+                            </div>
                           </div>
                         </div>
+                      </div>
+                    ))}
+                  </div>
 
-                        {/* Action Buttons */}
-                        <div className="d-flex gap-3 justify-content-center">
-                          <button
-                            className="btn btn-primary btn-lg px-4"
-                            onClick={() => handleProcess('reorder')}
-                            disabled={isProcessing}
-                          >
-                            {isProcessing ? (
-                              <>
-                                <span className="spinner-border spinner-border-sm me-2"></span>
-                                Traitement...
-                              </>
-                            ) : (
-                              <>
-                                <i className="feather-download me-2"></i>
-                                Télécharger PDF réorganisé
-                              </>
-                            )}
-                          </button>
-                          
-                          <button
-                            className="btn btn-success btn-lg px-4"
-                            onClick={() => handleProcess('extract')}
-                            disabled={isProcessing || selectedPages.length === 0}
-                          >
-                            {isProcessing ? (
-                              <>
-                                <span className="spinner-border spinner-border-sm me-2"></span>
-                                Traitement...
-                              </>
-                            ) : (
-                              <>
-                                <i className="feather-copy me-2"></i>
-                                Extraire {selectedPages.length > 0 ? `${selectedPages.length} page(s)` : 'les pages'}
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </>
-                    )}
+                  {/* Action info */}
+                  <div className="alert alert-light border mb-3">
+                    <strong>Options disponibles :</strong>
+                    <ul className="mb-0 mt-2" style={{ fontSize: '13px' }}>
+                      <li>Cliquez sur une page pour la sélectionner/désélectionner</li>
+                      <li>Utilisez les flèches pour réorganiser les pages librement</li>
+                      <li>Fusionnez toutes les pages dans l'ordre actuel</li>
+                      <li>Extrayez uniquement les pages sélectionnées</li>
+                      <li>Supprimez une page avec le bouton X rouge</li>
+                    </ul>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="d-flex gap-2 justify-content-center">
+                    <button
+                      className="btn btn-primary btn-lg px-4"
+                      onClick={handleMerge}
+                      disabled={isProcessing}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2"></span>
+                          Traitement...
+                        </>
+                      ) : (
+                        <>
+                          <i className="feather-git-merge me-2"></i>
+                          Fusionner toutes les pages
+                        </>
+                      )}
+                    </button>
+                    
+                    <button
+                      className="btn btn-success btn-lg px-4"
+                      onClick={handleExtract}
+                      disabled={isProcessing || pages.filter(p => p.selected).length === 0}
+                    >
+                      {isProcessing ? (
+                        <>
+                          <span className="spinner-border spinner-border-sm me-2"></span>
+                          Traitement...
+                        </>
+                      ) : (
+                        <>
+                          <i className="feather-copy me-2"></i>
+                          Extraire {pages.filter(p => p.selected).length} page(s)
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
