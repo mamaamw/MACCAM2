@@ -23,6 +23,7 @@ import notionPageRoutes from './routes/notion-page.routes.js';
 import qrMediaRoutes from './routes/qr-media.routes.js';
 import qrSettingsRoutes from './routes/qr-settings.routes.js';
 import qrCodeRoutes from './routes/qr-code.routes.js';
+import pdfMergeProjectRoutes from './routes/pdf-merge-project.routes.js';
 
 // Middleware d'erreur
 import { errorHandler } from './middleware/error.middleware.js';
@@ -85,6 +86,7 @@ app.use('/api/v1/notion-pages', notionPageRoutes);
 app.use('/api/v1/qr-media', qrMediaRoutes);
 app.use('/api/v1/qr-settings', qrSettingsRoutes);
 app.use('/api/v1/qr-codes', qrCodeRoutes);
+app.use('/api/v1/pdf-merge-projects', pdfMergeProjectRoutes);
 
 // Route de test
 app.get('/api/v1/health', (req, res) => {

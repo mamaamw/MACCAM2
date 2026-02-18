@@ -83,6 +83,9 @@ model User {
   
   // Relations pour QR Codes
   qrCodes         QrCode[]
+  
+  // Relations pour PDF Tools
+  pdfMergeProjects PdfMergeProject[] @relation("PdfMergeProjects")
 
   @@map("users")
 }
@@ -567,4 +570,25 @@ model Event {
   @@index([userId])
   @@index([startDate])
   @@map("events")
+}
+
+// Modèle pour sauvegarder les projets de fusion PDF
+model PdfMergeProject {
+  id              String    @id @default(uuid())
+  userId          String
+  name            String    // Nom du projet
+  description     String?   // Description optionnelle
+  filesData       String    // JSON contenant les infos des fichiers (nom, pageCount, selectedPages, ordre)
+  filesDirectory  String    // Répertoire contenant les fichiers uploadés
+  totalFiles      Int       // Nombre de fichiers
+  totalPages      Int       // Nombre total de pages sélectionnées
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  // Relations
+  user            User      @relation("PdfMergeProjects", fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+  @@index([createdAt])
+  @@map("pdf_merge_projects")
 }

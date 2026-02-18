@@ -47,6 +47,13 @@ import QRCodeGenerator from './pages/apps/QRCodeGenerator'
 import MyQrCodes from './pages/apps/MyQrCodes'
 import PDFTools from './pages/apps/PDFTools'
 import PDFToolDetail from './pages/apps/PDFToolDetail'
+import MergePdf from './pages/apps/MergePdf'
+import SignPdf from './pages/apps/SignPdf'
+import UnlockPdf from './pages/apps/UnlockPdf'
+import EditPdf from './pages/apps/EditPdf'
+import ConvertToPdf from './pages/apps/ConvertToPdf'
+import ConvertFromPdf from './pages/apps/ConvertFromPdf'
+import OrganizePdf from './pages/apps/OrganizePdf'
 import NotionLike from './pages/apps/NotionLike'
 
 // Analytics & Reports
@@ -365,6 +372,62 @@ function App() {
         <ProtectedRoute>
           <DashboardLayout>
             <PDFTools />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/apps/pdf-tools/merge-pdf" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <MergePdf />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/apps/pdf-tools/sign-pdf" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <SignPdf />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/apps/pdf-tools/unlock-pdf" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <UnlockPdf />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/apps/pdf-tools/edit-pdf" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <EditPdf />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/apps/pdf-tools/convert-to-pdf" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ConvertToPdf />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/apps/pdf-tools/convert-from-pdf" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ConvertFromPdf />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+
+      <Route path="/apps/pdf-tools/organize-pdf" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <OrganizePdf />
           </DashboardLayout>
         </ProtectedRoute>
       } />
