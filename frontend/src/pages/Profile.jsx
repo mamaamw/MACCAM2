@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../stores/authStore'
 import userService from '../services/userService'
 import { useI18n } from '../i18n/I18nContext'
@@ -11,6 +11,8 @@ export default function Profile() {
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
   const [activities, setActivities] = useState([])
+  const [avatarPreview, setAvatarPreview] = useState(null)
+  const fileInputRef = useRef(null)
   
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
@@ -201,6 +203,87 @@ export default function Profile() {
     }
   }
 
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Vérifier le type de fichier
+    if (!file.type.startsWith('image/')) {
+      setError(t('profile.errorInvalidImage') || 'Veuillez sélectionner une image valide')
+      setTimeout(() => setError(''), 5000)
+      return
+    }
+
+    // Vérifier la taille (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError(t('profile.errorImageTooLarge') || 'L\'image est trop volumineuse (max 5MB)')
+      setTimeout(() => setError(''), 5000)
+      return
+    }
+
+    // Créer une prévisualisation
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result)
+    }
+    reader.readAsDataURL(file)
+
+    // Uploader l'image
+    handleAvatarUpload(file)
+  }
+
+  const handleAvatarUpload = async (file) => {
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const response = await userService.uploadAvatar(file)
+      if (response.success) {
+        updateAuthUser(response.data)
+        setSuccess(t('profile.successAvatarUpdated') || 'Photo de profil mise à jour avec succès')
+        setTimeout(() => setSuccess(''), 3000)
+        loadActivities()
+      }
+    } catch (err) {
+      setError(err.message || t('profile.errorAvatarUpload') || 'Erreur lors de la mise à jour de la photo')
+      setTimeout(() => setError(''), 5000)
+      setAvatarPreview(null)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAvatarDelete = async () => {
+    if (!confirm(t('profile.confirmDeleteAvatar') || 'Êtes-vous sûr de vouloir supprimer votre photo de profil ?')) {
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    setSuccess('')
+
+    try {
+      const response = await userService.deleteAvatar()
+      if (response.success) {
+        updateAuthUser(response.data)
+        setAvatarPreview(null)
+        setSuccess(t('profile.successAvatarDeleted') || 'Photo de profil supprimée avec succès')
+        setTimeout(() => setSuccess(''), 3000)
+        loadActivities()
+      }
+    } catch (err) {
+      setError(err.message || t('profile.errorAvatarDelete') || 'Erreur lors de la suppression de la photo')
+      setTimeout(() => setError(''), 5000)
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const formatDate = (dateString) => {
     const date = new Date(dateString)
     const now = new Date()
@@ -279,10 +362,25 @@ export default function Profile() {
             {/* Profile Card */}
             <div className="card stretch stretch-full">
               <div className="card-body">
+                <input 
+                  ref={fileInputRef}
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleAvatarChange}
+                  style={{ display: 'none' }}
+                />
                 <div className="d-flex align-items-center justify-content-between mb-4">
                   <div className="d-flex align-items-center gap-3">
-                    <div className="avatar-image avatar-xl">
-                      <img src="/assets/images/avatar/1.png" alt="" className="img-fluid" />
+                    <div className="avatar-image avatar-xl position-relative" style={{ cursor: 'pointer' }} onClick={handleAvatarClick}>
+                      <img 
+                        src={avatarPreview || (user?.avatar ? `http://localhost:5000${user.avatar}` : '/assets/images/avatar/1.png')} 
+                        alt={`${user?.firstName} ${user?.lastName}`} 
+                        className="img-fluid" 
+                        style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '50%' }}
+                      />
+                      <div className="position-absolute bottom-0 end-0 bg-primary rounded-circle p-1" style={{ cursor: 'pointer' }}>
+                        <i className="feather-camera text-white" style={{ fontSize: '14px' }}></i>
+                      </div>
                     </div>
                     <div>
                       <a href="javascript:void(0);" className="fw-bold mb-1 text-truncate-1-line">
@@ -297,11 +395,11 @@ export default function Profile() {
                       <i className="feather-more-vertical"></i>
                     </a>
                     <div className="dropdown-menu dropdown-menu-end">
-                      <a className="dropdown-item" href="javascript:void(0);">
+                      <a className="dropdown-item" href="javascript:void(0);" onClick={handleAvatarClick}>
                         <i className="feather-edit-3 me-3"></i>
                         <span>{t('profile.editPhoto')}</span>
                       </a>
-                      <a className="dropdown-item" href="javascript:void(0);">
+                      <a className="dropdown-item" href="javascript:void(0);" onClick={handleAvatarDelete}>
                         <i className="feather-trash-2 me-3"></i>
                         <span>{t('profile.deletePhoto')}</span>
                       </a>

@@ -136,6 +136,31 @@ const userService = {
     });
     return handleResponse(response);
   },
+
+  // Upload avatar
+  uploadAvatar: async (file) => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
+    const response = await fetch(`${API_URL}/avatar`, {
+      method: 'POST',
+      headers: {
+        'Authorization': token ? `Bearer ${token}` : '',
+      },
+      body: formData,
+    });
+    return handleResponse(response);
+  },
+
+  // Supprimer avatar
+  deleteAvatar: async () => {
+    const response = await fetch(`${API_URL}/avatar`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
 };
 
 export default userService;

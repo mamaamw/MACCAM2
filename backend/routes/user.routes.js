@@ -1,10 +1,44 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
 import { PrismaClient } from '@prisma/client';
 import { protect, authorize } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+
+// Configuration de multer pour l'upload d'avatar
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = 'uploads/avatars';
+    // Créer le dossier s'il n'existe pas
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
+    cb(null, `avatar-${req.user.id}-${uniqueSuffix}${path.extname(file.originalname)}`);
+  }
+});
+
+const fileFilter = (req, file, cb) => {
+  // Accepter uniquement les images
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Seules les images sont autorisées'), false);
+  }
+};
+
+const upload = multer({ 
+  storage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 } // Max 5MB
+});
 
 router.use(protect);
 
@@ -420,6 +454,140 @@ router.delete('/:id', authorize('ADMIN'), async (req, res) => {
     });
     
     res.json({ success: true, message: 'Utilisateur supprimé' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// POST /api/users/avatar - Upload avatar
+router.post('/avatar', upload.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Aucun fichier fourni' 
+      });
+    }
+
+    // Supprimer l'ancien avatar s'il existe
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { avatar: true }
+    });
+
+    if (currentUser.avatar) {
+      const oldAvatarPath = path.join(process.cwd(), currentUser.avatar.replace(/^\//, ''));
+      if (fs.existsSync(oldAvatarPath)) {
+        fs.unlinkSync(oldAvatarPath);
+      }
+    }
+
+    // Sauvegarder le chemin de l'avatar dans la base de données
+    const avatarPath = `/uploads/avatars/${req.file.filename}`;
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { avatar: avatarPath },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        avatar: true,
+        role: true,
+        isActive: true,
+        company: true,
+        address: true,
+        city: true,
+        country: true,
+        postalCode: true,
+        bio: true,
+        twoFactorEnabled: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    // Créer une activité
+    await prisma.activity.create({
+      data: {
+        type: 'avatar_updated',
+        description: 'Photo de profil mise à jour',
+        userId: req.user.id
+      }
+    });
+
+    res.json({ success: true, data: user });
+  } catch (error) {
+    // Supprimer le fichier uploadé en cas d'erreur
+    if (req.file) {
+      const filePath = path.join(process.cwd(), 'uploads', 'avatars', req.file.filename);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    }
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// DELETE /api/users/avatar - Supprimer avatar
+router.delete('/avatar', async (req, res) => {
+  try {
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { avatar: true }
+    });
+
+    if (!currentUser.avatar) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Aucun avatar à supprimer' 
+      });
+    }
+
+    // Supprimer le fichier avatar
+    const avatarPath = path.join(process.cwd(), currentUser.avatar.replace(/^\//, ''));
+    if (fs.existsSync(avatarPath)) {
+      fs.unlinkSync(avatarPath);
+    }
+
+    // Mettre à jour la base de données
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { avatar: null },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        avatar: true,
+        role: true,
+        isActive: true,
+        company: true,
+        address: true,
+        city: true,
+        country: true,
+        postalCode: true,
+        bio: true,
+        twoFactorEnabled: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    // Créer une activité
+    await prisma.activity.create({
+      data: {
+        type: 'avatar_deleted',
+        description: 'Photo de profil supprimée',
+        userId: req.user.id
+      }
+    });
+
+    res.json({ success: true, data: user });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

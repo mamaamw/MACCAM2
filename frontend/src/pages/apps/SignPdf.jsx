@@ -31,6 +31,22 @@ export default function SignPdf() {
   const [pendingElement, setPendingElement] = useState(null) // Element being placed
   const [previewPosition, setPreviewPosition] = useState(null) // {x, y} for preview
   
+  // Digital signature
+  const [digitalSignMethod, setDigitalSignMethod] = useState('certificate') // 'certificate', 'eid', 'itsme', 'csam'
+  const [certificate, setCertificate] = useState(null)
+  const [certificatePassword, setCertificatePassword] = useState('')
+  const [signatureReason, setSignatureReason] = useState('Signature électronique')
+  const [signerName, setSignerName] = useState('')
+  const [signatureStampPosition, setSignatureStampPosition] = useState(null) // {x, y, page}
+  
+  // eID specific
+  const [eidPin, setEidPin] = useState('')
+  const [eidCardInfo, setEidCardInfo] = useState(null)
+  
+  // OAuth specific (itsme & CSAM)
+  const [authCode, setAuthCode] = useState(null)
+  const [availableMethods, setAvailableMethods] = useState([])
+  
   const fileInputRef = useRef(null)
   const imageInputRef = useRef(null)
   const drawCanvasRef = useRef(null)
@@ -56,6 +72,34 @@ export default function SignPdf() {
       renderPdfPage(currentPage)
     }
   }, [pdfJsDoc, currentPage, placedElements])
+
+  // Load available signature methods
+  useEffect(() => {
+    fetch('http://localhost:5000/api/v1/pdf-sign/methods')
+      .then(res => res.json())
+      .then(data => setAvailableMethods(data.methods))
+      .catch(err => console.error('Erreur chargement méthodes:', err))
+  }, [])
+
+  // Handle OAuth callback (itsme, CSAM)
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search)
+    const code = urlParams.get('authCode')
+    const method = urlParams.get('method')
+    const error = urlParams.get('error')
+    
+    if (error) {
+      toast.error(`Erreur d'authentification: ${error}`)
+      // Nettoyer l'URL
+      window.history.replaceState({}, '', window.location.pathname)
+    } else if (code && method) {
+      setAuthCode(code)
+      setDigitalSignMethod(method)
+      toast.success('Authentification réussie ! Vous pouvez maintenant signer le document.')
+      // Nettoyer l'URL
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  }, [])
 
   const handleFileSelect = async (event) => {
     const selectedFile = event.target.files?.[0]
@@ -220,6 +264,32 @@ export default function SignPdf() {
         previewPosition.x,
         previewPosition.y
       )
+      ctx.globalAlpha = 1.0
+    } else if (pendingElement.type === 'signature-stamp') {
+      // Draw signature stamp preview
+      const stampWidth = pendingElement.size.width * scale
+      const stampHeight = pendingElement.size.height * scale
+      const stampX = previewPosition.x - stampWidth / 2
+      const stampY = previewPosition.y - stampHeight / 2
+      
+      ctx.globalAlpha = 0.7
+      // Background
+      ctx.fillStyle = 'rgb(242, 242, 255)'
+      ctx.fillRect(stampX, stampY, stampWidth, stampHeight)
+      // Border
+      ctx.strokeStyle = 'rgb(0, 0, 128)'
+      ctx.lineWidth = 1.5
+      ctx.strokeRect(stampX, stampY, stampWidth, stampHeight)
+      // Text
+      ctx.fillStyle = 'rgb(0, 0, 128)'
+      ctx.font = `bold ${10 * scale}px Arial`
+      ctx.fillText('SIGNÉ ÉLECTRONIQUEMENT', stampX + 10, stampY + 20)
+      ctx.font = `${9 * scale}px Arial`
+      ctx.fillStyle = 'black'
+      ctx.fillText(`Signataire: ${pendingElement.data.name || 'Non spécifié'}`, stampX + 10, stampY + 40)
+      ctx.font = `${8 * scale}px Arial`
+      ctx.fillStyle = 'gray'
+      ctx.fillText(`Raison: ${pendingElement.data.reason}`, stampX + 10, stampY + 60)
       ctx.globalAlpha = 1.0
     } else {
       const img = new Image()
@@ -407,6 +477,20 @@ export default function SignPdf() {
     })
   }
 
+  const startPlaceSignatureStamp = () => {
+    if (!certificate) {
+      toast.error('Sélectionnez un certificat d\'abord')
+      return
+    }
+    setPlacementMode('signature-stamp')
+    setPendingElement({
+      type: 'signature-stamp',
+      data: { name: signerName, reason: signatureReason },
+      size: { width: 250, height: 100 }
+    })
+    toast.info('Cliquez sur le PDF pour placer la signature')
+  }
+
   const handlePdfMouseMove = (e) => {
     if (!placementMode || !pendingElement) return
     
@@ -450,6 +534,21 @@ export default function SignPdf() {
         y: y / scale,
         page: currentPage
       }
+    } else if (pendingElement.type === 'signature-stamp') {
+      // Center the stamp on click position
+      position = {
+        x: (x - (pendingElement.size.width * scale) / 2) / scale,
+        y: (y - (pendingElement.size.height * scale) / 2) / scale,
+        width: pendingElement.size.width,
+        height: pendingElement.size.height,
+        page: currentPage
+      }
+      setSignatureStampPosition(position)
+      setPlacementMode(null)
+      setPendingElement(null)
+      setPreviewPosition(null)
+      toast.success('Position de signature enregistrée ! Cliquez sur "Signer Électroniquement"')
+      return
     } else {
       // Center the element on click position (same as preview)
       position = {
@@ -479,7 +578,7 @@ export default function SignPdf() {
     console.log('Éléments:', placedElements)
     
     if (!pdfDoc || placedElements.length === 0) {
-      toast.error('Placez au moins un Ã©lÃ©ment sur le PDF')
+      toast.error('Placez au moins un élément sur le PDF')
       return
     }
 
@@ -608,13 +707,135 @@ export default function SignPdf() {
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
 
-      toast.success('PDF signÃ© avec succÃ¨s !')
+      toast.success('PDF signé avec succès !')
       setPlacedElements([])
     } catch (error) {
       console.error('Erreur signature:', error)
       toast.error('Erreur lors de la signature du PDF')
     } finally {
       setIsProcessing(false)
+    }
+  }
+
+  const digitalSign = async () => {
+    if (!file) {
+      toast.error('Chargez un PDF d\'abord')
+      return
+    }
+
+    if (digitalSignMethod === 'certificate' && !certificate) {
+      toast.error('Sélectionnez un certificat')
+      return
+    }
+    
+    if (digitalSignMethod === 'eid' && !eidPin) {
+      toast.error('Entrez votre code PIN eID')
+      return
+    }
+    
+    if ((digitalSignMethod === 'itsme' || digitalSignMethod === 'csam') && !authCode) {
+      toast.error('Authentification requise')
+      return
+    }
+
+    setIsProcessing(true)
+
+    try {
+      const formData = new FormData()
+      formData.append('pdf', file)
+      formData.append('signMethod', digitalSignMethod)
+      formData.append('reason', signatureReason)
+      formData.append('name', signerName)
+      
+      if (digitalSignMethod === 'certificate') {
+        formData.append('certificate', certificate)
+        formData.append('certificatePassword', certificatePassword)
+      } else if (digitalSignMethod === 'eid') {
+        formData.append('eidPin', eidPin)
+      } else if (digitalSignMethod === 'itsme' || digitalSignMethod === 'csam') {
+        formData.append('authCode', authCode)
+      }
+      
+      // Ajouter les coordonnées de la signature si elles sont définies
+      if (signatureStampPosition) {
+        formData.append('signatureX', signatureStampPosition.x)
+        formData.append('signatureY', signatureStampPosition.y)
+        formData.append('signaturePage', signatureStampPosition.page)
+        formData.append('signatureWidth', signatureStampPosition.width)
+        formData.append('signatureHeight', signatureStampPosition.height)
+      }
+
+      const response = await fetch('http://localhost:5000/api/v1/pdf-sign/digital-sign', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Erreur lors de la signature')
+      }
+
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = file.name.replace('.pdf', '-electronically-signed.pdf')
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+
+      toast.success('PDF signé électroniquement avec succès !')
+      setSignatureStampPosition(null)
+      setAuthCode(null) // Reset auth code
+      setEidPin('') // Reset PIN
+    } catch (error) {
+      console.error('Erreur signature électronique:', error)
+      toast.error(error.message || 'Erreur lors de la signature électronique')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
+
+  const checkEidCard = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/v1/pdf-sign/eid/check', {
+        method: 'POST'
+      })
+      
+      const data = await response.json()
+      
+      if (!response.ok) {
+        toast.error(data.message || 'Middleware eID non disponible')
+        return
+      }
+      
+      setEidCardInfo(data.card)
+      setSignerName(data.card.fullName)
+      toast.success(`Carte eID détectée: ${data.card.fullName}`)
+    } catch (error) {
+      toast.error('Impossible de lire la carte eID')
+    }
+  }
+
+  const initiateOAuthFlow = async (method) => {
+    try {
+      const endpoint = method === 'itsme' 
+        ? 'http://localhost:5000/api/v1/pdf-sign/itsme/authorize'
+        : 'http://localhost:5000/api/v1/pdf-sign/csam/authorize'
+      
+      const response = await fetch(endpoint)
+      const data = await response.json()
+      
+      if (!response.ok) {
+        toast.error(data.message || 'Service non configuré')
+        return
+      }
+      
+      // Ouvrir la page d'autorisation dans une nouvelle fenêtre
+      window.location.href = data.authUrl
+    } catch (error) {
+      toast.error(`Erreur d'authentification ${method}`)
     }
   }
 
@@ -863,6 +1084,226 @@ export default function SignPdf() {
             </div>
           </div>
 
+          {/* Signature Électronique */}
+          {file && (
+            <div className="card border-0 shadow-sm">
+              <div className="card-body">
+                <h6 className="mb-3">
+                  <i className="feather-shield me-2"></i>
+                  Signature Électronique Qualifiée
+                </h6>
+                
+                <div className="mb-3">
+                  <label className="form-label small">Méthode de signature</label>
+                  <select 
+                    className="form-select" 
+                    value={digitalSignMethod}
+                    onChange={(e) => {
+                      setDigitalSignMethod(e.target.value)
+                      setAuthCode(null) // Reset auth code on method change
+                    }}
+                  >
+                    {availableMethods.map(method => (
+                      <option 
+                        key={method.id} 
+                        value={method.id} 
+                        disabled={!method.available}
+                      >
+                        {method.name} {!method.available && '(non disponible)'}
+                      </option>
+                    ))}
+                  </select>
+                  {availableMethods.length === 0 && (
+                    <small className="text-muted">Chargement des méthodes...</small>
+                  )}
+                </div>
+
+                {digitalSignMethod === 'certificate' && (
+                  <>
+                    <div className="mb-3">
+                      <label className="form-label small">Certificat (.p12 / .pfx)</label>
+                      <input
+                        type="file"
+                        accept=".p12,.pfx"
+                        onChange={(e) => setCertificate(e.target.files[0])}
+                        className="form-control"
+                      />
+                      <div className="mt-2">
+                        <button
+                          type="button"
+                          className="btn btn-outline-secondary btn-sm w-100"
+                          onClick={async () => {
+                            try {
+                              const response = await fetch('http://localhost:5000/api/v1/pdf-sign/demo-certificate')
+                              if (!response.ok) throw new Error('Certificat non disponible')
+                              const blob = await response.blob()
+                              const url = URL.createObjectURL(blob)
+                              const a = document.createElement('a')
+                              a.href = url
+                              a.download = 'demo-certificate.p12'
+                              a.click()
+                              URL.revokeObjectURL(url)
+                              toast.success('Certificat de test téléchargé! Mot de passe: "demo"')
+                            } catch (error) {
+                              toast.error('Impossible de télécharger le certificat de test')
+                            }
+                          }}
+                        >
+                          <i className="feather-download me-1"></i>
+                          Télécharger un certificat de test
+                        </button>
+                        <small className="text-muted d-block mt-1">
+                          Mot de passe du certificat de test: <strong>demo</strong>
+                        </small>
+                      </div>
+                    </div>
+                    
+                    <div className="mb-3">
+                      <label className="form-label small">Mot de passe du certificat</label>
+                      <input
+                        type="password"
+                        value={certificatePassword}
+                        onChange={(e) => setCertificatePassword(e.target.value)}
+                        className="form-control"
+                        placeholder="Mot de passe"
+                      />
+                    </div>
+                  </>
+                )}
+
+                {digitalSignMethod === 'eid' && (
+                  <>
+                    <div className="alert alert-info py-2 mb-3">
+                      <i className="feather-info me-2"></i>
+                      Assurez-vous que votre carte eID est insérée dans le lecteur
+                    </div>
+                    
+                    <button
+                      className="btn btn-outline-primary w-100 mb-3"
+                      onClick={checkEidCard}
+                      disabled={isProcessing}
+                    >
+                      <i className="feather-credit-card me-2"></i>
+                      Vérifier la carte eID
+                    </button>
+                    
+                    {eidCardInfo && (
+                      <div className="alert alert-success py-2 mb-3">
+                        <i className="feather-check-circle me-2"></i>
+                        Carte détectée: {eidCardInfo.fullName}
+                      </div>
+                    )}
+                    
+                    <div className="mb-3">
+                      <label className="form-label small">Code PIN eID</label>
+                      <input
+                        type="password"
+                        value={eidPin}
+                        onChange={(e) => setEidPin(e.target.value)}
+                        className="form-control"
+                        placeholder="Votre code PIN à 4 chiffres"
+                        maxLength={4}
+                      />
+                      <small className="text-muted">Votre code PIN sera demandé pour signer le document</small>
+                    </div>
+                  </>
+                )}
+
+                {(digitalSignMethod === 'itsme' || digitalSignMethod === 'csam') && (
+                  <>
+                    <div className="alert alert-info py-2 mb-3">
+                      <i className="feather-info me-2"></i>
+                      {digitalSignMethod === 'itsme' 
+                        ? 'Vous serez redirigé vers l\'application itsme® pour signer'
+                        : 'Vous serez redirigé vers MyGov.be pour vous authentifier'}
+                    </div>
+                    
+                    {!authCode ? (
+                      <button
+                        className="btn btn-primary w-100 mb-3"
+                        onClick={() => initiateOAuthFlow(digitalSignMethod)}
+                        disabled={isProcessing}
+                      >
+                        <i className="feather-log-in me-2"></i>
+                        {digitalSignMethod === 'itsme' 
+                          ? 'Se connecter avec itsme®'
+                          : 'Se connecter avec MyGov.be'}
+                      </button>
+                    ) : (
+                      <div className="alert alert-success py-2 mb-3">
+                        <i className="feather-check-circle me-2"></i>
+                        Authentification réussie ! Vous pouvez maintenant signer le document.
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <div className="mb-3">
+                  <label className="form-label small">Nom du signataire</label>
+                  <input
+                    type="text"
+                    value={signerName}
+                    onChange={(e) => setSignerName(e.target.value)}
+                    className="form-control"
+                    placeholder="Votre nom"
+                  />
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label small">Raison de la signature</label>
+                  <input
+                    type="text"
+                    value={signatureReason}
+                    onChange={(e) => setSignatureReason(e.target.value)}
+                    className="form-control"
+                    placeholder="Ex: Approbation du document"
+                  />
+                </div>
+
+                <button
+                  className="btn btn-outline-primary w-100 mb-2"
+                  onClick={startPlaceSignatureStamp}
+                  disabled={isProcessing || (digitalSignMethod === 'certificate' && !certificate)}
+                >
+                  <i className="feather-crosshair me-2"></i>
+                  {signatureStampPosition ? 'Repositionner la signature' : 'Placer la signature sur le PDF'}
+                </button>
+                
+                {signatureStampPosition && (
+                  <div className="alert alert-success py-2 mb-2">
+                    <i className="feather-check-circle me-2"></i>
+                    Signature placée à la page {signatureStampPosition.page + 1}
+                  </div>
+                )}
+
+                <button
+                  className="btn btn-primary w-100"
+                  onClick={digitalSign}
+                  disabled={isProcessing || (digitalSignMethod === 'certificate' && !certificate)}
+                >
+                  {isProcessing ? (
+                    <>
+                      <span className="spinner-border spinner-border-sm me-2"></span>
+                      Signature en cours...
+                    </>
+                  ) : (
+                    <>
+                      <i className="feather-shield me-2"></i>
+                      Signer Électroniquement
+                    </>
+                  )}
+                </button>
+
+                <div className="mt-2">
+                  <small className="text-muted">
+                    <i className="feather-info me-1"></i>
+                    La signature électronique garantit l'authenticité du document
+                  </small>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="card border-0 shadow-sm">
             <div className="card-body">
@@ -871,7 +1312,7 @@ export default function SignPdf() {
                 Actions
               </h6>
               <div className="mb-2 text-muted small">
-                {placedElements.length} Ã©lÃ©ment(s) placÃ©(s)
+                {placedElements.length} élément(s) placé(s)
               </div>
               <button
                 className="btn btn-success w-100 mb-2"
@@ -886,7 +1327,7 @@ export default function SignPdf() {
                 ) : (
                   <>
                     <i className="feather-download me-2"></i>
-                    TÃ©lÃ©charger le PDF signÃ©
+                    Télécharger le PDF signé
                   </>
                 )}
               </button>
@@ -896,7 +1337,7 @@ export default function SignPdf() {
                   onClick={() => setPlacedElements([])}
                 >
                   <i className="feather-trash-2 me-2"></i>
-                  Supprimer tous les Ã©lÃ©ments
+                  Supprimer tous les éléments
                 </button>
               )}
             </div>
