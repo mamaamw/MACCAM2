@@ -43,11 +43,6 @@ export default function Profile() {
   })
 
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
-  
-  // États pour les modes d'édition
-  const [isEditingProfile, setIsEditingProfile] = useState(false)
-  const [isEditingPassword, setIsEditingPassword] = useState(false)
-  const [tempFormData, setTempFormData] = useState({})
 
   // Charger le profil au montage
   useEffect(() => {
@@ -107,25 +102,6 @@ export default function Profile() {
     }
   }
 
-  const handleEditProfile = () => {
-    setTempFormData({ ...formData })
-    setIsEditingProfile(true)
-  }
-
-  const handleCancelEditProfile = () => {
-    setFormData({ ...tempFormData })
-    setIsEditingProfile(false)
-  }
-
-  const handleEditPassword = () => {
-    setIsEditingPassword(true)
-  }
-
-  const handleCancelEditPassword = () => {
-    setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
-    setIsEditingPassword(false)
-  }
-
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -139,7 +115,6 @@ export default function Profile() {
         setSuccess(t('profile.successProfileUpdated'))
         setTimeout(() => setSuccess(''), 3000)
         loadActivities() // Recharger les activités
-        setIsEditingProfile(false)
       }
     } catch (err) {
       setError(err.message || t('profile.errorUpdating'))
@@ -186,7 +161,6 @@ export default function Profile() {
         setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' })
         setTimeout(() => setSuccess(''), 3000)
         loadActivities() // Recharger les activités
-        setIsEditingPassword(false)
       }
     } catch (err) {
       setError(err.message || t('profile.errorPwdChange'))
@@ -409,26 +383,26 @@ export default function Profile() {
                       </div>
                     </div>
                     <div>
-                      <div className="fw-bold mb-1 text-truncate-1-line">
+                      <a href="javascript:void(0);" className="fw-bold mb-1 text-truncate-1-line">
                         {user?.firstName} {user?.lastName}
-                      </div>
+                      </a>
                       <div className="fs-11 fw-semibold text-primary text-truncate-1-line">@{user?.username}</div>
                       <div className="fs-12 fw-normal text-muted text-truncate-1-line">{user?.email}</div>
                     </div>
                   </div>
                   <div className="dropdown">
-                    <button type="button" className="btn btn-link d-flex p-0" data-bs-toggle="dropdown">
+                    <a href="javascript:void(0);" className="d-flex" data-bs-toggle="dropdown">
                       <i className="feather-more-vertical"></i>
-                    </button>
+                    </a>
                     <div className="dropdown-menu dropdown-menu-end">
-                      <button type="button" className="dropdown-item" onClick={handleAvatarClick}>
+                      <a className="dropdown-item" href="javascript:void(0);" onClick={handleAvatarClick}>
                         <i className="feather-edit-3 me-3"></i>
                         <span>{t('profile.editPhoto')}</span>
-                      </button>
-                      <button type="button" className="dropdown-item" onClick={handleAvatarDelete}>
+                      </a>
+                      <a className="dropdown-item" href="javascript:void(0);" onClick={handleAvatarDelete}>
                         <i className="feather-trash-2 me-3"></i>
                         <span>{t('profile.deletePhoto')}</span>
-                      </button>
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -467,14 +441,14 @@ export default function Profile() {
                   </li>
                 </ul>
                 <div className="d-flex gap-2">
-                  <button type="button" className="btn btn-light-brand w-100" onClick={() => setActiveTab('profile')}>
+                  <a href="javascript:void(0);" className="btn btn-light-brand w-100" onClick={() => setActiveTab('profile')}>
                     <i className="feather-edit me-2"></i>
                     {t('profile.edit')}
-                  </button>
-                  <button type="button" className="btn btn-light w-100" onClick={() => setActiveTab('security')}>
+                  </a>
+                  <a href="javascript:void(0);" className="btn btn-light w-100" onClick={() => setActiveTab('security')}>
                     <i className="feather-settings me-2"></i>
                     {t('profile.settings')}
-                  </button>
+                  </a>
                 </div>
               </div>
             </div>
@@ -506,48 +480,48 @@ export default function Profile() {
               <div className="card-header">
                 <ul className="nav nav-tabs" role="tablist">
                   <li className="nav-item" role="presentation">
-                    <button 
-                      type="button"
+                    <a 
                       className={`nav-link ${activeTab === 'profile' ? 'active' : ''}`}
                       onClick={() => setActiveTab('profile')}
                       role="tab"
+                      href="javascript:void(0);"
                     >
                       <i className="feather-user me-2"></i>
                       {t('profile.tabInfo')}
-                    </button>
+                    </a>
                   </li>
                   <li className="nav-item" role="presentation">
-                    <button 
-                      type="button"
+                    <a 
                       className={`nav-link ${activeTab === 'security' ? 'active' : ''}`}
                       onClick={() => setActiveTab('security')}
                       role="tab"
+                      href="javascript:void(0);"
                     >
                       <i className="feather-shield me-2"></i>
                       {t('profile.tabSecurity')}
-                    </button>
+                    </a>
                   </li>
                   <li className="nav-item" role="presentation">
-                    <button 
-                      type="button"
+                    <a 
                       className={`nav-link ${activeTab === 'activity' ? 'active' : ''}`}
                       onClick={() => setActiveTab('activity')}
                       role="tab"
+                      href="javascript:void(0);"
                     >
                       <i className="feather-activity me-2"></i>
                       {t('profile.tabActivity')}
-                    </button>
+                    </a>
                   </li>
                   <li className="nav-item" role="presentation">
-                    <button 
-                      type="button"
+                    <a 
                       className={`nav-link ${activeTab === 'notifications' ? 'active' : ''}`}
                       onClick={() => setActiveTab('notifications')}
                       role="tab"
+                      href="javascript:void(0);"
                     >
                       <i className="feather-bell me-2"></i>
                       {t('profile.tabNotifications')}
-                    </button>
+                    </a>
                   </li>
                 </ul>
               </div>
@@ -557,339 +531,223 @@ export default function Profile() {
                   {/* Profile Tab */}
                   {activeTab === 'profile' && (
                     <div className="tab-pane fade show active">
-                      {!isEditingProfile ? (
-                        /* Mode Lecture */
-                        <div>
-                          <div className="d-flex align-items-center justify-content-between mb-4">
-                            <h6 className="fw-bold">{t('profile.personalInformation')}</h6>
-                            <button 
-                              type="button" 
-                              className="btn btn-sm btn-primary"
-                              onClick={handleEditProfile}
-                            >
-                              <i className="feather-edit me-2"></i>
-                              {t('profile.edit')}
-                            </button>
+                      <form onSubmit={handleSubmit}>
+                        <div className="row">
+                          <div className="col-md-6 mb-4">
+                            <label className="form-label">{t('profile.firstName')} <span className="text-danger">*</span></label>
+                            <input 
+                              type="text" 
+                              className="form-control" 
+                              name="firstName"
+                              value={formData.firstName}
+                              onChange={handleChange}
+                              placeholder={t('profile.yourFirstName')}
+                              required
+                            />
                           </div>
-                          <div className="row">
-                            <div className="col-md-6 mb-4">
-                              <label className="form-label fw-semibold text-muted">{t('profile.firstName')}</label>
-                              <p className="mb-0">{formData.firstName || '-'}</p>
-                            </div>
-                            <div className="col-md-6 mb-4">
-                              <label className="form-label fw-semibold text-muted">{t('profile.lastName')}</label>
-                              <p className="mb-0">{formData.lastName || '-'}</p>
-                            </div>
-                            <div className="col-md-6 mb-4">
-                              <label className="form-label fw-semibold text-muted">{t('profile.email')}</label>
-                              <p className="mb-0">{formData.email || '-'}</p>
-                            </div>
-                            <div className="col-md-6 mb-4">
-                              <label className="form-label fw-semibold text-muted">{t('profile.username')}</label>
-                              <p className="mb-0">@{formData.username || '-'}</p>
-                            </div>
-                            <div className="col-md-6 mb-4">
-                              <label className="form-label fw-semibold text-muted">{t('profile.phone')}</label>
-                              <p className="mb-0">{formData.phone || '-'}</p>
-                            </div>
-                            <div className="col-md-6 mb-4">
-                              <label className="form-label fw-semibold text-muted">{t('profile.company')}</label>
-                              <p className="mb-0">{formData.company || '-'}</p>
-                            </div>
-                            <div className="col-md-6 mb-4">
-                              <label className="form-label fw-semibold text-muted">{t('profile.address')}</label>
-                              <p className="mb-0">{formData.address || '-'}</p>
-                            </div>
-                            <div className="col-md-4 mb-4">
-                              <label className="form-label fw-semibold text-muted">{t('profile.city')}</label>
-                              <p className="mb-0">{formData.city || '-'}</p>
-                            </div>
-                            <div className="col-md-4 mb-4">
-                              <label className="form-label fw-semibold text-muted">{t('profile.postalCode')}</label>
-                              <p className="mb-0">{formData.postalCode || '-'}</p>
-                            </div>
-                            <div className="col-md-4 mb-4">
-                              <label className="form-label fw-semibold text-muted">{t('profile.country')}</label>
-                              <p className="mb-0">{formData.country || '-'}</p>
-                            </div>
-                            <div className="col-12 mb-4">
-                              <label className="form-label fw-semibold text-muted">{t('profile.biography')}</label>
-                              <p className="mb-0">{formData.bio || '-'}</p>
+                          <div className="col-md-6 mb-4">
+                            <label className="form-label">{t('profile.lastName')} <span className="text-danger">*</span></label>
+                            <input 
+                              type="text" 
+                              className="form-control" 
+                              name="lastName"
+                              value={formData.lastName}
+                              onChange={handleChange}
+                              placeholder={t('profile.yourLastName')}
+                              required
+                            />
+                          </div>
+                          <div className="col-md-6 mb-4">
+                            <label className="form-label">{t('profile.email')} <span className="text-danger">*</span></label>
+                            <input 
+                              type="email" 
+                              className="form-control" 
+                              name="email"
+                              value={formData.email}
+                              onChange={handleChange}
+                              placeholder="votre@email.com"
+                              required
+                            />
+                          </div>
+                          <div className="col-md-6 mb-4">
+                            <label className="form-label">{t('profile.username')} <span className="text-danger">*</span></label>
+                            <input 
+                              type="text" 
+                              className="form-control" 
+                              name="username"
+                              value={formData.username}
+                              onChange={handleChange}
+                              placeholder="johndoe"
+                              pattern="[a-zA-Z0-9_]+"
+                              title={t('profile.usernameHelp')}
+                              minLength="3"
+                              required
+                            />
+                            <small className="text-muted">{t('profile.usernameHelp')}</small>
+                          </div>
+                          <div className="col-md-6 mb-4">
+                            <label className="form-label">{t('profile.phone')}</label>
+                            <input 
+                              type="tel" 
+                              className="form-control" 
+                              name="phone"
+                              value={formData.phone}
+                              onChange={handleChange}
+                              placeholder="+33 6 12 34 56 78"
+                            />
+                          </div>
+                          <div className="col-md-6 mb-4">
+                            <label className="form-label">{t('profile.company')}</label>
+                            <input 
+                              type="text" 
+                              className="form-control" 
+                              name="company"
+                              value={formData.company}
+                              onChange={handleChange}
+                              placeholder={t('profile.yourCompany')}
+                            />
+                          </div>
+                          <div className="col-md-6 mb-4">
+                            <label className="form-label">{t('profile.address')}</label>
+                            <input 
+                              type="text" 
+                              className="form-control" 
+                              name="address"
+                              value={formData.address}
+                              onChange={handleChange}
+                              placeholder="123 Rue Example"
+                            />
+                          </div>
+                          <div className="col-md-4 mb-4">
+                            <label className="form-label">{t('profile.city')}</label>
+                            <input 
+                              type="text" 
+                              className="form-control" 
+                              name="city"
+                              value={formData.city}
+                              onChange={handleChange}
+                              placeholder="Paris"
+                            />
+                          </div>
+                          <div className="col-md-4 mb-4">
+                            <label className="form-label">{t('profile.postalCode')}</label>
+                            <input 
+                              type="text" 
+                              className="form-control" 
+                              name="postalCode"
+                              value={formData.postalCode}
+                              onChange={handleChange}
+                              placeholder="75001"
+                            />
+                          </div>
+                          <div className="col-md-4 mb-4">
+                            <label className="form-label">{t('profile.country')}</label>
+                            <select 
+                              className="form-control" 
+                              name="country"
+                              value={formData.country}
+                              onChange={handleChange}
+                            >
+                              <option value="">{t('profile.selectCountry')}</option>
+                              <option value="FR">{t('profile.countryFrance')}</option>
+                              <option value="BE">{t('profile.countryBelgium')}</option>
+                              <option value="CH">{t('profile.countrySwitzerland')}</option>
+                              <option value="CA">{t('profile.countryCanada')}</option>
+                            </select>
+                          </div>
+                          <div className="col-12 mb-4">
+                            <label className="form-label">{t('profile.biography')}</label>
+                            <textarea 
+                              className="form-control" 
+                              name="bio"
+                              value={formData.bio}
+                              onChange={handleChange}
+                              rows="4"
+                              placeholder={t('profile.tellAboutYou')}
+                            ></textarea>
+                          </div>
+                          <div className="col-12">
+                            <div className="d-flex gap-2 justify-content-end">
+                              <button type="button" className="btn btn-light" onClick={loadProfile}>{t('profile.cancel')}</button>
+                              <button type="submit" className="btn btn-primary" disabled={loading}>
+                                {loading ? (
+                                  <>
+                                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    {t('profile.saving')}
+                                  </>
+                                ) : (
+                                  <>
+                                    <i className="feather-save me-2"></i>
+                                    {t('profile.saveChanges')}
+                                  </>
+                                )}
+                              </button>
                             </div>
                           </div>
                         </div>
-                      ) : (
-                        /* Mode Édition */
-                        <form onSubmit={handleSubmit}>
-                          <div className="d-flex align-items-center justify-content-between mb-4">
-                            <h6 className="fw-bold">{t('profile.editProfile')}</h6>
-                          </div>
-                          <div className="row">
-                            <div className="col-md-6 mb-4">
-                              <label className="form-label">{t('profile.firstName')} <span className="text-danger">*</span></label>
-                              <input 
-                                type="text" 
-                                className="form-control" 
-                                name="firstName"
-                                value={formData.firstName}
-                                onChange={handleChange}
-                                placeholder={t('profile.yourFirstName')}
-                                required
-                              />
-                            </div>
-                            <div className="col-md-6 mb-4">
-                              <label className="form-label">{t('profile.lastName')} <span className="text-danger">*</span></label>
-                              <input 
-                                type="text" 
-                                className="form-control" 
-                                name="lastName"
-                                value={formData.lastName}
-                                onChange={handleChange}
-                                placeholder={t('profile.yourLastName')}
-                                required
-                              />
-                            </div>
-                            <div className="col-md-6 mb-4">
-                              <label className="form-label">{t('profile.email')} <span className="text-danger">*</span></label>
-                              <input 
-                                type="email" 
-                                className="form-control" 
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                placeholder="votre@email.com"
-                                required
-                              />
-                            </div>
-                            <div className="col-md-6 mb-4">
-                              <label className="form-label">{t('profile.username')} <span className="text-danger">*</span></label>
-                              <input 
-                                type="text" 
-                                className="form-control" 
-                                name="username"
-                                value={formData.username}
-                                onChange={handleChange}
-                                placeholder="johndoe"
-                                pattern="[a-zA-Z0-9_]+"
-                                title={t('profile.usernameHelp')}
-                                minLength="3"
-                                required
-                              />
-                              <small className="text-muted">{t('profile.usernameHelp')}</small>
-                            </div>
-                            <div className="col-md-6 mb-4">
-                              <label className="form-label">{t('profile.phone')}</label>
-                              <input 
-                                type="tel" 
-                                className="form-control" 
-                                name="phone"
-                                value={formData.phone}
-                                onChange={handleChange}
-                                placeholder="+33 6 12 34 56 78"
-                              />
-                            </div>
-                            <div className="col-md-6 mb-4">
-                              <label className="form-label">{t('profile.company')}</label>
-                              <input 
-                                type="text" 
-                                className="form-control" 
-                                name="company"
-                                value={formData.company}
-                                onChange={handleChange}
-                                placeholder={t('profile.yourCompany')}
-                              />
-                            </div>
-                            <div className="col-md-6 mb-4">
-                              <label className="form-label">{t('profile.address')}</label>
-                              <input 
-                                type="text" 
-                                className="form-control" 
-                                name="address"
-                                value={formData.address}
-                                onChange={handleChange}
-                                placeholder="123 Rue Example"
-                              />
-                            </div>
-                            <div className="col-md-4 mb-4">
-                              <label className="form-label">{t('profile.city')}</label>
-                              <input 
-                                type="text" 
-                                className="form-control" 
-                                name="city"
-                                value={formData.city}
-                                onChange={handleChange}
-                                placeholder="Paris"
-                              />
-                            </div>
-                            <div className="col-md-4 mb-4">
-                              <label className="form-label">{t('profile.postalCode')}</label>
-                              <input 
-                                type="text" 
-                                className="form-control" 
-                                name="postalCode"
-                                value={formData.postalCode}
-                                onChange={handleChange}
-                                placeholder="75001"
-                              />
-                            </div>
-                            <div className="col-md-4 mb-4">
-                              <label className="form-label">{t('profile.country')}</label>
-                              <select 
-                                className="form-control" 
-                                name="country"
-                                value={formData.country}
-                                onChange={handleChange}
-                              >
-                                <option value="">{t('profile.selectCountry')}</option>
-                                <option value="FR">{t('profile.countryFrance')}</option>
-                                <option value="BE">{t('profile.countryBelgium')}</option>
-                                <option value="CH">{t('profile.countrySwitzerland')}</option>
-                                <option value="CA">{t('profile.countryCanada')}</option>
-                              </select>
-                            </div>
-                            <div className="col-12 mb-4">
-                              <label className="form-label">{t('profile.biography')}</label>
-                              <textarea 
-                                className="form-control" 
-                                name="bio"
-                                value={formData.bio}
-                                onChange={handleChange}
-                                rows="4"
-                                placeholder={t('profile.tellAboutYou')}
-                              ></textarea>
-                            </div>
-                            <div className="col-12">
-                              <div className="d-flex gap-2 justify-content-end">
-                                <button 
-                                  type="button" 
-                                  className="btn btn-light" 
-                                  onClick={handleCancelEditProfile}
-                                  disabled={loading}
-                                >
-                                  {t('profile.cancel')}
-                                </button>
-                                <button type="submit" className="btn btn-primary" disabled={loading}>
-                                  {loading ? (
-                                    <>
-                                      <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                      {t('profile.saving')}
-                                    </>
-                                  ) : (
-                                    <>
-                                      <i className="feather-save me-2"></i>
-                                      {t('profile.saveChanges')}
-                                    </>
-                                  )}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </form>
-                      )}
+                      </form>
                     </div>
                   )}
 
                   {/* Security Tab */}
                   {activeTab === 'security' && (
                     <div className="tab-pane fade show active">
-                      {/* Section Mot de passe */}
-                      <div className="mb-5">
-                        {!isEditingPassword ? (
-                          /* Mode Lecture */
-                          <div>
-                            <div className="d-flex align-items-center justify-content-between mb-4">
-                              <div>
-                                <h6 className="fw-bold mb-1">{t('profile.password')}</h6>
-                                <p className="fs-12 text-muted mb-0">{t('profile.passwordDesc')}</p>
-                              </div>
-                              <button 
-                                type="button" 
-                                className="btn btn-sm btn-primary"
-                                onClick={handleEditPassword}
-                              >
-                                <i className="feather-edit me-2"></i>
-                                {t('profile.changePassword')}
-                              </button>
-                            </div>
-                            <div className="alert alert-info" role="alert">
-                              <i className="feather-info me-2"></i>
-                              {t('profile.passwordSecureMessage')}
-                            </div>
+                      <h6 className="fw-bold mb-4">{t('profile.changePassword')}</h6>
+                      <form onSubmit={handlePasswordSubmit}>
+                        <div className="row">
+                          <div className="col-12 mb-4">
+                            <label className="form-label">{t('profile.currentPassword')}</label>
+                            <input 
+                              type="password" 
+                              className="form-control" 
+                              name="currentPassword"
+                              value={passwordData.currentPassword}
+                              onChange={handlePasswordChange}
+                              placeholder="••••••••"
+                              required
+                            />
                           </div>
-                        ) : (
-                          /* Mode Édition */
-                          <div>
-                            <div className="d-flex align-items-center justify-content-between mb-4">
-                              <h6 className="fw-bold">{t('profile.changePassword')}</h6>
-                            </div>
-                            <form onSubmit={handlePasswordSubmit}>
-                              <div className="row">
-                                <div className="col-12 mb-4">
-                                  <label className="form-label">{t('profile.currentPassword')} <span className="text-danger">*</span></label>
-                                  <input 
-                                    type="password" 
-                                    className="form-control" 
-                                    name="currentPassword"
-                                    value={passwordData.currentPassword}
-                                    onChange={handlePasswordChange}
-                                    placeholder="••••••••"
-                                    required
-                                  />
-                                </div>
-                                <div className="col-md-6 mb-4">
-                                  <label className="form-label">{t('profile.newPassword')} <span className="text-danger">*</span></label>
-                                  <input 
-                                    type="password" 
-                                    className="form-control" 
-                                    name="newPassword"
-                                    value={passwordData.newPassword}
-                                    onChange={handlePasswordChange}
-                                    placeholder="••••••••"
-                                    required
-                                  />
-                                </div>
-                                <div className="col-md-6 mb-4">
-                                  <label className="form-label">{t('profile.confirmPassword')} <span className="text-danger">*</span></label>
-                                  <input 
-                                    type="password" 
-                                    className="form-control" 
-                                    name="confirmPassword"
-                                    value={passwordData.confirmPassword}
-                                    onChange={handlePasswordChange}
-                                    placeholder="••••••••"
-                                    required
-                                  />
-                                </div>
-                                <div className="col-12">
-                                  <div className="d-flex gap-2 justify-content-end">
-                                    <button 
-                                      type="button" 
-                                      className="btn btn-light" 
-                                      onClick={handleCancelEditPassword}
-                                      disabled={loading}
-                                    >
-                                      {t('profile.cancel')}
-                                    </button>
-                                    <button type="submit" className="btn btn-primary" disabled={loading}>
-                                      {loading ? (
-                                        <>
-                                          <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                                          {t('profile.updating')}
-                                        </>
-                                      ) : (
-                                        <>
-                                          <i className="feather-lock me-2"></i>
-                                          {t('profile.updatePassword')}
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            </form>
+                          <div className="col-md-6 mb-4">
+                            <label className="form-label">{t('profile.newPassword')}</label>
+                            <input 
+                              type="password" 
+                              className="form-control" 
+                              name="newPassword"
+                              value={passwordData.newPassword}
+                              onChange={handlePasswordChange}
+                              placeholder="••••••••"
+                              required
+                            />
                           </div>
-                        )}
-                      </div>
+                          <div className="col-md-6 mb-4">
+                            <label className="form-label">{t('profile.confirmPassword')}</label>
+                            <input 
+                              type="password" 
+                              className="form-control" 
+                              name="confirmPassword"
+                              value={passwordData.confirmPassword}
+                              onChange={handlePasswordChange}
+                              placeholder="••••••••"
+                              required
+                            />
+                          </div>
+                          <div className="col-12">
+                            <button type="submit" className="btn btn-primary" disabled={loading}>
+                              {loading ? (
+                                <>
+                                  <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                  {t('profile.updating')}
+                                </>
+                              ) : (
+                                <>
+                                  <i className="feather-lock me-2"></i>
+                                  {t('profile.updatePassword')}
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        </div>
+                      </form>
 
                       <hr className="my-5" />
 

@@ -22,7 +22,7 @@
   "license": "MIT",
   "dependencies": {
     "@marsaud/smb2": "^0.18.0",
-    "@prisma/client": "^5.9.1",
+    "@prisma/client": "^5.22.0",
     "@signpdf/placeholder-plain": "^3.3.0",
     "@signpdf/signer-p12": "^3.3.0",
     "@signpdf/signpdf": "^3.3.0",

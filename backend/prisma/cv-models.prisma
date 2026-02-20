@@ -1,0 +1,168 @@
+
+// ========================================
+// MODÈLES POUR LE CV
+// ========================================
+
+// Expériences professionnelles
+model Experience {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation("UserExperiences", fields: [userId], references: [id], onDelete: Cascade)
+  
+  title           String    // Titre du poste
+  company         String    // Nom de l'entreprise
+  location        String?   // Ville, Pays
+  employmentType  String?   // CDI, CDD, Freelance, Stage, Alternance
+  startDate       DateTime  // Date de début
+  endDate         DateTime? // Date de fin (null si poste actuel)
+  isCurrent       Boolean   @default(false) // Poste actuel
+  description     String?   // Description des tâches et réalisations
+  skills          String?   // Compétences utilisées (JSON array)
+  achievements    String?   // Réalisations clés (JSON array)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([startDate])
+  @@map("experiences")
+}
+
+// Études et formations académiques
+model Education {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation("UserEducation", fields: [userId], references: [id], onDelete: Cascade)
+  
+  degree          String    // Diplôme (Licence, Master, Doctorat, etc.)
+  fieldOfStudy    String    // Domaine d'études
+  school          String    // Établissement
+  location        String?   // Ville, Pays
+  startDate       DateTime  // Date de début
+  endDate         DateTime? // Date de fin (null si en cours)
+  isCurrent       Boolean   @default(false) // Études en cours
+  grade           String?   // Mention ou note
+  description     String?   // Description, mémoire, projets
+  activities      String?   // Activités extra-scolaires (JSON array)
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([startDate])
+  @@map("education")
+}
+
+// Formations continues et certifications courtes
+model Training {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation("UserTrainings", fields: [userId], references: [id], onDelete: Cascade)
+  
+  name            String    // Nom de la formation
+  organization    String    // Organisme de formation
+  instructor      String?   // Formateur/instructeur
+  duration        String?   // Durée (ex: "40 heures", "3 jours")
+  completionDate  DateTime? // Date de fin
+  description     String?   // Description du contenu
+  skills          String?   // Compétences acquises (JSON array)
+  url             String?   // Lien vers le cours/certificat
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([completionDate])
+  @@map("trainings")
+}
+
+// Certificats professionnels
+model Certificate {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation("UserCertificates", fields: [userId], references: [id], onDelete: Cascade)
+  
+  name            String    // Nom du certificat
+  issuingOrg      String    // Organisme émetteur
+  issueDate       DateTime  // Date d'obtention
+  expiryDate      DateTime? // Date d'expiration (null si pas d'expiration)
+  credentialId    String?   // ID de certification
+  credentialUrl   String?   // URL de vérification
+  description     String?   // Description
+  fileUrl         String?   // Fichier PDF/image du certificat
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([issueDate])
+  @@map("certificates")
+}
+
+// Expériences bénévoles
+model Volunteer {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation("UserVolunteers", fields: [userId], references: [id], onDelete: Cascade)
+  
+  role            String    // Rôle/titre
+  organization    String    // Organisation
+  cause           String?   // Cause (ex: "Éducation", "Environnement")
+  location        String?   // Lieu
+  startDate       DateTime  // Date de début
+  endDate         DateTime? // Date de fin (null si en cours)
+  isCurrent       Boolean   @default(false) // Bénévolat en cours
+  description     String?   // Description des activités
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([startDate])
+  @@map("volunteers")
+}
+
+// Projets personnels/professionnels
+model CvProject {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation("UserCvProjects", fields: [userId], references: [id], onDelete: Cascade)
+  
+  name            String    // Nom du projet
+  role            String?   // Rôle dans le projet
+  description     String    // Description détaillée
+  technologies    String?   // Technologies utilisées (JSON array)
+  url             String?   // Lien vers le projet
+  githubUrl       String?   // Lien GitHub
+  startDate       DateTime? // Date de début
+  endDate         DateTime? // Date de fin (null si en cours)
+  isCurrent       Boolean   @default(false) // Projet en cours
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([startDate])
+  @@map("cv_projects")
+}
+
+// Compétences
+model Skill {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation("UserSkills", fields: [userId], references: [id], onDelete: Cascade)
+  
+  name            String    // Nom de la compétence
+  category        String    // Catégorie (Technique, Linguistique, Soft Skills, etc.)
+  level           String?   // Niveau (Débutant, Intermédiaire, Avancé, Expert)
+  yearsOfExp      Int?      // Années d'expérience
+  endorsements    Int       @default(0) // Nombre de recommandations
+  description     String?   // Description
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([category])
+  @@map("skills")
+}
