@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import QRCodeStyling from 'qr-code-styling'
 import api from '../../lib/axios'
+import toast from '../../utils/toast'
 
 const QR_TYPES = [
   { key: 'link', label: 'Link', icon: 'feather-link' },
@@ -522,7 +523,7 @@ export default function QRCodeGenerator() {
           type,
           settings: JSON.stringify(settings)
         })
-        alert('QR mis à jour avec succès !')
+        toast.success('QR mis à jour avec succès !')
       } else {
         const response = await api.post('/qr-codes', {
           name: qrName,
@@ -530,16 +531,16 @@ export default function QRCodeGenerator() {
           settings: JSON.stringify(settings)
         })
         setCurrentQrId(response.data.qrCode.id)
-        alert('QR sauvegardé avec succès !')
+        toast.success('QR sauvegardé avec succès !')
       }
     } catch (error) {
-      alert('Erreur lors de la sauvegarde.')
+      toast.error('Erreur lors de la sauvegarde.')
     }
   }
 
   const handleSaveWithName = async () => {
     if (!qrName.trim()) {
-      alert('Veuillez entrer un nom')
+      toast.warning('Veuillez entrer un nom')
       return
     }
     setShowSaveModal(false)

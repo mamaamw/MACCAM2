@@ -17,6 +17,9 @@ import Register from './pages/auth/Register'
 import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import CV from './pages/CV'
+import Recipes from './pages/Recipes'
+import RecipeForm from './pages/RecipeForm'
+import ShoppingList from './pages/ShoppingList'
 import EditExperiences from './pages/cv/EditExperiences'
 import EditEducation from './pages/cv/EditEducation'
 import EditSkills from './pages/cv/EditSkills'
@@ -540,6 +543,40 @@ function App() {
         <ProtectedRoute>
           <DashboardLayout>
             <CV />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Recipes */}
+      <Route path="/recipes" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <Recipes />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/recipes/new" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <RecipeForm />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      <Route path="/recipes/:id/edit" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <RecipeForm />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Shopping List */}
+      <Route path="/shopping-list" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ShoppingList />
           </DashboardLayout>
         </ProtectedRoute>
       } />

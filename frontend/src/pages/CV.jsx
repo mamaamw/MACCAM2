@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '../stores/authStore'
 import cvService from '../services/cvService'
+import toast from '../utils/toast'
 
 export default function CV() {
   const { user } = useAuthStore()
@@ -49,7 +50,7 @@ export default function CV() {
       setSkills(skillRes.data || [])
     } catch (error) {
       console.error('Erreur:', error)
-      alert('Erreur de chargement: ' + error.message)
+      toast.error('Erreur de chargement: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -100,7 +101,7 @@ setEditingItem(item)
       setActiveModal(null)
       setFormData({})
     } catch (error) {
-      alert('Erreur: ' + error.message)
+      toast.error('Erreur: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -112,7 +113,7 @@ setEditingItem(item)
       await getService(type).delete(id)
       await loadAllData()
     } catch (error) {
-      alert('Erreur: ' + error.message)
+      toast.error('Erreur: ' + error.message)
     }
   }
 
@@ -249,7 +250,7 @@ setEditingItem(item)
           </ul>
         </div>
         <div className="page-header-right ms-auto">
-          <button className="btn btn-primary" onClick={() => alert('Export PDF disponible prochainement')}>
+          <button className="btn btn-primary" onClick={() => toast.info('Export PDF disponible prochainement')}>
             <i className="feather-download me-2"></i>
             Exporter PDF
           </button>

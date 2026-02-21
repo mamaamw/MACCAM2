@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import api from '../../lib/axios'
+import toast from '../../utils/toast'
 
 export default function MyQrCodes() {
   const navigate = useNavigate()
@@ -40,7 +41,7 @@ export default function MyQrCodes() {
       })
       loadQrCodes()
     } catch (error) {
-      alert('Erreur lors de la duplication')
+      toast.error('Erreur lors de la duplication')
     }
   }
 
@@ -53,7 +54,7 @@ export default function MyQrCodes() {
       setNewName('')
       loadQrCodes()
     } catch (error) {
-      alert('Erreur lors du renommage')
+      toast.error('Erreur lors du renommage')
     }
   }
 
@@ -63,7 +64,7 @@ export default function MyQrCodes() {
       setDeleteConfirm(null)
       loadQrCodes()
     } catch (error) {
-      alert('Erreur lors de la suppression')
+      toast.error('Erreur lors de la suppression')
     }
   }
 

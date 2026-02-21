@@ -95,6 +95,10 @@ model User {
   volunteers      Volunteer[] @relation("UserVolunteers")
   cvProjects      CvProject[] @relation("UserCvProjects")
   skills          Skill[] @relation("UserSkills")
+  
+  // Relations pour Recettes
+  recipes         Recipe[] @relation("UserRecipes")
+  shoppingList    ShoppingListItem[] @relation("UserShoppingList")
 
   @@map("users")
 }
@@ -771,7 +775,72 @@ model Skill {
 }
 
 // ========================================
-// MODÈLES POUR LE CV
+// MODÈLES POUR LES RECETTES
 // ========================================
 
-// Expériences professionnelles
+model Recipe {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation("UserRecipes", fields: [userId], references: [id], onDelete: Cascade)
+  
+  title           String    // Titre de la recette
+  description     String?   // Description courte
+  category        String    // Entrée, Plat, Dessert, Boisson, etc.
+  difficulty      String    @default("Inconnue") // Facile, Moyenne, Difficile, Inconnue
+  prepTime        Int?      // Temps de préparation en minutes
+  cookTime        Int?      // Temps de cuisson en minutes
+  servings        Int       @default(4) // Nombre de portions
+  
+  ingredients     String    // JSON array [{name, quantity, unit}]
+  steps           String    // JSON array [string]
+  
+  image           String?   // URL de l'image
+  tags            String?   // JSON array de tags
+  cuisine         String?   // Type de cuisine (Française, Italienne, etc.)
+  isPublic        Boolean   @default(false) // Recette publique ou privée
+  isFavorite      Boolean   @default(false) // Recette favorite
+  
+  notes           String?   // Notes personnelles
+  source          String?   // Source de la recette
+  sourceUrl       String?   // URL source
+  
+  shoppingItems   ShoppingListItem[] @relation("RecipeShoppingItems")
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([category])
+  @@index([isFavorite])
+  @@map("recipes")
+}
+
+model ShoppingListItem {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation("UserShoppingList", fields: [userId], references: [id], onDelete: Cascade)
+  
+  name            String    // Nom de l'ingrédient
+  quantity        String?   // Quantité (ex: "2", "150")
+  unit            String?   // Unité (ex: "g", "ml", "pièces")
+  category        String    @default("Autre") // Fruits, Légumes, Viandes, Produits laitiers, etc.
+  image           String?   // URL de l'image de l'ingrédient
+  
+  recipeId        String?   // Recette associée (optionnel)
+  recipe          Recipe?   @relation("RecipeShoppingItems", fields: [recipeId], references: [id], onDelete: Cascade)
+  recipeTitle     String?   // Titre de la recette (pour affichage)
+  servings        Int?      // Nombre de portions pour cette recette
+  
+  isChecked       Boolean   @default(false) // Item coché ou non
+  notes           String?   // Notes pour cet item
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([recipeId])
+  @@index([isChecked])
+  @@map("shopping_list_items")
+}
+
+// ========================================

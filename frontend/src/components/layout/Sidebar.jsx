@@ -210,6 +210,20 @@ export default function Sidebar() {
               </Link>
             </li>
             
+            <li className="nxl-item">
+              <Link to="/recipes" className={`nxl-link ${isActive('/recipes')}`}>
+                <span className="nxl-micon"><i className="feather-book-open"></i></span>
+                <span className="nxl-mtext">Mes Recettes</span>
+              </Link>
+            </li>
+            
+            <li className="nxl-item">
+              <Link to="/shopping-list" className={`nxl-link ${isActive('/shopping-list')}`}>
+                <span className="nxl-micon"><i className="feather-shopping-cart"></i></span>
+                <span className="nxl-mtext">Liste de courses</span>
+              </Link>
+            </li>
+            
             {/* Centre d'aide */}
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">
