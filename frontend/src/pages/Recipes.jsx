@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../stores/authStore'
 import recipeService from '../services/recipeService'
 import shoppingListService from '../services/shoppingListService'
+import mealPlanService from '../services/mealPlanService'
 import toast from '../utils/toast'
 
 export default function Recipes() {
@@ -13,7 +14,9 @@ export default function Recipes() {
   const [activeView, setActiveView] = useState('grid') // grid, list, detail
   const [selectedRecipe, setSelectedRecipe] = useState(null)
   const [showServingsModal, setShowServingsModal] = useState(false)
+  const [showPlannerModal, setShowPlannerModal] = useState(false)
   const [servingsInput, setServingsInput] = useState(4)
+  const [plannerDates, setPlannerDates] = useState([{ date: '', mealType: 'lunch', servings: 4 }])
   
   // Filtres
   const [filters, setFilters] = useState({
@@ -82,6 +85,62 @@ export default function Recipes() {
     setSelectedRecipe(recipe)
     setServingsInput(recipe.servings || 4)
     setShowServingsModal(true)
+  }
+
+  const handleOpenPlannerModal = (recipe) => {
+    setSelectedRecipe(recipe)
+    // Définir la date du lendemain par défaut
+    const tomorrow = new Date()
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const dateStr = tomorrow.toISOString().split('T')[0]
+    setPlannerDates([{ date: dateStr, mealType: 'lunch', servings: recipe.servings || 4 }])
+    setShowPlannerModal(true)
+  }
+
+  const handleAddDateSlot = () => {
+    setPlannerDates([...plannerDates, { date: '', mealType: 'lunch', servings: selectedRecipe?.servings || 4 }])
+  }
+
+  const handleRemoveDateSlot = (index) => {
+    setPlannerDates(plannerDates.filter((_, i) => i !== index))
+  }
+
+  const handleUpdateDateSlot = (index, field, value) => {
+    const updated = [...plannerDates]
+    updated[index][field] = value
+    setPlannerDates(updated)
+  }
+
+  const handleAddToPlanner = async () => {
+    // Vérifier que toutes les dates sont remplies
+    if (plannerDates.some(d => !d.date)) {
+      toast.warning('Veuillez remplir toutes les dates')
+      return
+    }
+
+    try {
+      const response = await mealPlanService.createMultipleMealPlans(
+        selectedRecipe.id,
+        plannerDates
+      )
+      if (response.success) {
+        // Ajouter automatiquement les ingrédients à la liste de courses pour chaque repas planifié
+        try {
+          for (const planDate of plannerDates) {
+            await shoppingListService.addFromRecipe(selectedRecipe.id, planDate.servings || selectedRecipe.servings)
+          }
+        } catch (error) {
+          console.error('Erreur lors de l\'ajout à la liste de courses:', error)
+          // Ne pas bloquer si l'ajout à la liste échoue
+        }
+        
+        toast.success(response.message || 'Recette ajoutée au planificateur et ingrédients ajoutés à la liste de courses !')
+        setShowPlannerModal(false)
+      }
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout:', error)
+      toast.error('Erreur lors de l\'ajout au planificateur')
+    }
   }
 
   const handleAddToShoppingList = async () => {
@@ -410,6 +469,13 @@ export default function Recipes() {
                                 Voir
                               </button>
                               <button 
+                                className="btn btn-sm btn-info" 
+                                onClick={() => handleOpenPlannerModal(recipe)}
+                                title="Planifier cette recette"
+                              >
+                                <i className="feather-calendar"></i>
+                              </button>
+                              <button 
                                 className="btn btn-sm btn-success" 
                                 onClick={() => handleOpenServingsModal(recipe)}
                                 title="Ajouter à la liste de courses"
@@ -469,6 +535,101 @@ export default function Recipes() {
                 <button type="button" className="btn btn-success" onClick={handleAddToShoppingList}>
                   <i className="feather-shopping-cart me-2"></i>
                   Ajouter à la liste de courses
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal pour planifier les repas */}
+      {showPlannerModal && (
+        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered modal-lg">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="feather-calendar me-2"></i>
+                  Planifier "{selectedRecipe?.title}"
+                </h5>
+                <button type="button" className="btn-close" onClick={() => setShowPlannerModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                <p className="text-muted mb-4">
+                  Sélectionnez une ou plusieurs dates pour planifier cette recette
+                </p>
+
+                {plannerDates.map((slot, index) => (
+                  <div key={index} className="card mb-3">
+                    <div className="card-body">
+                      <div className="d-flex justify-content-between align-items-center mb-3">
+                        <h6 className="mb-0">Repas #{index + 1}</h6>
+                        {plannerDates.length > 1 && (
+                          <button
+                            className="btn btn-sm btn-light text-danger"
+                            onClick={() => handleRemoveDateSlot(index)}
+                          >
+                            <i className="feather-x"></i>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="row g-3">
+                        <div className="col-md-5">
+                          <label className="form-label">Date</label>
+                          <input
+                            type="date"
+                            className="form-control"
+                            value={slot.date}
+                            onChange={(e) => handleUpdateDateSlot(index, 'date', e.target.value)}
+                            required
+                          />
+                        </div>
+
+                        <div className="col-md-4">
+                          <label className="form-label">Type de repas</label>
+                          <select
+                            className="form-select"
+                            value={slot.mealType}
+                            onChange={(e) => handleUpdateDateSlot(index, 'mealType', e.target.value)}
+                          >
+                            <option value="breakfast">Petit-déjeuner</option>
+                            <option value="lunch">Déjeuner</option>
+                            <option value="dinner">Dîner</option>
+                            <option value="snack">Collation</option>
+                          </select>
+                        </div>
+
+                        <div className="col-md-3">
+                          <label className="form-label">Portions</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            min="1"
+                            value={slot.servings}
+                            onChange={(e) => handleUpdateDateSlot(index, 'servings', parseInt(e.target.value) || 1)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  className="btn btn-light border-dashed w-100"
+                  onClick={handleAddDateSlot}
+                >
+                  <i className="feather-plus me-2"></i>
+                  Ajouter une autre date
+                </button>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowPlannerModal(false)}>
+                  Annuler
+                </button>
+                <button type="button" className="btn btn-primary" onClick={handleAddToPlanner}>
+                  <i className="feather-calendar me-2"></i>
+                  Ajouter au planificateur
                 </button>
               </div>
             </div>

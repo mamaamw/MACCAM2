@@ -99,6 +99,7 @@ model User {
   // Relations pour Recettes
   recipes         Recipe[] @relation("UserRecipes")
   shoppingList    ShoppingListItem[] @relation("UserShoppingList")
+  mealPlans       MealPlan[] @relation("UserMealPlans")
 
   @@map("users")
 }
@@ -805,6 +806,7 @@ model Recipe {
   sourceUrl       String?   // URL source
   
   shoppingItems   ShoppingListItem[] @relation("RecipeShoppingItems")
+  mealPlans       MealPlan[] @relation("RecipeMealPlans")
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -841,6 +843,31 @@ model ShoppingListItem {
   @@index([recipeId])
   @@index([isChecked])
   @@map("shopping_list_items")
+}
+
+model MealPlan {
+  id              String    @id @default(uuid())
+  userId          String
+  user            User      @relation("UserMealPlans", fields: [userId], references: [id], onDelete: Cascade)
+  
+  recipeId        String
+  recipe          Recipe    @relation("RecipeMealPlans", fields: [recipeId], references: [id], onDelete: Cascade)
+  
+  date            DateTime  // Date du repas
+  mealType        String    // Type de repas: "breakfast", "lunch", "dinner", "snack"
+  servings        Int       @default(4) // Nombre de portions prévues
+  
+  notes           String?   // Notes pour ce repas planifié
+  completed       Boolean   @default(false) // Repas préparé ou non
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([recipeId])
+  @@index([date])
+  @@index([mealType])
+  @@map("meal_plans")
 }
 
 // ========================================

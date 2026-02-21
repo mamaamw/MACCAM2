@@ -224,6 +224,13 @@ export default function Sidebar() {
               </Link>
             </li>
             
+            <li className="nxl-item">
+              <Link to="/meal-planner" className={`nxl-link ${isActive('/meal-planner')}`}>
+                <span className="nxl-micon"><i className="feather-calendar"></i></span>
+                <span className="nxl-mtext">Planificateur de repas</span>
+              </Link>
+            </li>
+            
             {/* Centre d'aide */}
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">

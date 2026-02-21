@@ -20,6 +20,7 @@ import CV from './pages/CV'
 import Recipes from './pages/Recipes'
 import RecipeForm from './pages/RecipeForm'
 import ShoppingList from './pages/ShoppingList'
+import MealPlanner from './pages/MealPlanner'
 import EditExperiences from './pages/cv/EditExperiences'
 import EditEducation from './pages/cv/EditEducation'
 import EditSkills from './pages/cv/EditSkills'
@@ -577,6 +578,15 @@ function App() {
         <ProtectedRoute>
           <DashboardLayout>
             <ShoppingList />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Meal Planner */}
+      <Route path="/meal-planner" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <MealPlanner />
           </DashboardLayout>
         </ProtectedRoute>
       } />

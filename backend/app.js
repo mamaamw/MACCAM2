@@ -29,6 +29,7 @@ import pdfSignRoutes from './routes/pdf-sign.routes.js';
 import cvRoutes from './routes/cv.routes.js';
 import recipeRoutes from './routes/recipe.routes.js';
 import shoppingListRoutes from './routes/shoppingList.routes.js';
+import mealPlanRoutes from './routes/mealPlan.routes.js';
 
 // Middleware d'erreur
 import { errorHandler } from './middleware/error.middleware.js';
@@ -97,6 +98,7 @@ app.use('/api/v1/pdf-sign', pdfSignRoutes);
 app.use('/api/v1/cv', cvRoutes);
 app.use('/api/v1/recipes', recipeRoutes);
 app.use('/api/v1/shopping-list', shoppingListRoutes);
+app.use('/api/v1/meal-plans', mealPlanRoutes);
 
 // Route de test
 app.get('/api/v1/health', (req, res) => {
