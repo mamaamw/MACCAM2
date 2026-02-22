@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import shoppingListService from '../services/shoppingListService';
 import toast from '../utils/toast';
 import ConfirmModal from '../components/ConfirmModal';
+import { formatWeekLabel, compareWeeks } from '../utils/dateHelpers';
 
 const ShoppingList = () => {
   const [items, setItems] = useState([]);
@@ -212,22 +213,37 @@ const ShoppingList = () => {
     return categories.find(c => c.name === categoryName) || categories[categories.length - 1];
   };
 
-  // Grouper les items par catégorie
-  const groupedItems = items.reduce((acc, item) => {
-    const category = item.category || 'Autre';
-    if (!acc[category]) {
-      acc[category] = [];
+  // Grouper les items par semaine, puis par catégorie
+  const groupedByWeek = items.reduce((acc, item) => {
+    const weekKey = item.weekOf || 'no-week';
+    if (!acc[weekKey]) {
+      acc[weekKey] = {};
     }
-    acc[category].push(item);
+    
+    const category = item.category || 'Autre';
+    if (!acc[weekKey][category]) {
+      acc[weekKey][category] = [];
+    }
+    
+    acc[weekKey][category].push(item);
     return acc;
   }, {});
 
   // Filtrer les items cochés si hideChecked est activé
-  const filteredGroupedItems = Object.entries(groupedItems).reduce((acc, [category, catItems]) => {
-    const filtered = hideChecked ? catItems.filter(item => !item.isChecked) : catItems;
-    if (filtered.length > 0) {
-      acc[category] = filtered;
+  const filteredGroupedByWeek = Object.entries(groupedByWeek).reduce((acc, [weekKey, categories]) => {
+    const filteredCategories = Object.entries(categories).reduce((catAcc, [category, catItems]) => {
+      const filtered = hideChecked ? catItems.filter(item => !item.isChecked) : catItems;
+      if (filtered.length > 0) {
+        catAcc[category] = filtered;
+      }
+      return catAcc;
+    }, {});
+    
+    // Inclure seulement les semaines qui ont des catégories avec des items
+    if (Object.keys(filteredCategories).length > 0) {
+      acc[weekKey] = filteredCategories;
     }
+    
     return acc;
   }, {});
 
@@ -371,47 +387,72 @@ const ShoppingList = () => {
                     </button>
                   </div>
                 ) : viewMode === 'grouped' ? (
-                  /* Vue groupée par catégorie */
+                  /* Vue groupée par semaine puis catégorie */
                   <div className="accordion accordion-flush" id="shoppingListAccordion">
-                    {Object.entries(filteredGroupedItems)
-                      .sort(([catA], [catB]) => catA.localeCompare(catB))
-                      .map(([categoryName, categoryItems]) => {
-                        const catConfig = getCategoryConfig(categoryName);
-                        const catChecked = categoryItems.filter(i => i.isChecked).length;
-                        const catTotal = categoryItems.length;
-                        const isCollapsed = collapsedCategories[categoryName];
+                    {Object.entries(filteredGroupedByWeek)
+                      .sort(([weekA], [weekB]) => compareWeeks(weekA === 'no-week' ? null : weekA, weekB === 'no-week' ? null : weekB))
+                      .map(([weekKey, weekCategories]) => {
+                        const weekLabel = weekKey === 'no-week' ? 'Sans semaine' : formatWeekLabel(weekKey);
+                        const weekItems = Object.values(weekCategories).flat();
+                        const weekChecked = weekItems.filter(i => i.isChecked).length;
+                        const weekTotal = weekItems.length;
 
                         return (
-                          <div key={categoryName} className="accordion-item border rounded-3 mb-3">
-                            <h2 className="accordion-header">
-                              <button
-                                className={`accordion-button ${isCollapsed ? 'collapsed' : ''} fw-semibold`}
-                                type="button"
-                                onClick={() => toggleCategory(categoryName)}
-                              >
-                                <i className={`${catConfig.icon} me-3 fs-4 text-${catConfig.color}`}></i>
-                                <span>{categoryName}</span>
-                                {/* Bouton pour tout cocher/décocher */}
-                                <button
-                                  className="btn btn-sm btn-light-brand ms-auto me-2"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    const allChecked = categoryItems.every(i => i.isChecked);
-                                    handleToggleCategoryCheck(categoryItems, !allChecked, categoryName);
-                                  }}
-                                  title={categoryItems.every(i => i.isChecked) ? 'Tout décocher' : 'Tout cocher'}
-                                >
-                                  <i className={`feather-${categoryItems.every(i => i.isChecked) ? 'x' : 'check'} me-1`}></i>
-                                  {categoryItems.every(i => i.isChecked) ? 'Décocher' : 'Cocher'}
-                                </button>
-                                <span className="badge bg-soft-secondary text-secondary me-3">
-                                  {catTotal - catChecked} / {catTotal}
-                                </span>
-                              </button>
-                            </h2>
-                            <div className={`accordion-collapse collapse ${!isCollapsed ? 'show' : ''}`}>
-                              <div className="accordion-body p-0">
-                                {categoryItems.map(item => (
+                          <div key={weekKey} className="mb-4">
+                            {/* En-tête de semaine */}
+                            <div className="d-flex align-items-center mb-3 pb-2 border-bottom">
+                              <h5 className="mb-0 text-primary">
+                                <i className="feather-calendar me-2"></i>
+                                {weekLabel}
+                              </h5>
+                              <span className="badge bg-soft-primary text-primary ms-3">
+                                {weekTotal - weekChecked} / {weekTotal} items
+                              </span>
+                            </div>
+
+                            {/* Catégories de cette semaine */}
+                            {Object.entries(weekCategories)
+                              .sort(([catA], [catB]) => catA.localeCompare(catB))
+                              .map(([categoryName, categoryItems]) => {
+                                const catConfig = getCategoryConfig(categoryName);
+                                const catChecked = categoryItems.filter(i => i.isChecked).length;
+                                const catTotal = categoryItems.length;
+                                const categoryKey = `${weekKey}-${categoryName}`;
+                                const isCollapsed = collapsedCategories[categoryKey];
+
+                                return (
+                                  <div key={categoryKey} className="accordion-item border rounded-3 mb-3">
+                                    <h2 className="accordion-header">
+                                      <button
+                                        className={`accordion-button ${isCollapsed ? 'collapsed' : ''} fw-semibold`}
+                                        type="button"
+                                        onClick={() => toggleCategory(categoryKey)}
+                                      >
+                                        <i className={`${catConfig.icon} me-3 fs-4 text-${catConfig.color}`}></i>
+                                        <span>{categoryName}</span>
+                                        {/* Bouton pour tout cocher/décocher */}
+                                        <span
+                                          className="btn btn-sm btn-light-brand ms-auto me-2"
+                                          role="button"
+                                          style={{ cursor: 'pointer' }}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const allChecked = categoryItems.every(i => i.isChecked);
+                                            handleToggleCategoryCheck(categoryItems, !allChecked, categoryName);
+                                          }}
+                                          title={categoryItems.every(i => i.isChecked) ? 'Tout décocher' : 'Tout cocher'}
+                                        >
+                                          <i className={`feather-${categoryItems.every(i => i.isChecked) ? 'x' : 'check'} me-1`}></i>
+                                          {categoryItems.every(i => i.isChecked) ? 'Décocher' : 'Cocher'}
+                                        </span>
+                                        <span className="badge bg-soft-secondary text-secondary me-3">
+                                          {catTotal - catChecked} / {catTotal}
+                                        </span>
+                                      </button>
+                                    </h2>
+                                    <div className={`accordion-collapse collapse ${!isCollapsed ? 'show' : ''}`}>
+                                      <div className="accordion-body p-0">
+                                        {categoryItems.map(item => (
                                   <div
                                     key={item.id}
                                     className={`d-flex align-items-start p-3 border-bottom ${item.isChecked ? 'bg-light' : ''}`}
@@ -427,7 +468,7 @@ const ShoppingList = () => {
                                     </div>
                                   {/* Image de l'ingrédient */}
                                   {item.image && (
-                                    <div className="me-3">
+                                    <div className="me-3 d-none d-sm-block">
                                       <img
                                         src={item.image}
                                         alt={item.name}
@@ -494,6 +535,9 @@ const ShoppingList = () => {
                           </div>
                         );
                       })}
+                          </div>
+                        );
+                      })}
                   </div>
                 ) : (
                   /* Vue liste simple */
@@ -515,7 +559,7 @@ const ShoppingList = () => {
 
                         {/* Image de l'ingrédient */}
                         {item.image && (
-                          <div className="me-3">
+                          <div className="me-3 d-none d-sm-block">
                             <img
                               src={item.image}
                               alt={item.name}

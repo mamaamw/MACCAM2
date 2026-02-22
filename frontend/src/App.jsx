@@ -21,6 +21,7 @@ import Recipes from './pages/Recipes'
 import RecipeForm from './pages/RecipeForm'
 import ShoppingList from './pages/ShoppingList'
 import MealPlanner from './pages/MealPlanner'
+import ExpenseSharing from './pages/ExpenseSharing'
 import EditExperiences from './pages/cv/EditExperiences'
 import EditEducation from './pages/cv/EditEducation'
 import EditSkills from './pages/cv/EditSkills'
@@ -587,6 +588,15 @@ function App() {
         <ProtectedRoute>
           <DashboardLayout>
             <MealPlanner />
+          </DashboardLayout>
+        </ProtectedRoute>
+      } />
+      
+      {/* Expense Sharing */}
+      <Route path="/expense-sharing" element={
+        <ProtectedRoute>
+          <DashboardLayout>
+            <ExpenseSharing />
           </DashboardLayout>
         </ProtectedRoute>
       } />

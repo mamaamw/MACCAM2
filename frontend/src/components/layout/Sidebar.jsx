@@ -231,6 +231,13 @@ export default function Sidebar() {
               </Link>
             </li>
             
+            <li className="nxl-item">
+              <Link to="/expense-sharing" className={`nxl-link ${isActive('/expense-sharing')}`}>
+                <span className="nxl-micon"><i className="feather-dollar-sign"></i></span>
+                <span className="nxl-mtext">Partage de dépenses</span>
+              </Link>
+            </li>
+            
             {/* Centre d'aide */}
             <li className="nxl-item nxl-hasmenu">
               <a href="#" onClick={(e) => e.preventDefault()} className="nxl-link">

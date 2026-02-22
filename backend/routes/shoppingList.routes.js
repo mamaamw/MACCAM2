@@ -2,6 +2,7 @@ import express from 'express';
 import { PrismaClient } from '@prisma/client';
 import { protect } from '../middleware/auth.middleware.js';
 import { getIngredientImage } from '../services/ingredientImages.service.js';
+import { getWeekStart } from '../utils/dateHelpers.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -30,13 +31,19 @@ router.get('/', async (req, res) => {
 // Ajouter une recette complète à la liste de courses
 router.post('/from-recipe', async (req, res) => {
   try {
-    const { recipeId, servings } = req.body;
+    const { recipeId, servings, mealPlanDate } = req.body;
 
     if (!recipeId || !servings) {
       return res.status(400).json({ 
         success: false, 
         message: 'Recipe ID et nombre de portions requis' 
       });
+    }
+
+    // Calculer le début de semaine si une date est fournie
+    let weekOf = null;
+    if (mealPlanDate) {
+      weekOf = getWeekStart(new Date(mealPlanDate));
     }
 
     // Récupérer la recette
@@ -60,11 +67,18 @@ router.post('/from-recipe', async (req, res) => {
     const ratio = servings / originalServings;
 
     // Récupérer tous les items existants de l'utilisateur (non cochés)
+    // Filtrer par weekOf si fourni pour fusionner seulement avec les items de la même semaine
+    const where = {
+      userId: req.user.id,
+      isChecked: false
+    };
+    
+    if (weekOf) {
+      where.weekOf = weekOf;
+    }
+
     const existingItems = await prisma.shoppingListItem.findMany({
-      where: {
-        userId: req.user.id,
-        isChecked: false
-      }
+      where
     });
 
     const processedItems = [];
@@ -136,7 +150,7 @@ router.post('/from-recipe', async (req, res) => {
       } else {
         // Nouvel item : créer
         const image = getIngredientImage(ingredient.name, category);
-        itemsToCreate.push({
+        const newItem = {
           userId: req.user.id,
           name: ingredient.name,
           quantity: adjustedQuantity,
@@ -148,7 +162,14 @@ router.post('/from-recipe', async (req, res) => {
           servings: servings,
           notes: `Pour ${servings} portions: ${recipe.title} (${servings})`,
           isChecked: false
-        });
+        };
+        
+        // Ajouter weekOf si fourni
+        if (weekOf) {
+          newItem.weekOf = weekOf;
+        }
+        
+        itemsToCreate.push(newItem);
       }
     }
 

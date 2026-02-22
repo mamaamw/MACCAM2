@@ -100,6 +100,10 @@ model User {
   recipes         Recipe[] @relation("UserRecipes")
   shoppingList    ShoppingListItem[] @relation("UserShoppingList")
   mealPlans       MealPlan[] @relation("UserMealPlans")
+  
+  // Relations pour Dépenses partagées
+  expenseGroups      ExpenseGroup[] @relation("UserExpenseGroups")
+  expenseGroupMembers ExpenseGroupMember[] @relation("UserExpenseGroupMembers")
 
   @@map("users")
 }
@@ -833,6 +837,8 @@ model ShoppingListItem {
   recipeTitle     String?   // Titre de la recette (pour affichage)
   servings        Int?      // Nombre de portions pour cette recette
   
+  weekOf          DateTime? // Début de semaine (lundi) pour regrouper par semaine
+  
   isChecked       Boolean   @default(false) // Item coché ou non
   notes           String?   // Notes pour cet item
   
@@ -842,6 +848,7 @@ model ShoppingListItem {
   @@index([userId])
   @@index([recipeId])
   @@index([isChecked])
+  @@index([weekOf])
   @@map("shopping_list_items")
 }
 
@@ -868,6 +875,93 @@ model MealPlan {
   @@index([date])
   @@index([mealType])
   @@map("meal_plans")
+}
+
+// ========================================
+// GESTION DES DÉPENSES PARTAGÉES (TRICOUNT)
+// ========================================
+
+model ExpenseGroup {
+  id              String    @id @default(uuid())
+  userId          String    // Créateur du groupe
+  user            User      @relation("UserExpenseGroups", fields: [userId], references: [id], onDelete: Cascade)
+  
+  name            String    // Nom du groupe (ex: "Voyage à Paris")
+  description     String?   // Description
+  currency        String    @default("EUR") // Devise: EUR, USD, CAD, etc.
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  members         ExpenseGroupMember[]
+  expenses        Expense[]
+  
+  @@index([userId])
+  @@map("expense_groups")
+}
+
+model ExpenseGroupMember {
+  id              String    @id @default(uuid())
+  groupId         String
+  group           ExpenseGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  
+  userId          String?   // Null si membre externe (pas un utilisateur)
+  user            User?     @relation("UserExpenseGroupMembers", fields: [userId], references: [id], onDelete: Cascade)
+  
+  name            String    // Nom du membre (rempli automatiquement si userId existe)
+  email           String?   // Email du membre
+  
+  joinedAt        DateTime  @default(now())
+  
+  paidExpenses    Expense[] @relation("ExpensePaidBy")
+  participations  ExpenseParticipant[]
+  
+  @@unique([groupId, userId])
+  @@index([groupId])
+  @@index([userId])
+  @@map("expense_group_members")
+}
+
+model Expense {
+  id              String    @id @default(uuid())
+  groupId         String
+  group           ExpenseGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  
+  paidById        String    // Membre qui a payé
+  paidBy          ExpenseGroupMember @relation("ExpensePaidBy", fields: [paidById], references: [id])
+  
+  description     String    // Description de la dépense
+  amount          Float     // Montant total
+  date            DateTime  @default(now()) // Date de la dépense
+  category        String?   // Catégorie: Transport, Logement, Nourriture, etc.
+  photos          String?   // JSON array des chemins des photos
+  splitMode       String?   // Mode de division: 'equal', 'shares', 'manual'
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  participants    ExpenseParticipant[]
+  
+  @@index([groupId])
+  @@index([paidById])
+  @@index([date])
+  @@map("expenses")
+}
+
+model ExpenseParticipant {
+  id              String    @id @default(uuid())
+  expenseId       String
+  expense         Expense   @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  
+  memberId        String
+  member          ExpenseGroupMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  
+  share           Float     // Part de cette personne dans la dépense
+  
+  @@unique([expenseId, memberId])
+  @@index([expenseId])
+  @@index([memberId])
+  @@map("expense_participants")
 }
 
 // ========================================

@@ -127,7 +127,11 @@ export default function Recipes() {
         // Ajouter automatiquement les ingrédients à la liste de courses pour chaque repas planifié
         try {
           for (const planDate of plannerDates) {
-            await shoppingListService.addFromRecipe(selectedRecipe.id, planDate.servings || selectedRecipe.servings)
+            await shoppingListService.addFromRecipe(
+              selectedRecipe.id, 
+              planDate.servings || selectedRecipe.servings,
+              planDate.date // Passer la date du meal plan
+            )
           }
         } catch (error) {
           console.error('Erreur lors de l\'ajout à la liste de courses:', error)

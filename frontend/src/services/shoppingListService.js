@@ -13,12 +13,19 @@ const shoppingListService = {
   },
 
   // Ajouter une recette complète
-  addFromRecipe: async (recipeId, servings) => {
+  addFromRecipe: async (recipeId, servings, mealPlanDate = null) => {
     try {
-      const response = await api.post('/shopping-list/from-recipe', {
+      const payload = {
         recipeId,
         servings
-      });
+      };
+      
+      // Ajouter mealPlanDate si fourni
+      if (mealPlanDate) {
+        payload.mealPlanDate = mealPlanDate;
+      }
+      
+      const response = await api.post('/shopping-list/from-recipe', payload);
       return response.data;
     } catch (error) {
       console.error('Erreur lors de l\'ajout de la recette:', error);

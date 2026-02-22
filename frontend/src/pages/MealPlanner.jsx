@@ -155,9 +155,9 @@ const MealPlanner = () => {
         notes
       });
 
-      // Ajouter automatiquement les ingrédients à la liste de courses
+      // Ajouter automatiquement les ingrédients à la liste de courses avec la date du meal plan
       try {
-        await shoppingListService.addFromRecipe(selectedRecipe, servings);
+        await shoppingListService.addFromRecipe(selectedRecipe, servings, selectedSlot.date.toISOString());
       } catch (error) {
         console.error('Erreur lors de l\'ajout à la liste de courses:', error);
         // Ne pas bloquer si l'ajout à la liste échoue
@@ -540,7 +540,7 @@ const MealPlanner = () => {
                                     <img
                                       src={meal.recipe.image}
                                       alt={meal.recipe.title}
-                                      className="rounded mt-2"
+                                      className="rounded mt-2 d-none d-md-block"
                                       style={{ width: '100%', height: '60px', objectFit: 'cover' }}
                                     />
                                   )}
