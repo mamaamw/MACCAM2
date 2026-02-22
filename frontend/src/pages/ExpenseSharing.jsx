@@ -1046,88 +1046,98 @@ const ExpenseSharing = () => {
                       const isParticipant = expenseForm.participants.some(p => p.memberId === member.id);
                       const participant = expenseForm.participants.find(p => p.memberId === member.id);
                       
+                      const toggleParticipant = () => {
+                        if (isParticipant) {
+                          setExpenseForm({
+                            ...expenseForm,
+                            participants: expenseForm.participants.filter(p => p.memberId !== member.id)
+                          });
+                          if (splitByShares) {
+                            const newShares = { ...participantShares };
+                            delete newShares[member.id];
+                            setParticipantShares(newShares);
+                            setTimeout(() => calculateShareAmounts(newShares), 0);
+                          }
+                        } else {
+                          setExpenseForm({
+                            ...expenseForm,
+                            participants: [...expenseForm.participants, { memberId: member.id, share: '0' }]
+                          });
+                          if (splitByShares) {
+                            const newShares = { ...participantShares, [member.id]: 1 };
+                            setParticipantShares(newShares);
+                            setTimeout(() => calculateShareAmounts(newShares), 0);
+                          }
+                        }
+                      };
+                      
                       return (
-                        <div key={member.id} className="d-flex align-items-center mb-2">
-                          <div className="form-check me-3">
-                            <input
-                              type="checkbox"
-                              className="form-check-input"
-                              checked={isParticipant}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setExpenseForm({
-                                    ...expenseForm,
-                                    participants: [...expenseForm.participants, { memberId: member.id, share: '0' }]
-                                  });
-                                  if (splitByShares) {
-                                    const newShares = { ...participantShares, [member.id]: 1 };
-                                    setParticipantShares(newShares);
-                                    setTimeout(() => calculateShareAmounts(newShares), 0);
-                                  }
-                                } else {
-                                  setExpenseForm({
-                                    ...expenseForm,
-                                    participants: expenseForm.participants.filter(p => p.memberId !== member.id)
-                                  });
-                                  if (splitByShares) {
-                                    const newShares = { ...participantShares };
-                                    delete newShares[member.id];
-                                    setParticipantShares(newShares);
-                                    setTimeout(() => calculateShareAmounts(newShares), 0);
-                                  }
-                                }
-                              }}
-                            />
-                            <label className="form-check-label">{member.name}</label>
-                          </div>
-                          {isParticipant && (
-                            <div className="d-flex align-items-center ms-auto gap-2">
-                              <div className="input-group input-group-sm" style={{ width: '130px' }}>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  className="form-control form-control-sm"
-                                  value={parseFloat(participant.share || 0).toFixed(2)}
-                                  readOnly={splitByShares}
-                                  onChange={(e) => {
-                                    setSplitByShares(false);
-                                    setExpenseForm({
-                                      ...expenseForm,
-                                      participants: expenseForm.participants.map(p => 
-                                        p.memberId === member.id ? { ...p, share: e.target.value } : p
-                                      )
-                                    });
-                                  }}
-                                  style={splitByShares ? { backgroundColor: '#f5f5f5' } : {}}
-                                />
-                                <span className="input-group-text">{selectedGroup?.currency || 'EUR'}</span>
-                              </div>
-                              {splitByShares && (
-                                <div className="input-group input-group-sm" style={{ width: '140px' }}>
+                        <div 
+                          key={member.id} 
+                          className={`border rounded p-3 mb-2 ${isParticipant ? 'border-primary bg-light' : 'bg-white'}`}
+                          style={{ cursor: 'pointer' }}
+                          onClick={toggleParticipant}
+                        >
+                          <div className="d-flex align-items-center">
+                            <div className="form-check me-3">
+                              <input
+                                type="checkbox"
+                                className="form-check-input"
+                                checked={isParticipant}
+                                onChange={() => {}}
+                                style={{ pointerEvents: 'none' }}
+                              />
+                              <label className="form-check-label fw-semibold">{member.name}</label>
+                            </div>
+                            {isParticipant && (
+                              <div className="d-flex align-items-center ms-auto gap-2" onClick={(e) => e.stopPropagation()}>
+                                <div className="input-group input-group-sm" style={{ width: '130px' }}>
                                   <input
                                     type="number"
-                                    step="0.5"
-                                    min="0"
-                                    className="form-control form-control-sm text-center"
-                                    style={{ fontSize: '0.875rem', fontWeight: '500' }}
-                                    value={participantShares[member.id] ?? 1}
+                                    step="0.01"
+                                    className="form-control form-control-sm"
+                                    value={parseFloat(participant.share || 0).toFixed(2)}
+                                    readOnly={splitByShares}
                                     onChange={(e) => {
-                                      const value = parseFloat(e.target.value) || 0;
-                                      
-                                      // Mettre à jour les shares
-                                      const newShares = {
-                                        ...participantShares,
-                                        [member.id]: value
-                                      };
-                                      setParticipantShares(newShares);
-                                      calculateShareAmounts(newShares);
+                                      setSplitByShares(false);
+                                      setExpenseForm({
+                                        ...expenseForm,
+                                        participants: expenseForm.participants.map(p => 
+                                          p.memberId === member.id ? { ...p, share: e.target.value } : p
+                                        )
+                                      });
                                     }}
+                                    style={splitByShares ? { backgroundColor: '#f5f5f5' } : {}}
                                   />
-                                  <span className="input-group-text" style={{ fontSize: '0.75rem' }}>parts</span>
+                                  <span className="input-group-text">{selectedGroup?.currency || 'EUR'}</span>
                                 </div>
-                              )}
-                            </div>
-                          )}
+                                {splitByShares && (
+                                  <div className="input-group input-group-sm" style={{ width: '140px' }}>
+                                    <input
+                                      type="number"
+                                      step="0.5"
+                                      min="0"
+                                      className="form-control form-control-sm text-center"
+                                      style={{ fontSize: '0.875rem', fontWeight: '500' }}
+                                      value={participantShares[member.id] ?? 1}
+                                      onChange={(e) => {
+                                        const value = parseFloat(e.target.value) || 0;
+                                        
+                                        // Mettre à jour les shares
+                                        const newShares = {
+                                          ...participantShares,
+                                          [member.id]: value
+                                        };
+                                        setParticipantShares(newShares);
+                                        calculateShareAmounts(newShares);
+                                      }}
+                                    />
+                                    <span className="input-group-text" style={{ fontSize: '0.75rem' }}>parts</span>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
