@@ -402,6 +402,110 @@ router.post('/:id/members', async (req, res) => {
   }
 });
 
+// Mettre à jour un membre du groupe
+router.put('/:id/members/:memberId', async (req, res) => {
+  try {
+    const { id, memberId } = req.params;
+    const { name, email, userId } = req.body;
+
+    // Vérifier l'accès au groupe
+    const group = await prisma.expenseGroup.findFirst({
+      where: {
+        id,
+        OR: [
+          { userId: req.user.id },
+          { members: { some: { userId: req.user.id } } }
+        ]
+      }
+    });
+
+    if (!group) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Groupe non trouvé' 
+      });
+    }
+
+    // Vérifier que le membre existe
+    const existingMember = await prisma.expenseGroupMember.findFirst({
+      where: {
+        id: memberId,
+        groupId: id
+      }
+    });
+
+    if (!existingMember) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Membre non trouvé' 
+      });
+    }
+
+    // Si on lie à un utilisateur, vérifier qu'il existe
+    if (userId) {
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+
+      if (!user) {
+        return res.status(404).json({ 
+          success: false, 
+          message: 'Utilisateur non trouvé' 
+        });
+      }
+
+      // Vérifier qu'il n'y a pas déjà un membre lié à cet utilisateur dans ce groupe
+      const duplicateMember = await prisma.expenseGroupMember.findFirst({
+        where: {
+          groupId: id,
+          userId: userId,
+          NOT: { id: memberId }
+        }
+      });
+
+      if (duplicateMember) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Cet utilisateur est déjà membre du groupe' 
+        });
+      }
+    }
+
+    // Mettre à jour le membre
+    const updatedMember = await prisma.expenseGroupMember.update({
+      where: { id: memberId },
+      data: {
+        userId: userId || null,
+        name,
+        email: email || null
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            avatar: true
+          }
+        }
+      }
+    });
+
+    res.json({ 
+      success: true, 
+      data: updatedMember,
+      message: 'Membre mis à jour avec succès' 
+    });
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour du membre:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Erreur lors de la mise à jour du membre' 
+    });
+  }
+});
+
 // Supprimer un membre du groupe
 router.delete('/:id/members/:memberId', async (req, res) => {
   try {

@@ -161,6 +161,15 @@ const userService = {
     });
     return handleResponse(response);
   },
+
+  // Rechercher des utilisateurs
+  searchUsers: async (query) => {
+    const response = await fetch(`${API_URL}/search?q=${encodeURIComponent(query)}`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
 };
 
 export default userService;

@@ -64,6 +64,42 @@ router.get('/', authorize('ADMIN', 'MANAGER'), async (req, res) => {
   }
 });
 
+// GET /api/users/search - Rechercher des utilisateurs par nom, prénom ou email
+router.get('/search', async (req, res) => {
+  try {
+    const { q } = req.query;
+    
+    if (!q || q.length < 2) {
+      return res.json({ success: true, data: [] });
+    }
+    
+    const users = await prisma.user.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { firstName: { contains: q } },
+          { lastName: { contains: q } },
+          { email: { contains: q } },
+          { username: { contains: q } }
+        ]
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        avatar: true
+      },
+      take: 10
+    });
+    
+    res.json({ success: true, data: users });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // GET /api/users/profile - Profil de l'utilisateur connecté
 router.get('/profile', async (req, res) => {
   try {

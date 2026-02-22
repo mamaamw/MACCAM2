@@ -67,6 +67,17 @@ const expenseGroupService = {
     }
   },
 
+  // Mettre à jour un membre du groupe
+  updateMember: async (groupId, memberId, memberData) => {
+    try {
+      const response = await api.put(`/expense-groups/${groupId}/members/${memberId}`, memberData);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour du membre:', error);
+      throw error;
+    }
+  },
+
   // Supprimer un membre du groupe
   removeMember: async (groupId, memberId) => {
     try {

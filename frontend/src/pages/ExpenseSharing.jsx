@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import expenseGroupService from '../services/expenseGroupService';
 import expenseService from '../services/expenseService';
+import userService from '../services/userService';
 import toast from '../utils/toast';
 import ConfirmModal from '../components/ConfirmModal';
 import ExpensePhotoManager from '../components/expense/ExpensePhotoManager';
@@ -45,8 +46,14 @@ const ExpenseSharing = () => {
 
   const [memberForm, setMemberForm] = useState({
     name: '',
-    email: ''
+    email: '',
+    userId: null
   });
+
+  const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [userSearchResults, setUserSearchResults] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [editingMember, setEditingMember] = useState(null);
 
   const [autoSplit, setAutoSplit] = useState(false);
   const [splitByShares, setSplitByShares] = useState(false);
@@ -505,15 +512,67 @@ const ExpenseSharing = () => {
     }
   };
 
+  const handleSearchUsers = async (query) => {
+    setUserSearchQuery(query);
+    
+    if (query.length < 2) {
+      setUserSearchResults([]);
+      return;
+    }
+
+    try {
+      const result = await userService.searchUsers(query);
+      console.log('Résultats de recherche:', result.data);
+      setUserSearchResults(result.data || []);
+    } catch (error) {
+      console.error('Erreur lors de la recherche:', error);
+      setUserSearchResults([]);
+    }
+  };
+
+  const handleSelectUser = (user) => {
+    setSelectedUser(user);
+    setMemberForm({
+      ...memberForm,
+      userId: user.id,
+      name: `${user.firstName} ${user.lastName}`,
+      email: user.email
+    });
+    setUserSearchQuery('');
+    setUserSearchResults([]);
+  };
+
+  const handleClearUser = () => {
+    setSelectedUser(null);
+    setMemberForm({
+      ...memberForm,
+      userId: null,
+      name: '',
+      email: ''
+    });
+  };
+
   const handleAddMember = async (e) => {
     e.preventDefault();
     if (!selectedGroup) return;
 
     try {
-      await expenseGroupService.addMember(selectedGroup.id, memberForm);
-      toast.success('Membre ajouté avec succès');
+      if (editingMember) {
+        // Mode édition
+        await expenseGroupService.updateMember(selectedGroup.id, editingMember.id, memberForm);
+        toast.success('Membre mis à jour avec succès');
+      } else {
+        // Mode ajout
+        await expenseGroupService.addMember(selectedGroup.id, memberForm);
+        toast.success('Membre ajouté avec succès');
+      }
+      
       setShowMemberModal(false);
-      setMemberForm({ name: '', email: '' });
+      setMemberForm({ name: '', email: '', userId: null });
+      setEditingMember(null);
+      setSelectedUser(null);
+      setUserSearchQuery('');
+      setUserSearchResults([]);
       fetchGroupDetails(selectedGroup.id);
     } catch (error) {
       console.error('Erreur:', error);
@@ -807,7 +866,14 @@ const ExpenseSharing = () => {
                         Membres
                       </h5>
                       <div className="card-header-action">
-                        <button className="btn btn-sm btn-light-brand" onClick={() => setShowMemberModal(true)}>
+                        <button className="btn btn-sm btn-light-brand" onClick={() => {
+                          setEditingMember(null);
+                          setMemberForm({ name: '', email: '', userId: null });
+                          setSelectedUser(null);
+                          setUserSearchQuery('');
+                          setUserSearchResults([]);
+                          setShowMemberModal(true);
+                        }}>
                           <i className="feather-user-plus me-1"></i>
                           Ajouter
                         </button>
@@ -817,19 +883,49 @@ const ExpenseSharing = () => {
                       <div className="row">
                         {selectedGroup.members?.map(member => (
                           <div key={member.id} className="col-md-6 mb-3">
-                            <div className="d-flex align-items-center">
-                              <div className="avatar avatar-md me-3">
-                                {member.user?.avatar ? (
-                                  <img src={member.user.avatar} alt={member.name} className="rounded-circle" />
-                                ) : (
-                                  <div className="avatar-text rounded-circle bg-primary text-white">
-                                    {member.name.charAt(0).toUpperCase()}
+                            <div className="d-flex align-items-center justify-content-between">
+                              <div className="d-flex align-items-center flex-grow-1">
+                                <div className="avatar avatar-md me-3">
+                                  {member.user?.avatar ? (
+                                    <img src={`http://localhost:5000${member.user.avatar}`} alt={member.name} className="rounded-circle" style={{ width: 40, height: 40, objectFit: 'cover' }} />
+                                  ) : (
+                                    <div className="avatar-text rounded-circle bg-primary text-white" style={{ width: 40, height: 40, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      {member.name.charAt(0).toUpperCase()}
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="flex-grow-1">
+                                  <div className="d-flex align-items-center gap-2">
+                                    <span className="fw-semibold">{member.name}</span>
+                                    {member.userId && (
+                                      <span className="badge bg-success-subtle text-success" style={{ fontSize: '0.7rem' }}>
+                                        <i className="feather-link me-1" style={{ fontSize: '0.7rem' }}></i>
+                                        Lié
+                                      </span>
+                                    )}
                                   </div>
-                                )}
+                                  <small className="text-muted">{member.email}</small>
+                                </div>
                               </div>
-                              <div>
-                                <div className="fw-semibold">{member.name}</div>
-                                <small className="text-muted">{member.email}</small>
+                              <div className="d-flex gap-1">
+                                <button 
+                                  className="btn btn-sm btn-light" 
+                                  onClick={() => {
+                                    setEditingMember(member);
+                                    setMemberForm({
+                                      name: member.name,
+                                      email: member.email || '',
+                                      userId: member.userId || null
+                                    });
+                                    if (member.user) {
+                                      setSelectedUser(member.user);
+                                    }
+                                    setShowMemberModal(true);
+                                  }}
+                                  title="Modifier"
+                                >
+                                  <i className="feather-edit-2"></i>
+                                </button>
                               </div>
                             </div>
                           </div>
@@ -1270,13 +1366,101 @@ const ExpenseSharing = () => {
       {showMemberModal && selectedGroup && (
         <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog">
-            <div className="modal-content">
+            <div className="modal-content" style={{ overflow: 'visible' }}>
               <form onSubmit={handleAddMember}>
                 <div className="modal-header">
-                  <h5 className="modal-title">Ajouter un membre</h5>
-                  <button type="button" className="btn-close" onClick={() => setShowMemberModal(false)}></button>
+                  <h5 className="modal-title">{editingMember ? 'Modifier le membre' : 'Ajouter un membre'}</h5>
+                  <button type="button" className="btn-close" onClick={() => {
+                    setShowMemberModal(false);
+                    setEditingMember(null);
+                    setSelectedUser(null);
+                    setUserSearchQuery('');
+                    setUserSearchResults([]);
+                    setMemberForm({ name: '', email: '', userId: null });
+                  }}></button>
                 </div>
-                <div className="modal-body">
+                <div className="modal-body" style={{ overflow: 'visible' }}>
+                  {/* Recherche d'utilisateur */}
+                  <div className="mb-3">
+                    <label className="form-label">Lier à un utilisateur (optionnel)</label>
+                    {selectedUser ? (
+                      <div className="d-flex align-items-center gap-2 p-2 border rounded bg-light">
+                        {selectedUser.avatar && (
+                          <img 
+                            src={`http://localhost:5000${selectedUser.avatar}`} 
+                            alt={selectedUser.firstName}
+                            className="rounded-circle"
+                            style={{ width: 32, height: 32, objectFit: 'cover' }}
+                          />
+                        )}
+                        <div className="flex-grow-1">
+                          <div className="fw-semibold">{selectedUser.firstName} {selectedUser.lastName}</div>
+                          <small className="text-muted">{selectedUser.email}</small>
+                        </div>
+                        <button 
+                          type="button" 
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={handleClearUser}
+                        >
+                          <i className="feather-x"></i>
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="position-relative">
+                        <input
+                          type="text"
+                          className="form-control"
+                          placeholder="Rechercher un utilisateur..."
+                          value={userSearchQuery}
+                          onChange={(e) => handleSearchUsers(e.target.value)}
+                        />
+                        {userSearchQuery.length >= 2 && userSearchResults.length === 0 && (
+                          <div 
+                            className="position-absolute w-100 mt-1 p-3 text-center text-muted border bg-white shadow-sm" 
+                            style={{ zIndex: 9999 }}
+                          >
+                            Aucun utilisateur trouvé
+                          </div>
+                        )}
+                        {userSearchResults.length > 0 && (
+                          <div 
+                            className="list-group position-absolute w-100 mt-1 shadow-lg border" 
+                            style={{ 
+                              zIndex: 9999, 
+                              maxHeight: '300px', 
+                              overflowY: 'auto',
+                              backgroundColor: 'white'
+                            }}
+                          >
+                            {userSearchResults.map(user => (
+                              <button
+                                key={user.id}
+                                type="button"
+                                className="list-group-item list-group-item-action d-flex align-items-center gap-2"
+                                onClick={() => handleSelectUser(user)}
+                                style={{ cursor: 'pointer' }}
+                              >
+                                {user.avatar && (
+                                  <img 
+                                    src={`http://localhost:5000${user.avatar}`} 
+                                    alt={user.firstName}
+                                    className="rounded-circle"
+                                    style={{ width: 32, height: 32, objectFit: 'cover' }}
+                                  />
+                                )}
+                                <div className="text-start">
+                                  <div>{user.firstName} {user.lastName}</div>
+                                  <small className="text-muted">{user.email}</small>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Nom */}
                   <div className="mb-3">
                     <label className="form-label">Nom *</label>
                     <input
@@ -1285,8 +1469,11 @@ const ExpenseSharing = () => {
                       value={memberForm.name}
                       onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })}
                       required
+                      disabled={!!selectedUser}
                     />
                   </div>
+
+                  {/* Email */}
                   <div className="mb-3">
                     <label className="form-label">Email</label>
                     <input
@@ -1294,14 +1481,24 @@ const ExpenseSharing = () => {
                       className="form-control"
                       value={memberForm.email}
                       onChange={(e) => setMemberForm({ ...memberForm, email: e.target.value })}
+                      disabled={!!selectedUser}
                     />
                   </div>
                 </div>
                 <div className="modal-footer">
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowMemberModal(false)}>
+                  <button type="button" className="btn btn-secondary" onClick={() => {
+                    setShowMemberModal(false);
+                    setEditingMember(null);
+                    setSelectedUser(null);
+                    setUserSearchQuery('');
+                    setUserSearchResults([]);
+                    setMemberForm({ name: '', email: '', userId: null });
+                  }}>
                     Annuler
                   </button>
-                  <button type="submit" className="btn btn-primary">Ajouter</button>
+                  <button type="submit" className="btn btn-primary">
+                    {editingMember ? 'Modifier' : 'Ajouter'}
+                  </button>
                 </div>
               </form>
             </div>
