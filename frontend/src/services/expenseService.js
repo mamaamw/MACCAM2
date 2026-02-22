@@ -8,7 +8,11 @@ const expenseService = {
       
       // Ajouter les données de base
       formData.append('groupId', expenseData.groupId);
+      formData.append('type', expenseData.type || 'expense');
       formData.append('paidById', expenseData.paidById);
+      if (expenseData.toMemberId) {
+        formData.append('toMemberId', expenseData.toMemberId);
+      }
       formData.append('description', expenseData.description);
       formData.append('amount', expenseData.amount);
       formData.append('date', expenseData.date);

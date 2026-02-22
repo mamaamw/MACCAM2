@@ -17,25 +17,44 @@ router.use(protect);
 // Créer une nouvelle dépense
 router.post('/', uploadExpensePhotos.array('photos', 5), async (req, res) => {
   try {
-    const { groupId, paidById, description, amount, date, category, splitMode, shares: sharesStr, participants: participantsStr } = req.body;
+    const { groupId, type, paidById, toMemberId, description, amount, date, category, splitMode, shares: sharesStr, participants: participantsStr } = req.body;
     const participants = participantsStr ? JSON.parse(participantsStr) : [];
     const shares = sharesStr ? JSON.parse(sharesStr) : null;
+    const transactionType = type || 'expense';
 
-    if (!groupId || !paidById || !description || !amount || !participants || participants.length === 0) {
+    if (!groupId || !paidById || !description || !amount) {
       return res.status(400).json({ 
         success: false, 
         message: 'Données manquantes' 
       });
     }
 
-    // Valider que la somme des parts = montant total
-    const totalShares = participants.reduce((sum, p) => sum + parseFloat(p.share), 0);
-    const amountValue = parseFloat(amount);
-    if (Math.abs(totalShares - amountValue) > 0.01) {
+    // Pour expense et income, il faut des participants
+    if ((transactionType === 'expense' || transactionType === 'income') && (!participants || participants.length === 0)) {
       return res.status(400).json({ 
         success: false, 
-        message: `La somme des parts (${totalShares.toFixed(2)}) doit être égale au montant total (${amountValue.toFixed(2)})` 
+        message: 'Les participants sont requis pour ce type de transaction' 
       });
+    }
+
+    // Pour transfer, il faut toMemberId
+    if (transactionType === 'transfer' && !toMemberId) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Le destinataire est requis pour un transfert' 
+      });
+    }
+
+    // Valider que la somme des parts = montant total (pour expense et income)
+    if ((transactionType === 'expense' || transactionType === 'income') && participants.length > 0) {
+      const totalShares = participants.reduce((sum, p) => sum + parseFloat(p.share), 0);
+      const amountValue = parseFloat(amount);
+      if (Math.abs(totalShares - amountValue) > 0.01) {
+        return res.status(400).json({ 
+          success: false, 
+          message: `La somme des parts (${totalShares.toFixed(2)}) doit être égale au montant total (${amountValue.toFixed(2)})` 
+        });
+      }
     }
 
     // Vérifier l'accès au groupe
@@ -77,7 +96,9 @@ router.post('/', uploadExpensePhotos.array('photos', 5), async (req, res) => {
     const expense = await prisma.expense.create({
       data: {
         groupId,
+        type: transactionType,
         paidById,
+        toMemberId: transactionType === 'transfer' ? toMemberId : null,
         description,
         amount: parseFloat(amount),
         date: date ? new Date(date) : new Date(),
@@ -86,7 +107,7 @@ router.post('/', uploadExpensePhotos.array('photos', 5), async (req, res) => {
         splitMode: splitMode || 'manual',
         shares: shares ? JSON.stringify(shares) : null,
         participants: {
-          create: participants.map(p => ({
+          create: transactionType === 'transfer' ? [] : participants.map(p => ({
             memberId: p.memberId,
             share: parseFloat(p.share)
           }))
@@ -94,6 +115,7 @@ router.post('/', uploadExpensePhotos.array('photos', 5), async (req, res) => {
       },
       include: {
         paidBy: true,
+        toMember: true,
         participants: {
           include: {
             member: true
@@ -123,7 +145,7 @@ router.post('/', uploadExpensePhotos.array('photos', 5), async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { description, amount, date, category, splitMode, shares: sharesStr, participants } = req.body;
+    const { type, toMemberId, description, amount, date, category, splitMode, shares: sharesStr, participants } = req.body;
     const shares = sharesStr ? JSON.parse(sharesStr) : null;
 
     // Récupérer la dépense et vérifier l'accès
@@ -151,6 +173,8 @@ router.put('/:id', async (req, res) => {
     const updatedExpense = await prisma.expense.update({
       where: { id },
       data: {
+        type: type || undefined,
+        toMemberId: toMemberId !== undefined ? toMemberId : undefined,
         description: description || undefined,
         amount: amount !== undefined ? parseFloat(amount) : undefined,
         date: date ? new Date(date) : undefined,

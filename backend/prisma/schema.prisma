@@ -914,6 +914,7 @@ model ExpenseGroupMember {
   joinedAt        DateTime  @default(now())
   
   paidExpenses    Expense[] @relation("ExpensePaidBy")
+  receivedTransfers Expense[] @relation("ExpenseToMember")
   participations  ExpenseParticipant[]
   
   @@unique([groupId, userId])
@@ -927,12 +928,17 @@ model Expense {
   groupId         String
   group           ExpenseGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
   
-  paidById        String    // Membre qui a payé
+  type            String    @default("expense") // Type: 'expense', 'income', 'transfer'
+  
+  paidById        String    // Pour expense: qui a payé, pour income: qui reçoit, pour transfer: qui donne
   paidBy          ExpenseGroupMember @relation("ExpensePaidBy", fields: [paidById], references: [id])
   
-  description     String    // Description de la dépense
+  toMemberId      String?   // Pour transfer: vers qui va l'argent
+  toMember        ExpenseGroupMember? @relation("ExpenseToMember", fields: [toMemberId], references: [id])
+  
+  description     String    // Description de la transaction
   amount          Float     // Montant total
-  date            DateTime  @default(now()) // Date de la dépense
+  date            DateTime  @default(now()) // Date de la transaction
   category        String?   // Catégorie: Transport, Logement, Nourriture, etc.
   photos          String?   // JSON array des chemins des photos
   splitMode       String?   // Mode de division: 'equal', 'shares', 'manual'

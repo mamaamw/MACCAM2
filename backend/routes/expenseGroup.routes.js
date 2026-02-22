@@ -141,6 +141,7 @@ router.get('/:id', async (req, res) => {
         expenses: {
           include: {
             paidBy: true,
+            toMember: true,
             participants: {
               include: {
                 member: true
@@ -506,13 +507,27 @@ router.get('/:id/balances', async (req, res) => {
 
     // Calculer ce que chaque membre a payé et doit
     group.expenses.forEach(expense => {
-      // Ajouter au montant payé
-      balances[expense.paidById].paid += expense.amount;
-
-      // Distribuer les parts
-      expense.participants.forEach(participant => {
-        balances[participant.memberId].owes += participant.share;
-      });
+      const expenseType = expense.type || 'expense';
+      
+      if (expenseType === 'expense') {
+        // Dépense: paidBy a payé, participants doivent
+        balances[expense.paidById].paid += expense.amount;
+        expense.participants.forEach(participant => {
+          balances[participant.memberId].owes += participant.share;
+        });
+      } else if (expenseType === 'income') {
+        // Revenu: paidBy a reçu (les autres ont payé), participants reçoivent
+        balances[expense.paidById].owes += expense.amount;
+        expense.participants.forEach(participant => {
+          balances[participant.memberId].paid += participant.share;
+        });
+      } else if (expenseType === 'transfer') {
+        // Transfert: paidBy a donné à toMember
+        if (expense.toMemberId && balances[expense.toMemberId]) {
+          balances[expense.paidById].paid += expense.amount;
+          balances[expense.toMemberId].owes += expense.amount;
+        }
+      }
     });
 
     // Calculer le solde final (payé - doit)

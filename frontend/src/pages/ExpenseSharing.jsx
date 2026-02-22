@@ -33,11 +33,13 @@ const ExpenseSharing = () => {
   });
 
   const [expenseForm, setExpenseForm] = useState({
+    type: 'expense',
     description: '',
     amount: '',
     date: new Date().toISOString().split('T')[0],
     category: 'Autre',
     paidById: '',
+    toMemberId: '',
     participants: []
   });
 
@@ -46,7 +48,6 @@ const ExpenseSharing = () => {
     email: ''
   });
 
-  const [autoSplit, setAutoSplit] = useState(false);
   const [splitByShares, setSplitByShares] = useState(false);
   const [participantShares, setParticipantShares] = useState({});
   const [selectedPhotos, setSelectedPhotos] = useState([]);
@@ -73,31 +74,12 @@ const ExpenseSharing = () => {
     }
   }, [selectedGroup]);
 
-  // Recalculer automatiquement les parts si en mode autoSplit ou splitByShares
+  // Recalculer automatiquement les parts si en mode splitByShares
   useEffect(() => {
-    if (autoSplit && expenseForm.amount && expenseForm.participants.length > 0) {
-      const totalAmount = parseFloat(expenseForm.amount);
-      const count = expenseForm.participants.length;
-      const equalShare = totalAmount / count;
-      
-      let sumSoFar = 0;
-      const updatedParticipants = expenseForm.participants.map((p, index) => {
-        if (index === count - 1) {
-          return { ...p, share: (totalAmount - sumSoFar).toString() };
-        } else {
-          sumSoFar += equalShare;
-          return { ...p, share: equalShare.toString() };
-        }
-      });
-      
-      setExpenseForm(prev => ({
-        ...prev,
-        participants: updatedParticipants
-      }));
-    } else if (splitByShares && expenseForm.amount && expenseForm.participants.length > 0) {
+    if (splitByShares && expenseForm.amount && expenseForm.participants.length > 0) {
       calculateShareAmounts();
     }
-  }, [expenseForm.amount, autoSplit, splitByShares]);
+  }, [expenseForm.amount, splitByShares]);
 
   const fetchGroups = async () => {
     try {
@@ -204,11 +186,13 @@ const ExpenseSharing = () => {
       
       setEditingExpense(expense);
       setExpenseForm({
+        type: expense.type || 'expense',
         description: expense.description,
         amount: expense.amount.toString(),
         date: new Date(expense.date).toISOString().split('T')[0],
         category: expense.category || 'Autre',
         paidById: expense.paidById,
+        toMemberId: expense.toMemberId || '',
         participants: expense.participants.map(p => ({
           memberId: p.memberId,
           share: p.share.toString()
@@ -236,30 +220,24 @@ const ExpenseSharing = () => {
           }
         }
         setSplitByShares(true);
-        setAutoSplit(false);
-      } else if (expense.splitMode === 'equal') {
-        // Mode équitable
-        setAutoSplit(true);
-        setSplitByShares(false);
-        setParticipantShares({});
       } else {
         // Mode manuel
-        setAutoSplit(false);
         setSplitByShares(false);
         setParticipantShares({});
       }
     } else {
       setEditingExpense(null);
       setExpenseForm({
+        type: 'expense',
         description: '',
         amount: '',
         date: new Date().toISOString().split('T')[0],
         category: 'Autre',
         paidById: selectedGroup?.members[0]?.id || '',
+        toMemberId: '',
         participants: []
       });
       setExpensePhotos([]);
-      setAutoSplit(false);
       setSplitByShares(false);
       setParticipantShares({});
     }
@@ -283,8 +261,7 @@ const ExpenseSharing = () => {
     try {
       // Déterminer le mode de division
       let splitMode = 'manual';
-      if (autoSplit) splitMode = 'equal';
-      else if (splitByShares) splitMode = 'shares';
+      if (splitByShares) splitMode = 'shares';
       
       const expenseData = {
         ...expenseForm,
@@ -361,37 +338,63 @@ const ExpenseSharing = () => {
       ...expenseForm,
       participants: updatedParticipants
     });
-    setAutoSplit(true);
-    setSplitByShares(false);
+    
+    // Si on est en mode par parts, mettre toutes les parts à 1
+    if (splitByShares) {
+      const equalShares = {};
+      expenseForm.participants.forEach(p => {
+        equalShares[p.memberId] = 1;
+      });
+      setParticipantShares(equalShares);
+    }
   };
 
   const handleSplitByShares = () => {
-    if (!expenseForm.amount || expenseForm.participants.length === 0) return;
-    
-    // Initialiser les parts à 1 si elles n'existent pas
-    const shares = {};
-    expenseForm.participants.forEach(p => {
-      shares[p.memberId] = participantShares[p.memberId] || 1;
-    });
-    setParticipantShares(shares);
-    
-    setSplitByShares(true);
-    setAutoSplit(false);
-    
-    // Calculer les montants basés sur les parts
-    calculateShareAmounts(shares);
+    if (splitByShares) {
+      // Désactiver le mode par parts (garder les montants actuels)
+      setSplitByShares(false);
+    } else {
+      // Activer le mode par parts
+      if (!expenseForm.amount || expenseForm.participants.length === 0) return;
+      
+      // Initialiser les parts à 1 pour chaque participant
+      const shares = {};
+      expenseForm.participants.forEach(p => {
+        shares[p.memberId] = participantShares[p.memberId] ?? 1;
+      });
+      
+      setParticipantShares(shares);
+      setSplitByShares(true);
+      
+      // Calculer les montants basés sur les parts
+      calculateShareAmounts(shares);
+    }
   };
 
   const calculateShareAmounts = (shares = participantShares) => {
     if (!expenseForm.amount || expenseForm.participants.length === 0) return;
     
     const totalAmount = parseFloat(expenseForm.amount);
-    const totalShares = Object.values(shares).reduce((sum, share) => sum + parseFloat(share || 1), 0);
+    const totalShares = Object.values(shares).reduce((sum, share) => sum + parseFloat(share || 0), 0);
+    
+    // Éviter la division par zéro
+    if (totalShares === 0) {
+      const updatedParticipants = expenseForm.participants.map(p => ({
+        ...p,
+        share: '0'
+      }));
+      setExpenseForm({
+        ...expenseForm,
+        participants: updatedParticipants
+      });
+      return;
+    }
+    
     const amountPerShare = totalAmount / totalShares;
     
     let sumSoFar = 0;
     const updatedParticipants = expenseForm.participants.map((p, index) => {
-      const memberShares = parseFloat(shares[p.memberId] || 1);
+      const memberShares = parseFloat(shares[p.memberId] || 0);
       
       if (index === expenseForm.participants.length - 1) {
         // Dernière part : ajuster pour que la somme soit exacte
@@ -676,19 +679,42 @@ const ExpenseSharing = () => {
                             <tbody>
                               {selectedGroup.expenses.map(expense => {
                                 const catConfig = getCategoryConfig(expense.category);
+                                const typeConfig = {
+                                  expense: { label: 'Dépense', color: 'danger', icon: 'feather-minus-circle' },
+                                  income: { label: 'Revenu', color: 'success', icon: 'feather-plus-circle' },
+                                  transfer: { label: 'Transfert', color: 'info', icon: 'feather-arrow-right-circle' }
+                                };
+                                const typeInfo = typeConfig[expense.type] || typeConfig.expense;
+                                
                                 return (
                                   <tr key={expense.id}>
                                     <td>
                                       <small>{new Date(expense.date).toLocaleDateString('fr-FR')}</small>
                                     </td>
-                                    <td>{expense.description}</td>
+                                    <td>
+                                      <div className="d-flex align-items-center gap-2">
+                                        <span className={`badge bg-soft-${typeInfo.color} text-${typeInfo.color}`}>
+                                          <i className={`${typeInfo.icon} me-1`}></i>
+                                          {typeInfo.label}
+                                        </span>
+                                        {expense.description}
+                                      </div>
+                                    </td>
                                     <td>
                                       <span className={`badge bg-soft-${catConfig.color} text-${catConfig.color}`}>
                                         <i className={`${catConfig.icon} me-1`}></i>
                                         {expense.category || 'Autre'}
                                       </span>
                                     </td>
-                                    <td>{expense.paidBy?.name}</td>
+                                    <td>
+                                      {expense.type === 'transfer' ? (
+                                        <small>
+                                          {expense.paidBy?.name} → {expense.toMember?.name}
+                                        </small>
+                                      ) : (
+                                        expense.paidBy?.name
+                                      )}
+                                    </td>
                                     <td className="text-end fw-semibold">
                                       {formatCurrency(expense.amount, selectedGroup.currency)}
                                     </td>
@@ -850,11 +876,45 @@ const ExpenseSharing = () => {
               <form onSubmit={handleExpenseSubmit}>
                 <div className="modal-header">
                   <h5 className="modal-title">
-                    {editingExpense ? 'Modifier la dépense' : 'Nouvelle dépense'}
+                    {editingExpense ? (
+                      expenseForm.type === 'expense' ? 'Modifier la dépense' :
+                      expenseForm.type === 'income' ? 'Modifier le revenu' :
+                      'Modifier le transfert'
+                    ) : (
+                      expenseForm.type === 'expense' ? 'Nouvelle dépense' :
+                      expenseForm.type === 'income' ? 'Nouveau revenu' :
+                      'Nouveau transfert'
+                    )}
                   </h5>
                   <button type="button" className="btn-close" onClick={() => setShowExpenseModal(false)}></button>
                 </div>
                 <div className="modal-body">
+                  <div className="mb-3">
+                    <label className="form-label">Type de transaction *</label>
+                    <select
+                      className="form-select"
+                      value={expenseForm.type}
+                      onChange={(e) => {
+                        setExpenseForm({ 
+                          ...expenseForm, 
+                          type: e.target.value,
+                          participants: e.target.value === 'transfer' ? [] : expenseForm.participants,
+                          toMemberId: e.target.value === 'transfer' ? '' : ''
+                        });
+                        setSplitByShares(false);
+                        setParticipantShares({});
+                      }}
+                    >
+                      <option value="expense">Dépense</option>
+                      <option value="income">Revenu</option>
+                      <option value="transfer">Transfert</option>
+                    </select>
+                    <small className="text-muted">
+                      {expenseForm.type === 'expense' && 'Une dépense partagée entre plusieurs participants'}
+                      {expenseForm.type === 'income' && 'Un revenu distribué entre plusieurs participants'}
+                      {expenseForm.type === 'transfer' && 'Un transfert direct d\'argent entre deux personnes'}
+                    </small>
+                  </div>
                   <div className="row">
                     <div className="col-md-8 mb-3">
                       <label className="form-label">Description *</label>
@@ -901,43 +961,80 @@ const ExpenseSharing = () => {
                       </select>
                     </div>
                   </div>
-                  <div className="mb-3">
-                    <label className="form-label">Payé par *</label>
-                    <select
-                      className="form-select"
-                      value={expenseForm.paidById}
-                      onChange={(e) => setExpenseForm({ ...expenseForm, paidById: e.target.value })}
-                      required
-                    >
-                      <option value="">Sélectionner...</option>
-                      {selectedGroup.members?.map(member => (
-                        <option key={member.id} value={member.id}>{member.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="mb-3">
-                    <div className="d-flex justify-content-between align-items-center mb-2">
-                      <label className="form-label mb-0">Participants *</label>
-                      <div className="btn-group">
-                        <button
-                          type="button"
-                          className={`btn btn-sm ${autoSplit ? 'btn-brand' : 'btn-light-brand'}`}
-                          onClick={handleSplitEqually}
+                  <div className="row">
+                    <div className={`mb-3 ${expenseForm.type === 'transfer' ? 'col-md-6' : 'col-md-12'}`}>
+                      <label className="form-label">
+                        {expenseForm.type === 'expense' && 'Payé par *'}
+                        {expenseForm.type === 'income' && 'Reçu par *'}
+                        {expenseForm.type === 'transfer' && 'De *'}
+                      </label>
+                      <select
+                        className="form-select"
+                        value={expenseForm.paidById}
+                        onChange={(e) => setExpenseForm({ ...expenseForm, paidById: e.target.value })}
+                        required
+                      >
+                        <option value="">Sélectionner...</option>
+                        {selectedGroup.members?.map(member => (
+                          <option key={member.id} value={member.id}>{member.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    {expenseForm.type === 'transfer' && (
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label">Vers *</label>
+                        <select
+                          className="form-select"
+                          value={expenseForm.toMemberId}
+                          onChange={(e) => setExpenseForm({ ...expenseForm, toMemberId: e.target.value })}
+                          required
                         >
-                          <i className={`feather-${autoSplit ? 'check-circle' : 'divide'} me-1`}></i>
-                          Équitable
-                          {autoSplit && <span className="badge bg-white text-brand ms-2">Auto</span>}
-                        </button>
-                        <button
-                          type="button"
-                          className={`btn btn-sm ${splitByShares ? 'btn-brand' : 'btn-light-brand'}`}
-                          onClick={handleSplitByShares}
-                        >
-                          <i className={`feather-${splitByShares ? 'check-circle' : 'percent'} me-1`}></i>
-                          Par parts
-                          {splitByShares && <span className="badge bg-white text-brand ms-2">Auto</span>}
-                        </button>
+                          <option value="">Sélectionner...</option>
+                          {selectedGroup.members?.filter(m => m.id !== expenseForm.paidById).map(member => (
+                            <option key={member.id} value={member.id}>{member.name}</option>
+                          ))}
+                        </select>
                       </div>
+                    )}
+                  </div>
+                  
+                  {/* Participants (seulement pour expense et income) */}
+                  {expenseForm.type !== 'transfer' && (
+                    <>
+                      <div className="mb-3">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                          <label className="form-label mb-0">Participants *</label>
+                        <div className="d-flex gap-2">
+                          <button
+                            type="button"
+                            className="btn btn-sm btn-outline-brand"
+                            onClick={handleSplitEqually}
+                            disabled={!expenseForm.amount || expenseForm.participants.length === 0}
+                          >
+                            <i className="feather-divide me-1"></i>
+                            Diviser équitablement
+                          </button>
+                          <div className="btn-group">
+                            <button
+                              type="button"
+                              className={`btn btn-sm ${!splitByShares ? 'btn-brand' : 'btn-outline-brand'}`}
+                              onClick={() => setSplitByShares(false)}
+                              disabled={!splitByShares}
+                            >
+                              <i className="feather-edit-2 me-1"></i>
+                              Sommes
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn btn-sm ${splitByShares ? 'btn-brand' : 'btn-outline-brand'}`}
+                              onClick={handleSplitByShares}
+                              disabled={splitByShares}
+                            >
+                              <i className="feather-percent me-1"></i>
+                              Par parts
+                            </button>
+                          </div>
+                        </div>
                     </div>
                     {splitByShares && (
                       <div className="alert alert-info alert-sm mb-2">
@@ -993,7 +1090,6 @@ const ExpenseSharing = () => {
                                   value={parseFloat(participant.share || 0).toFixed(2)}
                                   readOnly={splitByShares}
                                   onChange={(e) => {
-                                    setAutoSplit(false);
                                     setSplitByShares(false);
                                     setExpenseForm({
                                       ...expenseForm,
@@ -1014,29 +1110,17 @@ const ExpenseSharing = () => {
                                     min="0"
                                     className="form-control form-control-sm text-center"
                                     style={{ fontSize: '0.875rem', fontWeight: '500' }}
-                                    value={participantShares[member.id] || 1}
+                                    value={participantShares[member.id] ?? 1}
                                     onChange={(e) => {
-                                      const value = parseFloat(e.target.value);
+                                      const value = parseFloat(e.target.value) || 0;
                                       
-                                      // Si la valeur est 0 ou vide, décocher le participant
-                                      if (!value || value === 0) {
-                                        setExpenseForm({
-                                          ...expenseForm,
-                                          participants: expenseForm.participants.filter(p => p.memberId !== member.id)
-                                        });
-                                        const newShares = { ...participantShares };
-                                        delete newShares[member.id];
-                                        setParticipantShares(newShares);
-                                        setTimeout(() => calculateShareAmounts(newShares), 0);
-                                      } else {
-                                        // Sinon, mettre à jour les shares normalement
-                                        const newShares = {
-                                          ...participantShares,
-                                          [member.id]: value
-                                        };
-                                        setParticipantShares(newShares);
-                                        calculateShareAmounts(newShares);
-                                      }
+                                      // Mettre à jour les shares
+                                      const newShares = {
+                                        ...participantShares,
+                                        [member.id]: value
+                                      };
+                                      setParticipantShares(newShares);
+                                      calculateShareAmounts(newShares);
                                     }}
                                   />
                                   <span className="input-group-text" style={{ fontSize: '0.75rem' }}>parts</span>
@@ -1047,30 +1131,32 @@ const ExpenseSharing = () => {
                         </div>
                       );
                     })}
-                  </div>
+                    </div>
                   
-                  {/* Afficher la différence si les parts ne correspondent pas au montant */}
-                  {expenseForm.amount && expenseForm.participants.length > 0 && (() => {
-                    const totalAmount = parseFloat(expenseForm.amount);
-                    const totalShares = expenseForm.participants.reduce((sum, p) => sum + parseFloat(p.share || 0), 0);
-                    const difference = totalAmount - totalShares;
-                    const currency = selectedGroup?.currency || 'EUR';
-                    
-                    if (Math.abs(difference) > 0.01) {
-                      return (
-                        <div className={`alert ${difference > 0 ? 'alert-warning' : 'alert-danger'} mt-3 mb-0`}>
-                          <i className="feather-alert-circle me-2"></i>
-                          <strong>Différence : {difference > 0 ? '+' : ''}{formatCurrency(Math.abs(difference), currency)}</strong>
-                          <br />
-                          <small>
-                            Total des parts : {formatCurrency(totalShares, currency)} / 
-                            Montant total : {formatCurrency(totalAmount, currency)}
-                          </small>
-                        </div>
-                      );
-                    }
-                    return null;
-                  })()}
+                    {/* Afficher la différence si les parts ne correspondent pas au montant */}
+                    {expenseForm.amount && expenseForm.participants.length > 0 && (() => {
+                      const totalAmount = parseFloat(expenseForm.amount);
+                      const totalShares = expenseForm.participants.reduce((sum, p) => sum + parseFloat(p.share || 0), 0);
+                      const difference = totalAmount - totalShares;
+                      const currency = selectedGroup?.currency || 'EUR';
+                      
+                      if (Math.abs(difference) > 0.01) {
+                        return (
+                          <div className={`alert ${difference > 0 ? 'alert-warning' : 'alert-danger'} mt-3 mb-0`}>
+                            <i className="feather-alert-circle me-2"></i>
+                            <strong>Différence : {difference > 0 ? '+' : ''}{formatCurrency(Math.abs(difference), currency)}</strong>
+                            <br />
+                            <small>
+                              Total des parts : {formatCurrency(totalShares, currency)} / 
+                              Montant total : {formatCurrency(totalAmount, currency)}
+                            </small>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </>
+                )}
                   
                   {/* Gestionnaire de photos */}
                   <div className="mt-4">
