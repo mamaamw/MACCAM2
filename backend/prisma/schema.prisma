@@ -936,6 +936,7 @@ model Expense {
   category        String?   // Catégorie: Transport, Logement, Nourriture, etc.
   photos          String?   // JSON array des chemins des photos
   splitMode       String?   // Mode de division: 'equal', 'shares', 'manual'
+  shares          String?   // JSON object des parts par participant (ex: {"memberId": 2})
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

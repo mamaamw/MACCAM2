@@ -164,7 +164,8 @@ router.get('/:id', async (req, res) => {
       ...group,
       expenses: group.expenses.map(expense => ({
         ...expense,
-        photos: expense.photos ? JSON.parse(expense.photos) : []
+        photos: expense.photos ? JSON.parse(expense.photos) : [],
+        shares: expense.shares ? JSON.parse(expense.shares) : null
       }))
     };
 

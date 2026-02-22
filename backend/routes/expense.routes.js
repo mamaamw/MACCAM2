@@ -17,8 +17,9 @@ router.use(protect);
 // Créer une nouvelle dépense
 router.post('/', uploadExpensePhotos.array('photos', 5), async (req, res) => {
   try {
-    const { groupId, paidById, description, amount, date, category, splitMode, participants: participantsStr } = req.body;
+    const { groupId, paidById, description, amount, date, category, splitMode, shares: sharesStr, participants: participantsStr } = req.body;
     const participants = participantsStr ? JSON.parse(participantsStr) : [];
+    const shares = sharesStr ? JSON.parse(sharesStr) : null;
 
     if (!groupId || !paidById || !description || !amount || !participants || participants.length === 0) {
       return res.status(400).json({ 
@@ -83,6 +84,7 @@ router.post('/', uploadExpensePhotos.array('photos', 5), async (req, res) => {
         category: category || null,
         photos: photosPaths.length > 0 ? JSON.stringify(photosPaths) : null,
         splitMode: splitMode || 'manual',
+        shares: shares ? JSON.stringify(shares) : null,
         participants: {
           create: participants.map(p => ({
             memberId: p.memberId,
@@ -121,7 +123,8 @@ router.post('/', uploadExpensePhotos.array('photos', 5), async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { description, amount, date, category, splitMode, participants } = req.body;
+    const { description, amount, date, category, splitMode, shares: sharesStr, participants } = req.body;
+    const shares = sharesStr ? JSON.parse(sharesStr) : null;
 
     // Récupérer la dépense et vérifier l'accès
     const expense = await prisma.expense.findFirst({
@@ -152,7 +155,8 @@ router.put('/:id', async (req, res) => {
         amount: amount !== undefined ? parseFloat(amount) : undefined,
         date: date ? new Date(date) : undefined,
         category: category !== undefined ? category : undefined,
-        splitMode: splitMode !== undefined ? splitMode : undefined
+        splitMode: splitMode !== undefined ? splitMode : undefined,
+        shares: shares !== null ? JSON.stringify(shares) : undefined
       },
       include: {
         paidBy: true,

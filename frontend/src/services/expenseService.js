@@ -15,6 +15,14 @@ const expenseService = {
       formData.append('category', expenseData.category || '');
       formData.append('participants', JSON.stringify(expenseData.participants));
       
+      // Ajouter le mode de division et les parts
+      if (expenseData.splitMode) {
+        formData.append('splitMode', expenseData.splitMode);
+      }
+      if (expenseData.shares) {
+        formData.append('shares', JSON.stringify(expenseData.shares));
+      }
+      
       // Ajouter les photos
       if (photos && photos.length > 0) {
         photos.forEach(photo => {
@@ -37,7 +45,13 @@ const expenseService = {
   // Modifier une dépense
   updateExpense: async (id, expenseData) => {
     try {
-      const response = await api.put(`/expenses/${id}`, expenseData);
+      // Préparer les données avec shares en string si présent
+      const dataToSend = {
+        ...expenseData,
+        shares: expenseData.shares ? JSON.stringify(expenseData.shares) : undefined
+      };
+      
+      const response = await api.put(`/expenses/${id}`, dataToSend);
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la mise à jour de la dépense:', error);

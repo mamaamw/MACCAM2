@@ -218,17 +218,22 @@ const ExpenseSharing = () => {
       
       // Restaurer le mode de division depuis la base de données
       if (expense.splitMode === 'shares') {
-        // Mode par parts : restaurer les parts
-        const detectedShares = detectSharesFromAmounts(expense.participants, expense.amount);
-        if (detectedShares) {
-          setParticipantShares(detectedShares);
+        // Mode par parts : restaurer les parts depuis la BDD
+        if (expense.shares) {
+          setParticipantShares(expense.shares);
         } else {
-          // Si la détection échoue, initialiser avec 1 part pour chaque
-          const defaultShares = {};
-          expense.participants.forEach(p => {
-            defaultShares[p.memberId] = 1;
-          });
-          setParticipantShares(defaultShares);
+          // Fallback: essayer de détecter les parts
+          const detectedShares = detectSharesFromAmounts(expense.participants, expense.amount);
+          if (detectedShares) {
+            setParticipantShares(detectedShares);
+          } else {
+            // Si la détection échoue, initialiser avec 1 part pour chaque
+            const defaultShares = {};
+            expense.participants.forEach(p => {
+              defaultShares[p.memberId] = 1;
+            });
+            setParticipantShares(defaultShares);
+          }
         }
         setSplitByShares(true);
         setAutoSplit(false);
@@ -284,7 +289,8 @@ const ExpenseSharing = () => {
       const expenseData = {
         ...expenseForm,
         groupId: selectedGroup.id,
-        splitMode: splitMode
+        splitMode: splitMode,
+        shares: splitByShares ? participantShares : null
       };
 
       if (editingExpense) {
