@@ -48,6 +48,7 @@ const ExpenseSharing = () => {
     email: ''
   });
 
+  const [autoSplit, setAutoSplit] = useState(false);
   const [splitByShares, setSplitByShares] = useState(false);
   const [participantShares, setParticipantShares] = useState({});
   const [selectedPhotos, setSelectedPhotos] = useState([]);
@@ -80,6 +81,30 @@ const ExpenseSharing = () => {
       calculateShareAmounts();
     }
   }, [expenseForm.amount, splitByShares]);
+
+  // Diviser équitablement automatiquement en mode autoSplit
+  useEffect(() => {
+    if (autoSplit && !splitByShares && expenseForm.amount && expenseForm.participants.length > 0) {
+      const totalAmount = parseFloat(expenseForm.amount);
+      const count = expenseForm.participants.length;
+      const equalShare = totalAmount / count;
+      
+      let sumSoFar = 0;
+      const updatedParticipants = expenseForm.participants.map((p, index) => {
+        if (index === count - 1) {
+          return { ...p, share: (totalAmount - sumSoFar).toString() };
+        } else {
+          sumSoFar += equalShare;
+          return { ...p, share: equalShare.toString() };
+        }
+      });
+      
+      setExpenseForm(prev => ({
+        ...prev,
+        participants: updatedParticipants
+      }));
+    }
+  }, [expenseForm.amount, expenseForm.participants.length, autoSplit, splitByShares]);
 
   const fetchGroups = async () => {
     try {
@@ -220,13 +245,22 @@ const ExpenseSharing = () => {
           }
         }
         setSplitByShares(true);
+        setAutoSplit(false);
       } else {
         // Mode manuel
         setSplitByShares(false);
         setParticipantShares({});
+        setAutoSplit(false);
       }
     } else {
       setEditingExpense(null);
+      
+      // Par défaut, sélectionner tous les membres comme participants avec share='0'
+      const allParticipants = selectedGroup?.members?.map(m => ({
+        memberId: m.id,
+        share: '0'
+      })) || [];
+      
       setExpenseForm({
         type: 'expense',
         description: '',
@@ -235,11 +269,12 @@ const ExpenseSharing = () => {
         category: 'Autre',
         paidById: selectedGroup?.members[0]?.id || '',
         toMemberId: '',
-        participants: []
+        participants: allParticipants
       });
       setExpensePhotos([]);
       setSplitByShares(false);
       setParticipantShares({});
+      setAutoSplit(true); // Activer le mode auto-split pour les nouvelles dépenses
     }
     setSelectedPhotos([]);
     setShowExpenseModal(true);
@@ -249,13 +284,15 @@ const ExpenseSharing = () => {
     e.preventDefault();
     if (!selectedGroup) return;
 
-    // Validation: vérifier que la somme des parts = montant total
-    const totalAmount = parseFloat(expenseForm.amount);
-    const totalShares = expenseForm.participants.reduce((sum, p) => sum + parseFloat(p.share || 0), 0);
-    
-    if (Math.abs(totalAmount - totalShares) > 0.01) {
-      toast.error(`La somme des parts (${totalShares.toFixed(2)}) doit être égale au montant total (${totalAmount.toFixed(2)})`);
-      return;
+    // Validation: vérifier que la somme des parts = montant total (sauf pour les transferts)
+    if (expenseForm.type !== 'transfer') {
+      const totalAmount = parseFloat(expenseForm.amount);
+      const totalShares = expenseForm.participants.reduce((sum, p) => sum + parseFloat(p.share || 0), 0);
+      
+      if (Math.abs(totalAmount - totalShares) > 0.01) {
+        toast.error(`La somme des parts (${totalShares.toFixed(2)}) doit être égale au montant total (${totalAmount.toFixed(2)})`);
+        return;
+      }
     }
 
     try {
@@ -339,6 +376,9 @@ const ExpenseSharing = () => {
       participants: updatedParticipants
     });
     
+    // Activer le mode auto-split
+    setAutoSplit(true);
+    
     // Si on est en mode par parts, mettre toutes les parts à 1
     if (splitByShares) {
       const equalShares = {};
@@ -356,6 +396,9 @@ const ExpenseSharing = () => {
     } else {
       // Activer le mode par parts
       if (!expenseForm.amount || expenseForm.participants.length === 0) return;
+      
+      // Désactiver le mode auto-split
+      setAutoSplit(false);
       
       // Initialiser les parts à 1 pour chaque participant
       const shares = {};
@@ -895,14 +938,19 @@ const ExpenseSharing = () => {
                       className="form-select"
                       value={expenseForm.type}
                       onChange={(e) => {
+                        const newType = e.target.value;
                         setExpenseForm({ 
                           ...expenseForm, 
-                          type: e.target.value,
-                          participants: e.target.value === 'transfer' ? [] : expenseForm.participants,
-                          toMemberId: e.target.value === 'transfer' ? '' : ''
+                          type: newType,
+                          participants: newType === 'transfer' ? [] : expenseForm.participants,
+                          toMemberId: newType === 'transfer' ? '' : ''
                         });
                         setSplitByShares(false);
                         setParticipantShares({});
+                        // Réactiver autoSplit si on revient à expense/income
+                        if (newType !== 'transfer') {
+                          setAutoSplit(true);
+                        }
                       }}
                     >
                       <option value="expense">Dépense</option>
@@ -1017,9 +1065,12 @@ const ExpenseSharing = () => {
                           <div className="btn-group">
                             <button
                               type="button"
-                              className={`btn btn-sm ${!splitByShares ? 'btn-brand' : 'btn-outline-brand'}`}
-                              onClick={() => setSplitByShares(false)}
-                              disabled={!splitByShares}
+                              className={`btn btn-sm ${!splitByShares && !autoSplit ? 'btn-brand' : 'btn-outline-brand'}`}
+                              onClick={() => {
+                                setSplitByShares(false);
+                                setAutoSplit(false);
+                              }}
+                              disabled={!splitByShares && !autoSplit}
                             >
                               <i className="feather-edit-2 me-1"></i>
                               Sommes
@@ -1100,6 +1151,7 @@ const ExpenseSharing = () => {
                                     readOnly={splitByShares}
                                     onChange={(e) => {
                                       setSplitByShares(false);
+                                      setAutoSplit(false); // Désactiver le mode auto-split
                                       setExpenseForm({
                                         ...expenseForm,
                                         participants: expenseForm.participants.map(p => 
