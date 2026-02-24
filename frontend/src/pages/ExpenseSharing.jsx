@@ -55,6 +55,9 @@ const ExpenseSharing = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [editingMember, setEditingMember] = useState(null);
 
+  const [groupSearchQuery, setGroupSearchQuery] = useState('');
+  const [archivedFilter, setArchivedFilter] = useState('active'); // 'active', 'archived', 'all'
+
   const [autoSplit, setAutoSplit] = useState(false);
   const [splitByShares, setSplitByShares] = useState(false);
   const [participantShares, setParticipantShares] = useState({});
@@ -72,9 +75,14 @@ const ExpenseSharing = () => {
 
   const currencies = ['EUR', 'USD', 'CAD', 'GBP', 'CHF'];
 
+  // Debounce pour la recherche de groupes
   useEffect(() => {
-    fetchGroups();
-  }, []);
+    const timer = setTimeout(() => {
+      fetchGroups();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [groupSearchQuery, archivedFilter]);
 
   useEffect(() => {
     if (selectedGroup) {
@@ -116,7 +124,11 @@ const ExpenseSharing = () => {
   const fetchGroups = async () => {
     try {
       setLoading(true);
-      const response = await expenseGroupService.getGroups();
+      const options = {
+        search: groupSearchQuery || undefined,
+        archived: archivedFilter === 'all' ? undefined : (archivedFilter === 'archived')
+      };
+      const response = await expenseGroupService.getGroups(options);
       setGroups(response.data || []);
     } catch (error) {
       console.error('Erreur:', error);
@@ -206,6 +218,40 @@ const ExpenseSharing = () => {
         }
       }
     });
+  };
+
+  const handleArchiveGroup = (group) => {
+    setConfirmModal({
+      show: true,
+      title: 'Archiver le groupe',
+      message: `Voulez-vous archiver le groupe "${group.name}" ? Vous pourrez le désarchiver plus tard.`,
+      type: 'warning',
+      onConfirm: async () => {
+        setConfirmModal({ show: false, title: '', message: '', onConfirm: null, type: 'primary' });
+        try {
+          await expenseGroupService.archiveGroup(group.id);
+          toast.success('Groupe archivé');
+          if (selectedGroup?.id === group.id) {
+            setSelectedGroup(null);
+          }
+          fetchGroups();
+        } catch (error) {
+          console.error('Erreur:', error);
+          toast.error('Erreur lors de l\'archivage');
+        }
+      }
+    });
+  };
+
+  const handleUnarchiveGroup = async (group) => {
+    try {
+      await expenseGroupService.unarchiveGroup(group.id);
+      toast.success('Groupe désarchivé');
+      fetchGroups();
+    } catch (error) {
+      console.error('Erreur:', error);
+      toast.error('Erreur lors de la désarchivation');
+    }
   };
 
   const openExpenseModal = (expense = null) => {
@@ -634,7 +680,53 @@ const ExpenseSharing = () => {
                   Mes groupes
                 </h5>
               </div>
-              <div className="card-body p-0">
+              <div className="card-body pt-0">
+                {/* Barre de recherche */}
+                <div className="mb-3">
+                  <div className="input-group">
+                    <span className="input-group-text">
+                      <i className="feather-search"></i>
+                    </span>
+                    <input
+                      type="text"
+                      className="form-control"
+                      placeholder="Rechercher un groupe..."
+                      value={groupSearchQuery}
+                      onChange={(e) => setGroupSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') {
+                          e.target.blur();
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Filtres d'archivage */}
+                <div className="btn-group w-100 mb-3" role="group">
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${archivedFilter === 'active' ? 'btn-primary' : 'btn-light'}`}
+                    onClick={() => setArchivedFilter('active')}
+                  >
+                    Actifs
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${archivedFilter === 'archived' ? 'btn-primary' : 'btn-light'}`}
+                    onClick={() => setArchivedFilter('archived')}
+                  >
+                    Archivés
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${archivedFilter === 'all' ? 'btn-primary' : 'btn-light'}`}
+                    onClick={() => setArchivedFilter('all')}
+                  >
+                    Tous
+                  </button>
+                </div>
+
                 {groups.length === 0 ? (
                   <div className="text-center py-5">
                     <i className="feather-users" style={{ fontSize: '3rem', color: '#cbd5e1' }}></i>
@@ -648,13 +740,18 @@ const ExpenseSharing = () => {
                     {groups.map(group => (
                       <div
                         key={group.id}
-                        className={`list-group-item list-group-item-action ${selectedGroup?.id === group.id ? 'active' : ''}`}
+                        className={`list-group-item list-group-item-action ${selectedGroup?.id === group.id ? 'active' : ''} ${group.archived ? 'opacity-50' : ''}`}
                         style={{ cursor: 'pointer' }}
                         onClick={() => fetchGroupDetails(group.id)}
                       >
                         <div className="d-flex justify-content-between align-items-start">
                           <div className="flex-grow-1">
-                            <h6 className="mb-1">{group.name}</h6>
+                            <h6 className="mb-1">
+                              {group.name}
+                              {group.archived && (
+                                <span className="badge bg-secondary ms-2">Archivé</span>
+                              )}
+                            </h6>
                             <small className={selectedGroup?.id === group.id ? 'text-white-50' : 'text-muted'}>
                               {group.members?.length || 0} membres · {group.expenses?.length || 0} dépenses
                             </small>
@@ -669,6 +766,19 @@ const ExpenseSharing = () => {
                                   <i className="feather-edit-2 me-2"></i>Modifier
                                 </a>
                               </li>
+                              {group.archived ? (
+                                <li>
+                                  <a className="dropdown-item" onClick={() => handleUnarchiveGroup(group)}>
+                                    <i className="feather-archive me-2"></i>Désarchiver
+                                  </a>
+                                </li>
+                              ) : (
+                                <li>
+                                  <a className="dropdown-item" onClick={() => handleArchiveGroup(group)}>
+                                    <i className="feather-archive me-2"></i>Archiver
+                                  </a>
+                                </li>
+                              )}
                               <li><hr className="dropdown-divider" /></li>
                               <li>
                                 <a className="dropdown-item text-danger" onClick={() => handleDeleteGroup(group)}>

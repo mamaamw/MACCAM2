@@ -2,9 +2,16 @@ import api from '../lib/axios';
 
 const expenseGroupService = {
   // Obtenir tous les groupes
-  getGroups: async () => {
+  getGroups: async (options = {}) => {
     try {
-      const response = await api.get('/expense-groups');
+      const params = new URLSearchParams();
+      if (options.search) params.append('search', options.search);
+      if (options.archived !== undefined) params.append('archived', options.archived);
+      
+      const queryString = params.toString();
+      const url = `/expense-groups${queryString ? `?${queryString}` : ''}`;
+      
+      const response = await api.get(url);
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la récupération des groupes:', error);
@@ -52,6 +59,28 @@ const expenseGroupService = {
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la suppression du groupe:', error);
+      throw error;
+    }
+  },
+
+  // Archiver un groupe
+  archiveGroup: async (id) => {
+    try {
+      const response = await api.put(`/expense-groups/${id}/archive`);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de l\'archivage du groupe:', error);
+      throw error;
+    }
+  },
+
+  // Désarchiver un groupe
+  unarchiveGroup: async (id) => {
+    try {
+      const response = await api.put(`/expense-groups/${id}/unarchive`);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la désarchivation du groupe:', error);
       throw error;
     }
   },

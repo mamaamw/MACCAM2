@@ -82,16 +82,28 @@ export default function RecipeForm() {
     try {
       const response = await recipeService.importFromUrl(importUrl)
       if (response.success) {
+        const data = response.data;
         setFormData({
           ...formData,
-          ...response.data,
-          ingredients: response.data.ingredients?.length > 0 
-            ? response.data.ingredients 
+          title: data.title || '',
+          description: data.description || '',
+          category: data.category || 'Plat',
+          difficulty: data.difficulty || 'Inconnue',
+          prepTime: data.prepTime || '',
+          cookTime: data.cookTime || '',
+          servings: data.servings || 0,
+          image: data.image || '',
+          cuisine: data.cuisine || '',
+          source: data.source || '',
+          sourceUrl: data.sourceUrl || '',
+          notes: data.notes || '',
+          ingredients: data.ingredients?.length > 0 
+            ? data.ingredients 
             : [{ name: '', quantity: '', unit: '' }],
-          steps: response.data.steps?.length > 0 
-            ? response.data.steps 
+          steps: data.steps?.length > 0 
+            ? data.steps 
             : [''],
-          tags: response.data.tags || []
+          tags: data.tags || []
         })
         setImportUrl('')
         toast.success('Recette importée ! Vous pouvez maintenant la modifier avant de la sauvegarder.')

@@ -10,9 +10,33 @@ router.use(protect);
 // Obtenir tous les groupes de l'utilisateur
 router.get('/', async (req, res) => {
   try {
+    const { search, archived } = req.query;
+    
+    // Déterminer le filtre archived
+    let archivedFilter;
+    if (archived === 'true') {
+      archivedFilter = true; // Seulement les archivés
+    } else if (archived === 'false') {
+      archivedFilter = false; // Seulement les actifs
+    } else {
+      archivedFilter = undefined; // Tous
+    }
+    
+    // Construire le where pour la recherche
+    const searchWhere = search ? {
+      OR: [
+        { name: { contains: search } },
+        { description: { contains: search } }
+      ]
+    } : {};
+    
     // Groupes créés par l'utilisateur
     const createdGroups = await prisma.expenseGroup.findMany({
-      where: { userId: req.user.id },
+      where: { 
+        userId: req.user.id,
+        archived: archivedFilter,
+        ...searchWhere
+      },
       include: {
         members: {
           include: {
@@ -48,7 +72,9 @@ router.get('/', async (req, res) => {
           some: {
             userId: req.user.id
           }
-        }
+        },
+        archived: archivedFilter,
+        ...searchWhere
       },
       include: {
         user: {
@@ -336,6 +362,108 @@ router.delete('/:id', async (req, res) => {
     });
   } catch (error) {
     console.error('Erreur lors de la suppression:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Archiver un groupe
+router.put('/:id/archive', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Vérifier que l'utilisateur est le créateur du groupe
+    const group = await prisma.expenseGroup.findFirst({
+      where: {
+        id,
+        userId: req.user.id
+      }
+    });
+
+    if (!group) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Groupe non trouvé ou accès refusé' 
+      });
+    }
+
+    const updatedGroup = await prisma.expenseGroup.update({
+      where: { id },
+      data: { archived: true },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                avatar: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Groupe archivé avec succès',
+      data: updatedGroup
+    });
+  } catch (error) {
+    console.error('Erreur lors de l\'archivage:', error);
+    res.status(500).json({ success: false, message: 'Erreur serveur' });
+  }
+});
+
+// Désarchiver un groupe
+router.put('/:id/unarchive', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Vérifier que l'utilisateur est le créateur du groupe
+    const group = await prisma.expenseGroup.findFirst({
+      where: {
+        id,
+        userId: req.user.id
+      }
+    });
+
+    if (!group) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Groupe non trouvé ou accès refusé' 
+      });
+    }
+
+    const updatedGroup = await prisma.expenseGroup.update({
+      where: { id },
+      data: { archived: false },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                avatar: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Groupe désarchivé avec succès',
+      data: updatedGroup
+    });
+  } catch (error) {
+    console.error('Erreur lors de la désarchivation:', error);
     res.status(500).json({ success: false, message: 'Erreur serveur' });
   }
 });

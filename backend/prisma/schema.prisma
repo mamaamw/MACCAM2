@@ -889,6 +889,7 @@ model ExpenseGroup {
   name            String    // Nom du groupe (ex: "Voyage à Paris")
   description     String?   // Description
   currency        String    @default("EUR") // Devise: EUR, USD, CAD, etc.
+  archived        Boolean   @default(false) // Groupe archivé
   
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
