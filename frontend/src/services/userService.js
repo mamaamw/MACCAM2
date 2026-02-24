@@ -153,6 +153,35 @@ const userService = {
     return handleResponse(response);
   },
 
+  // Galerie des avatars de l'utilisateur connecté
+  getAvatarGallery: async () => {
+    const response = await fetch(`${API_URL}/avatar/gallery`, {
+      method: 'GET',
+      headers: getHeaders(),
+    });
+    return handleResponse(response);
+  },
+
+  // Définir un avatar existant comme photo actuelle
+  selectAvatarFromGallery: async (avatarPath) => {
+    const response = await fetch(`${API_URL}/avatar/select`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ path: avatarPath }),
+    });
+    return handleResponse(response);
+  },
+
+  // Supprimer une photo précise de la galerie d'avatars
+  deleteAvatarFromGallery: async (avatarPath) => {
+    const response = await fetch(`${API_URL}/avatar/file`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+      body: JSON.stringify({ path: avatarPath }),
+    });
+    return handleResponse(response);
+  },
+
   // Supprimer avatar
   deleteAvatar: async () => {
     const response = await fetch(`${API_URL}/avatar`, {

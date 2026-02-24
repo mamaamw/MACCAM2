@@ -265,7 +265,7 @@ setEditingItem(item)
               <div className="card-body">
                 <div className="d-flex align-items-center gap-4">
                   <img 
-                    src={user?.avatar ? `http://localhost:5000${user.avatar}` : '/assets/images/avatar/1.png'} 
+                    src={user?.avatar ? `http://localhost:5000${user.avatar}` : '/assets/images/avatar/default-user.svg'} 
                     alt={`${user?.firstName} ${user?.lastName}`}
                     style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '50%' }}
                   />

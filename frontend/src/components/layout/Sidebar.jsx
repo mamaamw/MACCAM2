@@ -253,15 +253,6 @@ export default function Sidebar() {
             </li>
           </ul>
           
-          {/* Carte de téléchargement */}
-          <div className="card text-center">
-            <div className="card-body">
-              <i className="feather-sunrise fs-4 text-dark"></i>
-              <h6 className="mt-4 text-dark fw-bolder">{t('sidebar.downloadCenter')}</h6>
-              <p className="fs-11 my-3 text-dark">{t('sidebar.downloadDesc')}</p>
-              <a href="https://www.maccam.com" target="_blank" rel="noopener noreferrer" className="btn btn-primary text-dark w-100">{t('sidebar.learnMore')}</a>
-            </div>
-          </div>
         </div>
       </div>
     </nav>

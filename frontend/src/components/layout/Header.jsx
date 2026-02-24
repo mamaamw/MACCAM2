@@ -8,7 +8,8 @@ export default function Header() {
   const navigate = useNavigate()
 
   const currentLanguage = supportedLanguages.find((item) => item.code === language) || supportedLanguages[0]
-  const userAvatar = user?.avatar ? `http://localhost:5000${user.avatar}` : '/assets/images/avatar/1.png'
+  const backendOrigin = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace(/\/api\/v1\/?$/, '')
+  const userAvatar = user?.avatar ? `${backendOrigin}${user.avatar}` : '/assets/images/avatar/default-user.svg'
   const userDisplayName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() || user?.username || user?.email || t('header.fallbackUser')
 
   const handleLogout = () => {
@@ -226,12 +227,12 @@ export default function Header() {
             {/* User Dropdown */}
             <div className="dropdown nxl-h-item">
               <a href="#" onClick={(e) => e.preventDefault()} data-bs-toggle="dropdown" role="button" data-bs-auto-close="outside">
-                <img src={userAvatar} alt="user-image" className="img-fluid user-avtar me-0" style={{ objectFit: 'cover' }} />
+                <img src={userAvatar} alt="user-image" className="img-fluid user-avtar me-0" style={{ objectFit: 'cover' }} onError={(event) => { event.currentTarget.src = '/assets/images/avatar/default-user.svg' }} />
               </a>
               <div className="dropdown-menu dropdown-menu-end nxl-h-dropdown nxl-user-dropdown">
                 <div className="dropdown-header">
                   <div className="d-flex align-items-center">
-                    <img src={userAvatar} alt="user-image" className="img-fluid user-avtar" style={{ objectFit: 'cover' }} />
+                    <img src={userAvatar} alt="user-image" className="img-fluid user-avtar" style={{ objectFit: 'cover' }} onError={(event) => { event.currentTarget.src = '/assets/images/avatar/default-user.svg' }} />
                     <div>
                       <h6 className="text-dark mb-0">{userDisplayName} <span className="badge bg-soft-success text-success ms-1">PRO</span></h6>
                       <span className="fs-12 fw-medium text-muted">{user?.email || 'user@example.com'}</span>

@@ -3,8 +3,11 @@ import { useAuthStore } from '../stores/authStore'
 import userService from '../services/userService'
 import { useI18n } from '../i18n/I18nContext'
 import { useSearchParams } from 'react-router-dom'
+import ConfirmModal from '../components/ConfirmModal'
 
 const VALID_TABS = ['profile', 'security', 'activity', 'notifications']
+const AVATAR_HISTORY_STORAGE_KEY = 'maccam-avatar-history'
+const LOCAL_CURRENT_AVATAR_KEY = 'maccam-local-current-avatar'
 
 export default function Profile() {
   const { user, updateUser: updateAuthUser } = useAuthStore()
@@ -21,8 +24,71 @@ export default function Profile() {
   const [error, setError] = useState('')
   const [activities, setActivities] = useState([])
   const [avatarPreview, setAvatarPreview] = useState(null)
+  const [avatarUnavailable, setAvatarUnavailable] = useState(false)
+  const [localCurrentAvatar, setLocalCurrentAvatar] = useState('')
+  const [avatarHistory, setAvatarHistory] = useState([])
+  const [galleryLoading, setGalleryLoading] = useState(false)
+  const [showAvatarGallery, setShowAvatarGallery] = useState(false)
+  const [selectedGalleryPhoto, setSelectedGalleryPhoto] = useState('')
+  const [confirmDeleteModal, setConfirmDeleteModal] = useState({ show: false, target: null })
   const fileInputRef = useRef(null)
-  
+  const backendOrigin = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace(/\/api\/v1\/?$/, '')
+  const defaultAvatar = '/assets/images/avatar/default-user.svg'
+  const resolveAvatarUrl = (pathOrUrl) => {
+    if (!pathOrUrl) return ''
+    if (pathOrUrl.startsWith('http')) return pathOrUrl
+    return `${backendOrigin}${pathOrUrl}`
+  }
+
+  const avatarUrl = avatarPreview || (user?.avatar ? resolveAvatarUrl(user.avatar) : defaultAvatar)
+  const hasCustomAvatar = Boolean(avatarPreview || user?.avatar)
+  const selectedGalleryItem = avatarHistory.find((item) => item.url === selectedGalleryPhoto) || avatarHistory[0] || null
+  const isSelectedCurrentAvatar = Boolean(selectedGalleryItem && user?.avatar && selectedGalleryItem.path === user.avatar)
+  const isCurrentAvatarItem = (item) => {
+    if (!item) return false
+    if (item?.path && user?.avatar && item.path === user.avatar) return true
+    return false
+  }
+
+  const saveAvatarInLocalHistory = (pathOrUrl) => {
+    if (!pathOrUrl) return
+
+    const fullUrl = resolveAvatarUrl(pathOrUrl)
+    try {
+      const raw = localStorage.getItem(AVATAR_HISTORY_STORAGE_KEY)
+      const parsed = raw ? JSON.parse(raw) : []
+      const list = Array.isArray(parsed) ? parsed : []
+      const next = [fullUrl, ...list.filter((item) => item !== fullUrl)].slice(0, 20)
+      localStorage.setItem(AVATAR_HISTORY_STORAGE_KEY, JSON.stringify(next))
+    } catch {
+      localStorage.removeItem(AVATAR_HISTORY_STORAGE_KEY)
+    }
+  }
+
+  const removeAvatarFromLocalHistory = (urlToRemove) => {
+    if (!urlToRemove) return
+    try {
+      const raw = localStorage.getItem(AVATAR_HISTORY_STORAGE_KEY)
+      const parsed = raw ? JSON.parse(raw) : []
+      const list = Array.isArray(parsed) ? parsed : []
+      const next = list.filter((item) => item !== urlToRemove)
+      localStorage.setItem(AVATAR_HISTORY_STORAGE_KEY, JSON.stringify(next))
+    } catch {
+      localStorage.removeItem(AVATAR_HISTORY_STORAGE_KEY)
+    }
+  }
+
+  const setLocalCurrentAvatarPersisted = (pathOrUrl) => {
+    const normalized = pathOrUrl ? resolveAvatarUrl(pathOrUrl) : ''
+    setLocalCurrentAvatar(normalized)
+    if (normalized) {
+      localStorage.setItem(LOCAL_CURRENT_AVATAR_KEY, normalized)
+    } else {
+      localStorage.removeItem(LOCAL_CURRENT_AVATAR_KEY)
+    }
+  }
+
+
   const [formData, setFormData] = useState({
     firstName: user?.firstName || '',
     lastName: user?.lastName || '',
@@ -60,9 +126,19 @@ export default function Profile() {
 
   // Charger le profil au montage
   useEffect(() => {
+    try {
+      const storedCurrentAvatar = localStorage.getItem(LOCAL_CURRENT_AVATAR_KEY)
+      if (storedCurrentAvatar) {
+        setLocalCurrentAvatar(storedCurrentAvatar)
+      }
+    } catch {
+      localStorage.removeItem(LOCAL_CURRENT_AVATAR_KEY)
+    }
+
     loadProfile()
     loadActivities()
     loadNotificationSettings()
+    loadAvatarGallery()
   }, [])
 
   useEffect(() => {
@@ -71,6 +147,10 @@ export default function Profile() {
       setActiveTab(tabFromUrl)
     }
   }, [searchParams])
+
+  useEffect(() => {
+    setAvatarUnavailable(false)
+  }, [user?.avatar, avatarPreview])
 
   const handleTabChange = (tab) => {
     setActiveTab(tab)
@@ -103,6 +183,9 @@ export default function Profile() {
         })
         setTwoFactorEnabled(userData.twoFactorEnabled || false)
         updateAuthUser(userData)
+        if (userData.avatar) {
+          saveAvatarInLocalHistory(userData.avatar)
+        }
       }
     } catch {
     }
@@ -131,6 +214,29 @@ export default function Profile() {
         })
       }
     } catch {
+    }
+  }
+
+  const loadAvatarGallery = async () => {
+    setGalleryLoading(true)
+    try {
+      const response = await userService.getAvatarGallery()
+      if (response.success && Array.isArray(response.data)) {
+        const normalized = response.data.map((item) => ({
+          ...item,
+          url: resolveAvatarUrl(item.path)
+        }))
+        setAvatarHistory(normalized)
+        setSelectedGalleryPhoto((previous) => {
+          if (normalized.length === 0) return ''
+          return previous && normalized.some((item) => item.url === previous) ? previous : normalized[0].url
+        })
+      }
+    } catch {
+      setAvatarHistory([])
+      setSelectedGalleryPhoto('')
+    } finally {
+      setGalleryLoading(false)
     }
   }
 
@@ -260,6 +366,141 @@ export default function Profile() {
     fileInputRef.current?.click()
   }
 
+  const handleOpenGallery = () => {
+    setSelectedGalleryPhoto((previous) => {
+      if (avatarHistory.length === 0) return ''
+      return previous && avatarHistory.some((item) => item.url === previous) ? previous : avatarHistory[0].url
+    })
+    setShowAvatarGallery(true)
+  }
+
+  const handleSetCurrentFromGallery = async () => {
+    if (!selectedGalleryItem) return
+
+    if (!selectedGalleryItem.path) {
+      setAvatarPreview(selectedGalleryItem.url)
+      setLocalCurrentAvatarPersisted(selectedGalleryItem.url)
+      saveAvatarInLocalHistory(selectedGalleryItem.url)
+      setSuccess('Photo de profil mise à jour depuis la galerie locale')
+      setTimeout(() => setSuccess(''), 3000)
+      return
+    }
+
+    try {
+      setLoading(true)
+      const response = await userService.selectAvatarFromGallery(selectedGalleryItem.path)
+      if (response.success) {
+        updateAuthUser(response.data)
+        setLocalCurrentAvatarPersisted('')
+        if (response.data?.avatar) {
+          saveAvatarInLocalHistory(response.data.avatar)
+        }
+        setSuccess('Photo de profil mise à jour depuis la galerie')
+        setTimeout(() => setSuccess(''), 3000)
+        loadAvatarGallery()
+        loadActivities()
+      }
+    } catch (err) {
+      setError(err.message || 'Impossible de définir cette photo comme actuelle')
+      setTimeout(() => setError(''), 5000)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleDeleteFromGallery = async () => {
+    if (!selectedGalleryItem) return
+
+    if (!selectedGalleryItem.path) {
+      const nextGallery = avatarHistory.filter((item) => item.url !== selectedGalleryItem.url)
+      setAvatarHistory(nextGallery)
+      removeAvatarFromLocalHistory(selectedGalleryItem.url)
+      if (localCurrentAvatar && resolveAvatarUrl(selectedGalleryItem.url) === resolveAvatarUrl(localCurrentAvatar)) {
+        const replacement = nextGallery[0]?.url || ''
+        setLocalCurrentAvatarPersisted(replacement)
+        setAvatarPreview(replacement || null)
+      }
+      setSelectedGalleryPhoto(nextGallery[0]?.url || '')
+      setSuccess('Photo locale supprimée de la galerie')
+      setTimeout(() => setSuccess(''), 3000)
+      return
+    }
+
+    try {
+      setLoading(true)
+      const response = await userService.deleteAvatarFromGallery(selectedGalleryItem.path)
+      if (response.success) {
+        updateAuthUser(response.data)
+        if (!response.data?.avatar) {
+          setLocalCurrentAvatarPersisted('')
+          setAvatarPreview(null)
+        }
+        setSuccess('Photo supprimée de la galerie')
+        setTimeout(() => setSuccess(''), 3000)
+        await loadAvatarGallery()
+        loadActivities()
+      }
+    } catch (err) {
+      setError(err.message || 'Impossible de supprimer cette photo')
+      setTimeout(() => setError(''), 5000)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleOpenAvatar = async (url = avatarUrl) => {
+    if (!url || !hasCustomAvatar) {
+      setError('Aucune photo de profil disponible')
+      setTimeout(() => setError(''), 5000)
+      return
+    }
+
+    const finalUrl = resolveAvatarUrl(url)
+
+    try {
+      const response = await fetch(finalUrl, { method: 'HEAD' })
+      if (!response.ok) {
+        throw new Error('missing-avatar')
+      }
+      window.open(finalUrl, '_blank', 'noopener,noreferrer')
+    } catch {
+      setAvatarUnavailable(true)
+      setError('Photo introuvable sur le serveur. Veuillez en téléverser une nouvelle.')
+      setTimeout(() => setError(''), 5000)
+    }
+  }
+
+  const handleDownloadAvatar = async (url = avatarUrl) => {
+    if (!url || !hasCustomAvatar) {
+      setError('Aucune photo de profil à télécharger')
+      setTimeout(() => setError(''), 5000)
+      return
+    }
+
+    const finalUrl = resolveAvatarUrl(url)
+
+    try {
+      const response = await fetch(finalUrl)
+      if (!response.ok) {
+        throw new Error('missing-avatar')
+      }
+
+      const blob = await response.blob()
+      const objectUrl = URL.createObjectURL(blob)
+      const anchor = document.createElement('a')
+      anchor.href = objectUrl
+      anchor.download = `photo-profil-${new Date().toISOString().slice(0, 10)}.jpg`
+      document.body.appendChild(anchor)
+      anchor.click()
+      document.body.removeChild(anchor)
+      URL.revokeObjectURL(objectUrl)
+    } catch {
+      setAvatarUnavailable(true)
+      setError('Téléchargement impossible: photo introuvable sur le serveur.')
+      setTimeout(() => setError(''), 5000)
+    }
+  }
+
   const handleAvatarChange = (e) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -298,9 +539,14 @@ export default function Profile() {
       const response = await userService.uploadAvatar(file)
       if (response.success) {
         updateAuthUser(response.data)
+        setLocalCurrentAvatarPersisted('')
+        if (response.data?.avatar) {
+          saveAvatarInLocalHistory(response.data.avatar)
+        }
         setSuccess(t('profile.successAvatarUpdated') || 'Photo de profil mise à jour avec succès')
         setTimeout(() => setSuccess(''), 3000)
         loadActivities()
+        loadAvatarGallery()
       }
     } catch (err) {
       setError(err.message || t('profile.errorAvatarUpload') || 'Erreur lors de la mise à jour de la photo')
@@ -312,10 +558,6 @@ export default function Profile() {
   }
 
   const handleAvatarDelete = async () => {
-    if (!confirm(t('profile.confirmDeleteAvatar') || 'Êtes-vous sûr de vouloir supprimer votre photo de profil ?')) {
-      return
-    }
-
     setLoading(true)
     setError('')
     setSuccess('')
@@ -324,16 +566,40 @@ export default function Profile() {
       const response = await userService.deleteAvatar()
       if (response.success) {
         updateAuthUser(response.data)
+        setLocalCurrentAvatarPersisted('')
         setAvatarPreview(null)
         setSuccess(t('profile.successAvatarDeleted') || 'Photo de profil supprimée avec succès')
         setTimeout(() => setSuccess(''), 3000)
         loadActivities()
+        loadAvatarGallery()
       }
     } catch (err) {
       setError(err.message || t('profile.errorAvatarDelete') || 'Erreur lors de la suppression de la photo')
       setTimeout(() => setError(''), 5000)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const openDeleteConfirm = (target) => {
+    setConfirmDeleteModal({ show: true, target })
+  }
+
+  const closeDeleteConfirm = () => {
+    setConfirmDeleteModal({ show: false, target: null })
+  }
+
+  const handleConfirmDelete = async () => {
+    const target = confirmDeleteModal.target
+    closeDeleteConfirm()
+
+    if (target === 'current') {
+      await handleAvatarDelete()
+      return
+    }
+
+    if (target === 'gallery') {
+      await handleDeleteFromGallery()
     }
   }
 
@@ -426,9 +692,10 @@ export default function Profile() {
                   <div className="d-flex align-items-center gap-3">
                     <div className="avatar-image avatar-xl position-relative" style={{ cursor: 'pointer' }} onClick={handleAvatarClick}>
                       <img 
-                        src={avatarPreview || (user?.avatar ? `http://localhost:5000${user.avatar}` : '/assets/images/avatar/1.png')} 
+                        src={avatarUnavailable ? defaultAvatar : avatarUrl}
                         alt={`${user?.firstName} ${user?.lastName}`} 
                         className="img-fluid" 
+                        onError={() => setAvatarUnavailable(true)}
                         style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '50%' }}
                       />
                       <div className="position-absolute bottom-0 end-0 bg-primary rounded-circle p-1" style={{ cursor: 'pointer' }}>
@@ -448,11 +715,19 @@ export default function Profile() {
                       <i className="feather-more-vertical"></i>
                     </button>
                     <div className="dropdown-menu dropdown-menu-end">
+                      <button type="button" className="dropdown-item" onClick={handleOpenGallery}>
+                        <i className="feather-eye me-3"></i>
+                        <span>Voir la galerie</span>
+                      </button>
+                      <button type="button" className="dropdown-item" onClick={() => handleDownloadAvatar()}>
+                        <i className="feather-download me-3"></i>
+                        <span>Télécharger</span>
+                      </button>
                       <button type="button" className="dropdown-item" onClick={handleAvatarClick}>
                         <i className="feather-edit-3 me-3"></i>
                         <span>{t('profile.editPhoto')}</span>
                       </button>
-                      <button type="button" className="dropdown-item" onClick={handleAvatarDelete}>
+                      <button type="button" className="dropdown-item" onClick={() => openDeleteConfirm('current')}>
                         <i className="feather-trash-2 me-3"></i>
                         <span>{t('profile.deletePhoto')}</span>
                       </button>
@@ -642,6 +917,73 @@ export default function Profile() {
                             <div className="col-12 mb-4">
                               <label className="form-label fw-semibold text-muted">{t('profile.biography')}</label>
                               <p className="mb-0">{formData.bio || '-'}</p>
+                            </div>
+
+                            <div className="col-12">
+                              <div className="border rounded p-3">
+                                <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                                  <label className="form-label fw-semibold text-muted mb-0">Mes photos de profil</label>
+                                  <div className="d-flex gap-2">
+                                    <button type="button" className="btn btn-sm btn-light" onClick={handleOpenGallery} disabled={avatarHistory.length === 0}>
+                                      <i className="feather-eye me-1"></i>
+                                      Voir
+                                    </button>
+                                    <button type="button" className="btn btn-sm btn-light" onClick={() => handleDownloadAvatar()} disabled={!hasCustomAvatar}>
+                                      <i className="feather-download me-1"></i>
+                                      Télécharger
+                                    </button>
+                                    <button type="button" className="btn btn-sm btn-primary" onClick={handleAvatarClick}>
+                                      <i className="feather-upload me-1"></i>
+                                      Ajouter/Modifier
+                                    </button>
+                                  </div>
+                                </div>
+
+                                <div className="d-flex align-items-center gap-3 mb-3">
+                                  <img
+                                    src={avatarUnavailable ? defaultAvatar : avatarUrl}
+                                    alt="Photo de profil actuelle"
+                                    className="rounded"
+                                    onError={() => setAvatarUnavailable(true)}
+                                    style={{ width: '88px', height: '88px', objectFit: 'cover' }}
+                                  />
+                                  <div>
+                                    <div className="fw-semibold">Photo de profil actuelle</div>
+                                    <div className="fs-12 text-muted">
+                                      {hasCustomAvatar ? 'Disponible' : 'Aucune photo personnalisée'}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {avatarHistory.length > 0 && (
+                                  <div>
+                                    <div className="fs-12 fw-semibold text-muted mb-2">Galerie des photos uploadées</div>
+                                    <div className="d-flex flex-wrap gap-2">
+                                      {avatarHistory.map((item, index) => (
+                                        <button
+                                          key={`${item.path}-${index}`}
+                                          type="button"
+                                          className="btn p-0 border rounded"
+                                          onClick={() => {
+                                            setSelectedGalleryPhoto(item.url)
+                                            setShowAvatarGallery(true)
+                                          }}
+                                          title="Voir dans la galerie"
+                                        >
+                                          <img
+                                            src={item.url}
+                                            alt={`Ancienne photo ${index + 1}`}
+                                            onError={(event) => {
+                                              event.currentTarget.style.display = 'none'
+                                            }}
+                                            style={{ width: '52px', height: '52px', objectFit: 'cover', borderRadius: '6px' }}
+                                          />
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1061,6 +1403,120 @@ export default function Profile() {
           </div>
         </div>
       </div>
+
+      {showAvatarGallery && (
+        <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }} onClick={() => setShowAvatarGallery(false)}>
+          <div className="modal-dialog modal-xl modal-dialog-centered" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Galerie de mes photos de profil</h5>
+                <button type="button" className="btn-close" onClick={() => setShowAvatarGallery(false)}></button>
+              </div>
+              <div className="modal-body">
+                {galleryLoading ? (
+                  <div className="text-center py-4">Chargement de la galerie...</div>
+                ) : avatarHistory.length === 0 ? (
+                  <div className="text-center py-4 text-muted">Aucune photo trouvée.</div>
+                ) : (
+                  <div className="row g-3">
+                    <div className="col-lg-8">
+                      <div className="border rounded p-2 text-center position-relative">
+                        {isSelectedCurrentAvatar && (
+                          <span className="badge bg-success position-absolute top-0 end-0 m-2">
+                            <i className="feather-check-circle me-1"></i>
+                            Photo de profil actuelle
+                          </span>
+                        )}
+                        <img
+                          src={selectedGalleryPhoto || avatarHistory[0]?.url}
+                          alt="Photo de profil"
+                          className="img-fluid rounded"
+                          style={{ maxHeight: '60vh', objectFit: 'contain' }}
+                        />
+                      </div>
+                    </div>
+                    <div className="col-lg-4">
+                      <div className="d-grid gap-2" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                        {avatarHistory.map((item, index) => (
+                          <button
+                            key={`${item.path}-${index}`}
+                            type="button"
+                            className={`btn p-2 border text-start ${selectedGalleryPhoto === item.url ? 'border-primary' : isCurrentAvatarItem(item) ? 'border-success' : ''}`}
+                            onClick={() => setSelectedGalleryPhoto(item.url)}
+                          >
+                            <div className="d-flex align-items-center gap-2">
+                              <img src={item.url} alt={`Photo ${index + 1}`} style={{ width: '52px', height: '52px', objectFit: 'cover', borderRadius: '6px' }} />
+                              <div>
+                                <div className="fw-semibold">Photo {index + 1}</div>
+                                <div className="fs-11 text-muted">{new Date(item.uploadedAt).toLocaleString()}</div>
+                                {isCurrentAvatarItem(item) && (
+                                  <div className="fs-11 text-success fw-semibold">
+                                    <i className="feather-check me-1"></i>
+                                    Photo de profil actuelle
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-light" onClick={() => setShowAvatarGallery(false)}>Fermer</button>
+                <button
+                  type="button"
+                  className="btn btn-outline-primary"
+                  onClick={handleSetCurrentFromGallery}
+                  disabled={!selectedGalleryItem || isSelectedCurrentAvatar || loading}
+                >
+                  <i className="feather-check-circle me-2"></i>
+                  Définir comme actuelle
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline-danger"
+                  onClick={() => openDeleteConfirm('gallery')}
+                  disabled={!selectedGalleryItem || loading}
+                >
+                  <i className="feather-trash-2 me-2"></i>
+                  Supprimer
+                </button>
+                <button type="button" className="btn btn-primary" onClick={() => handleDownloadAvatar(selectedGalleryPhoto || avatarHistory[0]?.url)} disabled={avatarHistory.length === 0}>
+                  <i className="feather-download me-2"></i>
+                  Télécharger
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={handleAvatarClick}
+                  disabled={loading}
+                >
+                  <i className="feather-upload me-2"></i>
+                  Uploader
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <ConfirmModal
+        show={confirmDeleteModal.show}
+        title="Confirmation"
+        message={
+          confirmDeleteModal.target === 'gallery'
+            ? 'Supprimer cette photo de la galerie ?'
+            : (t('profile.confirmDeleteAvatar') || 'Êtes-vous sûr de vouloir supprimer votre photo de profil ?')
+        }
+        onConfirm={handleConfirmDelete}
+        onCancel={closeDeleteConfirm}
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        type="danger"
+      />
     </>
   )
 }

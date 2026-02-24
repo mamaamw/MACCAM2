@@ -8,6 +8,91 @@ import { protect, authorize } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 const prisma = new PrismaClient();
+const AVATAR_GALLERY_KEY_PREFIX = 'avatar_gallery_user_';
+
+const getAvatarGallerySettingKey = (userId) => `${AVATAR_GALLERY_KEY_PREFIX}${userId}`;
+
+const getStoredAvatarGalleryPaths = async (userId) => {
+  const key = getAvatarGallerySettingKey(userId);
+  const setting = await prisma.setting.findUnique({ where: { key } });
+
+  if (!setting?.value) return [];
+
+  try {
+    const parsed = JSON.parse(setting.value);
+    if (!Array.isArray(parsed)) return [];
+
+    return parsed
+      .map((entry) => (typeof entry === 'string' ? entry : entry?.path))
+      .filter((entry) => typeof entry === 'string' && entry.startsWith('/uploads/avatars/'));
+  } catch {
+    return [];
+  }
+};
+
+const setStoredAvatarGalleryPaths = async (userId, paths) => {
+  const key = getAvatarGallerySettingKey(userId);
+  const uniquePaths = Array.from(new Set((paths || []).filter(Boolean)));
+
+  await prisma.setting.upsert({
+    where: { key },
+    update: {
+      value: JSON.stringify(uniquePaths),
+      type: 'json',
+      category: 'user',
+      description: `Galerie avatars utilisateur ${userId}`,
+    },
+    create: {
+      key,
+      value: JSON.stringify(uniquePaths),
+      type: 'json',
+      category: 'user',
+      description: `Galerie avatars utilisateur ${userId}`,
+    },
+  });
+};
+
+const getDiskAvatarEntries = (userId) => {
+  const avatarsDir = path.join(process.cwd(), 'uploads', 'avatars');
+  const filenamePrefix = `avatar-${userId}-`;
+
+  if (!fs.existsSync(avatarsDir)) {
+    return [];
+  }
+
+  return fs.readdirSync(avatarsDir)
+    .filter((filename) => filename.startsWith(filenamePrefix))
+    .map((filename) => {
+      const fullPath = path.join(avatarsDir, filename);
+      const stats = fs.statSync(fullPath);
+      return {
+        filename,
+        path: `/uploads/avatars/${filename}`,
+        uploadedAt: stats.mtime,
+      };
+    })
+    .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+};
+
+const getNextAvatarPath = async (userId, excludedPaths = []) => {
+  const excludedSet = new Set((excludedPaths || []).filter(Boolean));
+  const diskEntries = getDiskAvatarEntries(userId);
+  const diskPaths = diskEntries
+    .map((entry) => entry.path)
+    .filter((entryPath) => !excludedSet.has(entryPath));
+
+  const diskPathSet = new Set(diskPaths);
+  const storedPaths = (await getStoredAvatarGalleryPaths(userId))
+    .filter((entryPath) => !excludedSet.has(entryPath))
+    .filter((entryPath) => diskPathSet.has(entryPath));
+
+  const mergedPaths = [
+    ...storedPaths,
+    ...diskPaths.filter((entryPath) => !storedPaths.includes(entryPath)),
+  ];
+
+  return mergedPaths[0] || null;
+};
 
 // Configuration de multer pour l'upload d'avatar
 const storage = multer.diskStorage({
@@ -483,13 +568,185 @@ router.put('/:id', authorize('ADMIN', 'MANAGER'), async (req, res) => {
 });
 
 // DELETE /api/users/:id - Supprimer un utilisateur (Admin)
-router.delete('/:id', authorize('ADMIN'), async (req, res) => {
+router.delete('/:id([0-9a-fA-F-]{36})', authorize('ADMIN'), async (req, res) => {
   try {
     await prisma.user.delete({
       where: { id: req.params.id }
     });
     
     res.json({ success: true, message: 'Utilisateur supprimé' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// GET /api/users/avatar/gallery - Liste des photos de profil uploadées
+router.get('/avatar/gallery', async (req, res) => {
+  try {
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { avatar: true }
+    });
+
+    const filesFromDisk = getDiskAvatarEntries(req.user.id);
+
+    if (!filesFromDisk.length) {
+      await setStoredAvatarGalleryPaths(req.user.id, currentUser?.avatar ? [currentUser.avatar] : []);
+      return res.json({ success: true, data: [] });
+    }
+
+    const fileMap = new Map(filesFromDisk.map((file) => [file.path, file]));
+    const storedPaths = await getStoredAvatarGalleryPaths(req.user.id);
+
+    const mergedPaths = [...storedPaths, ...filesFromDisk.map((file) => file.path)]
+      .filter((value, index, array) => array.indexOf(value) === index)
+      .filter((pathValue) => fileMap.has(pathValue));
+
+    if (currentUser?.avatar && fileMap.has(currentUser.avatar) && !mergedPaths.includes(currentUser.avatar)) {
+      mergedPaths.unshift(currentUser.avatar);
+    }
+
+    await setStoredAvatarGalleryPaths(req.user.id, mergedPaths);
+
+    const files = mergedPaths.map((pathValue) => fileMap.get(pathValue));
+
+    res.json({ success: true, data: files });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// PUT /api/users/avatar/select - Définir une photo de galerie comme avatar actuel
+router.put('/avatar/select', async (req, res) => {
+  try {
+    const { path: selectedPath } = req.body;
+
+    if (!selectedPath || typeof selectedPath !== 'string') {
+      return res.status(400).json({ success: false, message: 'Chemin de photo invalide' });
+    }
+
+    const expectedPrefix = `/uploads/avatars/avatar-${req.user.id}-`;
+    if (!selectedPath.startsWith(expectedPrefix)) {
+      return res.status(403).json({ success: false, message: 'Photo non autorisée' });
+    }
+
+    const absolutePath = path.join(process.cwd(), selectedPath.replace(/^\//, ''));
+    if (!fs.existsSync(absolutePath)) {
+      return res.status(404).json({ success: false, message: 'Photo introuvable' });
+    }
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { avatar: selectedPath },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        avatar: true,
+        role: true,
+        isActive: true,
+        company: true,
+        address: true,
+        city: true,
+        country: true,
+        postalCode: true,
+        bio: true,
+        twoFactorEnabled: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    const storedPaths = await getStoredAvatarGalleryPaths(req.user.id);
+    await setStoredAvatarGalleryPaths(req.user.id, [selectedPath, ...storedPaths]);
+
+    await prisma.activity.create({
+      data: {
+        type: 'avatar_updated',
+        description: 'Photo de profil sélectionnée depuis la galerie',
+        userId: req.user.id
+      }
+    });
+
+    res.json({ success: true, data: user });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// DELETE /api/users/avatar/file - Supprimer une photo précise de la galerie
+router.delete('/avatar/file', async (req, res) => {
+  try {
+    const { path: selectedPath } = req.body;
+
+    if (!selectedPath || typeof selectedPath !== 'string') {
+      return res.status(400).json({ success: false, message: 'Chemin de photo invalide' });
+    }
+
+    const expectedPrefix = `/uploads/avatars/avatar-${req.user.id}-`;
+    if (!selectedPath.startsWith(expectedPrefix)) {
+      return res.status(403).json({ success: false, message: 'Photo non autorisée' });
+    }
+
+    const absolutePath = path.join(process.cwd(), selectedPath.replace(/^\//, ''));
+    if (!fs.existsSync(absolutePath)) {
+      return res.status(404).json({ success: false, message: 'Photo introuvable' });
+    }
+
+    fs.unlinkSync(absolutePath);
+
+    const storedPaths = await getStoredAvatarGalleryPaths(req.user.id);
+    await setStoredAvatarGalleryPaths(
+      req.user.id,
+      storedPaths.filter((entry) => entry !== selectedPath)
+    );
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { avatar: true }
+    });
+
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        avatar: currentUser?.avatar === selectedPath
+          ? await getNextAvatarPath(req.user.id, [selectedPath])
+          : currentUser?.avatar || null
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        avatar: true,
+        role: true,
+        isActive: true,
+        company: true,
+        address: true,
+        city: true,
+        country: true,
+        postalCode: true,
+        bio: true,
+        twoFactorEnabled: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    await prisma.activity.create({
+      data: {
+        type: 'avatar_deleted',
+        description: 'Photo supprimée depuis la galerie',
+        userId: req.user.id
+      }
+    });
+
+    res.json({ success: true, data: user });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -503,19 +760,6 @@ router.post('/avatar', upload.single('avatar'), async (req, res) => {
         success: false, 
         message: 'Aucun fichier fourni' 
       });
-    }
-
-    // Supprimer l'ancien avatar s'il existe
-    const currentUser = await prisma.user.findUnique({
-      where: { id: req.user.id },
-      select: { avatar: true }
-    });
-
-    if (currentUser.avatar) {
-      const oldAvatarPath = path.join(process.cwd(), currentUser.avatar.replace(/^\//, ''));
-      if (fs.existsSync(oldAvatarPath)) {
-        fs.unlinkSync(oldAvatarPath);
-      }
     }
 
     // Sauvegarder le chemin de l'avatar dans la base de données
@@ -544,6 +788,9 @@ router.post('/avatar', upload.single('avatar'), async (req, res) => {
         updatedAt: true
       }
     });
+
+    const storedPaths = await getStoredAvatarGalleryPaths(req.user.id);
+    await setStoredAvatarGalleryPaths(req.user.id, [avatarPath, ...storedPaths]);
 
     // Créer une activité
     await prisma.activity.create({
@@ -588,10 +835,18 @@ router.delete('/avatar', async (req, res) => {
       fs.unlinkSync(avatarPath);
     }
 
+    const storedPaths = await getStoredAvatarGalleryPaths(req.user.id);
+    await setStoredAvatarGalleryPaths(
+      req.user.id,
+      storedPaths.filter((entry) => entry !== currentUser.avatar)
+    );
+
+    const nextAvatarPath = await getNextAvatarPath(req.user.id, [currentUser.avatar]);
+
     // Mettre à jour la base de données
     const user = await prisma.user.update({
       where: { id: req.user.id },
-      data: { avatar: null },
+      data: { avatar: nextAvatarPath },
       select: {
         id: true,
         email: true,
