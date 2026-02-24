@@ -2,11 +2,20 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuthStore } from '../stores/authStore'
 import userService from '../services/userService'
 import { useI18n } from '../i18n/I18nContext'
+import { useSearchParams } from 'react-router-dom'
+
+const VALID_TABS = ['profile', 'security', 'activity', 'notifications']
 
 export default function Profile() {
   const { user, updateUser: updateAuthUser } = useAuthStore()
   const { t, language } = useI18n()
-  const [activeTab, setActiveTab] = useState('profile')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const getTabFromUrl = () => {
+    const tab = searchParams.get('tab')
+    return VALID_TABS.includes(tab) ? tab : 'profile'
+  }
+
+  const [activeTab, setActiveTab] = useState(getTabFromUrl)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState('')
@@ -55,6 +64,24 @@ export default function Profile() {
     loadActivities()
     loadNotificationSettings()
   }, [])
+
+  useEffect(() => {
+    const tabFromUrl = getTabFromUrl()
+    if (tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl)
+    }
+  }, [searchParams])
+
+  const handleTabChange = (tab) => {
+    setActiveTab(tab)
+    const params = new URLSearchParams(searchParams)
+    if (tab === 'profile') {
+      params.delete('tab')
+    } else {
+      params.set('tab', tab)
+    }
+    setSearchParams(params, { replace: true })
+  }
 
   const loadProfile = async () => {
     try {
@@ -467,11 +494,11 @@ export default function Profile() {
                   </li>
                 </ul>
                 <div className="d-flex gap-2">
-                  <button type="button" className="btn btn-light-brand w-100" onClick={() => setActiveTab('profile')}>
+                  <button type="button" className="btn btn-light-brand w-100" onClick={() => handleTabChange('profile')}>
                     <i className="feather-edit me-2"></i>
                     {t('profile.edit')}
                   </button>
-                  <button type="button" className="btn btn-light w-100" onClick={() => setActiveTab('security')}>
+                  <button type="button" className="btn btn-light w-100" onClick={() => handleTabChange('security')}>
                     <i className="feather-settings me-2"></i>
                     {t('profile.settings')}
                   </button>
@@ -509,7 +536,7 @@ export default function Profile() {
                     <button 
                       type="button"
                       className={`nav-link ${activeTab === 'profile' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('profile')}
+                      onClick={() => handleTabChange('profile')}
                       role="tab"
                     >
                       <i className="feather-user me-2"></i>
@@ -520,7 +547,7 @@ export default function Profile() {
                     <button 
                       type="button"
                       className={`nav-link ${activeTab === 'security' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('security')}
+                      onClick={() => handleTabChange('security')}
                       role="tab"
                     >
                       <i className="feather-shield me-2"></i>
@@ -531,7 +558,7 @@ export default function Profile() {
                     <button 
                       type="button"
                       className={`nav-link ${activeTab === 'activity' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('activity')}
+                      onClick={() => handleTabChange('activity')}
                       role="tab"
                     >
                       <i className="feather-activity me-2"></i>
@@ -542,7 +569,7 @@ export default function Profile() {
                     <button 
                       type="button"
                       className={`nav-link ${activeTab === 'notifications' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('notifications')}
+                      onClick={() => handleTabChange('notifications')}
                       role="tab"
                     >
                       <i className="feather-bell me-2"></i>

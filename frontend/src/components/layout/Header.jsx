@@ -8,6 +8,8 @@ export default function Header() {
   const navigate = useNavigate()
 
   const currentLanguage = supportedLanguages.find((item) => item.code === language) || supportedLanguages[0]
+  const userAvatar = user?.avatar ? `http://localhost:5000${user.avatar}` : '/assets/images/avatar/1.png'
+  const userDisplayName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim() || user?.username || user?.email || t('header.fallbackUser')
 
   const handleLogout = () => {
     logout()
@@ -224,38 +226,29 @@ export default function Header() {
             {/* User Dropdown */}
             <div className="dropdown nxl-h-item">
               <a href="#" onClick={(e) => e.preventDefault()} data-bs-toggle="dropdown" role="button" data-bs-auto-close="outside">
-                <img src="/assets/images/avatar/1.png" alt="user-image" className="img-fluid user-avtar me-0" />
+                <img src={userAvatar} alt="user-image" className="img-fluid user-avtar me-0" style={{ objectFit: 'cover' }} />
               </a>
               <div className="dropdown-menu dropdown-menu-end nxl-h-dropdown nxl-user-dropdown">
                 <div className="dropdown-header">
                   <div className="d-flex align-items-center">
-                    <img src="/assets/images/avatar/1.png" alt="user-image" className="img-fluid user-avtar" />
+                    <img src={userAvatar} alt="user-image" className="img-fluid user-avtar" style={{ objectFit: 'cover' }} />
                     <div>
-                      <h6 className="text-dark mb-0">{user?.email || t('header.fallbackUser')} <span className="badge bg-soft-success text-success ms-1">PRO</span></h6>
+                      <h6 className="text-dark mb-0">{userDisplayName} <span className="badge bg-soft-success text-success ms-1">PRO</span></h6>
                       <span className="fs-12 fw-medium text-muted">{user?.email || 'user@example.com'}</span>
                     </div>
                   </div>
                 </div>
-                <div className="dropdown">
-                  <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item" data-bs-toggle="dropdown">
-                    <span className="hstack">
-                      <i className="wd-10 ht-10 border border-2 border-gray-1 bg-success rounded-circle me-2"></i>
-                      <span>{t('header.active')}</span>
-                    </span>
-                    <i className="feather-chevron-right ms-auto me-0"></i>
-                  </a>
+                <div className="dropdown-item-text">
+                  <span className="hstack">
+                    <i className="wd-10 ht-10 border border-2 border-gray-1 bg-success rounded-circle me-2"></i>
+                    <span className="fw-semibold text-dark">{t('header.active')}</span>
+                  </span>
                 </div>
                 <div className="dropdown-divider"></div>
-                <div className="dropdown">
-                  <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item" data-bs-toggle="dropdown">
-                    <span className="hstack">
-                      <i className="feather-dollar-sign me-2"></i>
-                      <span>{t('header.subscriptions')}</span>
-                    </span>
-                    <i className="feather-chevron-right ms-auto me-0"></i>
-                  </a>
-                </div>
-                <div className="dropdown-divider"></div>
+                <Link to="/payment" className="dropdown-item">
+                  <i className="feather-dollar-sign"></i>
+                  <span>{t('header.subscriptions')}</span>
+                </Link>
                 <Link to="/profile" className="dropdown-item">
                   <i className="feather-user"></i>
                   <span>{t('header.profileDetails')}</span>
@@ -264,18 +257,18 @@ export default function Header() {
                   <i className="feather-file-text"></i>
                   <span>{t('header.myCv')}</span>
                 </Link>
-                <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                <Link to="/profile?tab=activity" className="dropdown-item">
                   <i className="feather-activity"></i>
                   <span>{t('header.activityFeed')}</span>
-                </a>
-                <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                </Link>
+                <Link to="/payment" className="dropdown-item">
                   <i className="feather-dollar-sign"></i>
                   <span>{t('header.billingDetails')}</span>
-                </a>
-                <a href="#" onClick={(e) => e.preventDefault()} className="dropdown-item">
+                </Link>
+                <Link to="/profile?tab=notifications" className="dropdown-item">
                   <i className="feather-bell"></i>
                   <span>{t('header.notifications')}</span>
-                </a>
+                </Link>
                 <Link to="/settings" className="dropdown-item">
                   <i className="feather-settings"></i>
                   <span>{t('header.accountSettings')}</span>
